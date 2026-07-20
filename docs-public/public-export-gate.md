@@ -1,6 +1,6 @@
 # Public Export Gate
 
-Status: historyless export candidate audited; repository publication pending
+Status: historyless public source published; external reporting reverification pending
 Date: 2026-07-20
 
 This gate defines how DesktopLab can become public without publishing the internal planning method.
@@ -99,12 +99,15 @@ That mode must fail while private docs or private history are present.
 
 ## Current Gate Result
 
-The historyless export candidate passes with zero private findings. The public
-repository has not been recreated or published. The private source tree and its
-history remain deliberately blocked from direct publication. The export
-manifest records the exact source commit, clean-tree state and lockfile hashes.
-Publication still requires a fresh one-commit repository, a second tree and
-history audit, green public CI, activation and reverification of support and
-Private Vulnerability Reporting channels, and explicit push authorization.
-This gate does not accept a public beta binary; signing, notarization and
-exact-candidate product evidence remain separate blockers.
+The historyless public repository is live and passes tree, history, secret,
+claim, contract, frontend and Rust checks. The private source tree and its
+history remain deliberately blocked from direct publication. The external
+transport manifest records the exact private source commit, clean-tree state
+and lockfile hashes without entering the public tree.
+
+Issues, Discussions and Private Vulnerability Reporting are enabled, and the
+authenticated support-channel audit completes without findings. A new external
+report has not yet reverified the reporter-to-maintainer path on this repository,
+so that final reporting check remains open. This gate does not accept a public
+beta binary; signing, notarization and exact-candidate product evidence remain
+separate blockers.

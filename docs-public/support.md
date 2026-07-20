@@ -1,18 +1,18 @@
 # Support
 
-Status: public-source candidate; channels activate after publication
+Status: public source published; support channels active
 
 DesktopLab separates assistance, defects, feature proposals and security reports so each channel can be triaged with the correct privacy boundary.
 
 ## Assistance And Questions
 
-After the repository is published, use [GitHub Discussions Q&A](https://github.com/Vitalisimon/desktoplab/discussions/categories/q-a) for setup, hardware selection, local runtimes, models, provider configuration and usage questions.
+Use [GitHub Discussions Q&A](https://github.com/Vitalisimon/desktoplab/discussions/categories/q-a) for setup, hardware selection, local runtimes, models, provider configuration and usage questions.
 
 Search existing discussions and follow the [troubleshooting guide](troubleshooting.md) first. Include the DesktopLab version, operating system, package type and runtime/model combination when they affect the question.
 
 ## Bug Reports
 
-After the repository is published, use the [GitHub issue chooser](https://github.com/Vitalisimon/desktoplab/issues/new/choose) for a reproducible product defect. One issue should describe one observable problem.
+Use the [GitHub issue chooser](https://github.com/Vitalisimon/desktoplab/issues/new/choose) for a reproducible product defect. One issue should describe one observable problem.
 
 The report should contain:
 
@@ -30,7 +30,7 @@ Use the feature request form for a concrete user problem and desired outcome. Us
 
 ## Security Reports
 
-Never disclose a vulnerability in an issue or discussion. Follow [SECURITY.md](../SECURITY.md). GitHub Private Vulnerability Reporting must be enabled and reverified when the repository is published before confidential reports are accepted there.
+Never disclose a vulnerability in an issue or discussion. Follow [SECURITY.md](../SECURITY.md). GitHub Private Vulnerability Reporting is enabled; a current external reporter-to-maintainer test remains required before any binary beta release.
 
 ## Maintainer Auditability
 

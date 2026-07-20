@@ -1,6 +1,6 @@
 # DesktopLab
 
-Status: audited public-source candidate prepared, not published; no public binary release
+Status: public source published; no public binary release
 
 DesktopLab is a local-first desktop environment for development agents. It is designed so a user can install the app, open a repository and reach the first useful prompt with minimal setup.
 
@@ -8,11 +8,11 @@ DesktopLab is not just a chat window for a model. It is a local control plane fo
 
 ## Current Release State
 
-DesktopLab's audited historyless public-source candidate is prepared locally.
-The canonical public repository is intentionally not live yet, and no public
-binary has been released. Windows, Linux and macOS package-development evidence
-exists, but installers are not public distribution claims until the exact
-release-head signing, provenance and platform recertification gates pass.
+DesktopLab's audited historyless public source is live in the
+[canonical GitHub repository](https://github.com/Vitalisimon/desktoplab). No
+public binary has been released. Windows, Linux and macOS package-development
+evidence exists, but installers are not public distribution claims until the
+exact release-head signing, provenance and platform recertification gates pass.
 
 The private development repository and its history are never published
 directly. Public source is produced through the audited export described in

@@ -44,6 +44,18 @@ test("source publication claims reject stale live-repository wording", () => {
   assert.match(validateSourcePublicationClaims(stale, { sourceAvailability: "candidate_not_public" }).join("\n"), /source publication/);
 });
 
+test("published source claims reject stale publication-pending wording", () => {
+  const published = `
+Status: public source published; no public binary release
+DesktopLab's public source repository is live.
+Cloud providers are not public support claims yet.
+`;
+  assert.deepEqual(validateSourcePublicationClaims(published, { sourceAvailability: "public" }), []);
+
+  const stale = "Status: public-source candidate prepared, not published\nPublication is pending.";
+  assert.match(validateSourcePublicationClaims(stale, { sourceAvailability: "public" }).join("\n"), /source publication/);
+});
+
 test("security reporting distinguishes channel activation from external proof", () => {
   const activeButUnverified = `
 Use GitHub Private Vulnerability Reporting for confidential reports. The channel is enabled.

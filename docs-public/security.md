@@ -1,6 +1,6 @@
 # Security
 
-Status: public-source candidate; reporting activation and reverification pending
+Status: public source published; reporting enabled; current external reverification pending
 Date: 2026-07-20
 
 DesktopLab is a local-first development agent environment. Security boundaries matter because the app can work with repositories, local files, terminals, runtimes, providers and secrets.
@@ -9,13 +9,13 @@ DesktopLab is a local-first development agent environment. Security boundaries m
 
 Do not publish exploit details in public issues.
 
-The public source repository is not currently published. No public binary is shared by this status.
+The public source repository is live. No public binary is shared by this status.
 
-After the new public repository is published, use [GitHub Private Vulnerability Reporting](https://github.com/Vitalisimon/desktoplab/security/advisories) for confidential reports.
+Use [GitHub Private Vulnerability Reporting](https://github.com/Vitalisimon/desktoplab/security/advisories) for confidential reports.
 
-GitHub Private Vulnerability Reporting is not currently available because public repository publication is pending. Do not send vulnerability details through public issues or discussions while this channel is unavailable.
+GitHub Private Vulnerability Reporting is enabled on the current public repository. Do not send vulnerability details through public issues or discussions.
 
-Historical evidence: a historical external non-collaborator report completed the private end-to-end path on the former public repository. The authorized test report was received, triaged and closed without public disclosure. The channel must be enabled and reverified after the new repository is published. This page still does not claim released-binary support.
+No external private test report has been verified on this replacement repository yet. The former repository's reporting exercise remains historical and is not rebound to this source identity. Public beta binaries remain blocked until the current end-to-end path is verified. This page does not claim released-binary support.
 
 ## Supported Versions
 

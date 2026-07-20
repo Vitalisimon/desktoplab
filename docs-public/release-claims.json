@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceAvailability": "candidate_not_public",
+  "sourceAvailability": "public",
   "binaryReleasePlatforms": [
     "macosAppleSilicon"
   ],

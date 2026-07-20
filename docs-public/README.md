@@ -1,10 +1,10 @@
 # DesktopLab Public Documentation
 
-Status: public-source candidate
+Status: public source published; no public binary release
 Date: 2026-07-20
 
-This directory contains the documentation prepared for the future public
-DesktopLab source repository.
+This directory contains the public documentation for the DesktopLab source
+repository.
 
 Documentation outside `docs-public/` is internal by default unless a later public export gate explicitly promotes it.
 

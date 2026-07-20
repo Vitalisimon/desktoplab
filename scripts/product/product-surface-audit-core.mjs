@@ -23,7 +23,7 @@ export function validateSourcePublicationClaims(source, releaseClaims) {
   const failures = [];
   const expected = releaseClaims?.sourceAvailability;
   if (!expected) return ["machine-readable source publication claim is missing"];
-  const actual = classifyAvailability(source);
+  const actual = classifyAvailability(sourceStatus(source));
   if (actual !== expected) failures.push(`source publication is ${actual}, expected ${expected}`);
   if (expected !== "public" && [
     /\bpublic source repository is live\b/i,
@@ -34,6 +34,13 @@ export function validateSourcePublicationClaims(source, releaseClaims) {
     failures.push("source publication copy claims a live repository while publication is pending");
   }
   return failures;
+}
+
+function sourceStatus(source) {
+  return source
+    .split(/\r?\n/)
+    .find((line) => /^Status:\s*/i.test(line.trim()))
+    ?? source;
 }
 
 export function validatePlatformClaims(source, releaseClaims) {

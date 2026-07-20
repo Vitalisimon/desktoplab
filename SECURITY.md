@@ -1,6 +1,6 @@
 # Security Policy
 
-Status: public-source candidate; reporting activation and reverification pending
+Status: public source published; reporting enabled; current external reverification pending
 
 DesktopLab is local-first software that can inspect repositories, start local runtimes, execute commands after approval and store provider credentials through the native OS vault. Security reports must be handled privately before any public disclosure.
 
@@ -10,7 +10,7 @@ No public release is currently supported.
 
 | Version | Supported |
 | --- | --- |
-| public source snapshots | Not published; no versioned release support commitment |
+| public source snapshots | Source available; no versioned binary support commitment |
 | current public beta | Latest beta only, after the beta gate is accepted |
 | previous public beta | 30 days after the next beta is published |
 | future stable release | Current stable release and its immediate predecessor |
@@ -19,11 +19,11 @@ No public release is currently supported.
 
 Do not open a public issue with exploit details, secrets, credentials, private repository data, local file paths or proof-of-exploit payloads.
 
-After the new public repository is published, use [GitHub Private Vulnerability Reporting](https://github.com/Vitalisimon/desktoplab/security/advisories) for confidential reports.
+Use [GitHub Private Vulnerability Reporting](https://github.com/Vitalisimon/desktoplab/security/advisories) for confidential reports.
 
-GitHub Private Vulnerability Reporting is not currently available because public repository publication is pending. Do not send vulnerability details through public issues or discussions while this channel is unavailable.
+GitHub Private Vulnerability Reporting is enabled on the current public repository. Do not send vulnerability details through public issues or discussions.
 
-Historical evidence: an external non-collaborator report completed the private reporter-to-maintainer path on the former public repository. The authorized test report was received, triaged and closed without public disclosure. The channel must be enabled and reverified after the new repository is published. This historical proof does not release or support any DesktopLab binary.
+No external private test report has been verified on this replacement repository yet. The former repository's reporting exercise remains historical and is not rebound to this source identity. Public beta binaries remain blocked until the current reporter-to-maintainer path is verified. Source publication does not release or support any DesktopLab binary.
 
 Reports should include:
 

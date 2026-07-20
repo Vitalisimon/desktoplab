@@ -1,10 +1,10 @@
 # Supply Chain
 
-Status: public-source candidate automated; publication evidence pending
+Status: public source published; binary publication evidence pending
 Date: 2026-07-20
 
-DesktopLab source is prepared for historyless publication but is not currently
-public. No DesktopLab binary is publicly released.
+DesktopLab source is published through the audited historyless repository. No
+DesktopLab binary is publicly released.
 
 This page records the public-facing dependency, license and artifact hygiene boundary for beta candidates.
 
@@ -26,12 +26,12 @@ Git commit and all three lockfile hashes. The evidence includes:
 - scans of the historyless public export, packaged app and real diagnostics export;
 - artifact provenance comparison against the exact source commit.
 
-The command exits non-zero for any local evidence failure. The GitHub private
-vulnerability path was historically verified through an external report on
-2026-07-17. It must be enabled and reverified after the new repository is
-published. No environment flag can replace current external evidence, and
-binary release remains blocked whenever reporting or exact-source artifact
-provenance is stale or missing.
+The command exits non-zero for any local evidence failure. GitHub Private
+Vulnerability Reporting is enabled and the authenticated channel audit passes
+on the current repository. The external reporter-to-maintainer path still
+requires current-repository reverification. No environment flag can replace
+that external evidence, and binary release remains blocked whenever reporting
+or exact-source artifact provenance is stale or missing.
 
 ## Artifact Hygiene
 
