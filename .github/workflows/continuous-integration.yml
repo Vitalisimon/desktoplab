@@ -107,5 +107,11 @@ jobs:
       - name: Verify locked desktop packaging graph
         run: '"$HOME/.cargo/bin/cargo" metadata --locked --manifest-path apps/desktop/src-tauri/Cargo.toml --format-version 1 --no-deps >/dev/null'
 
+      - name: Verify desktop shell prerequisites
+        run: bash scripts/packaging/check-linux-build-prereqs.sh
+
       - name: Test locked workspace
         run: '"$HOME/.cargo/bin/cargo" test --locked --workspace --no-fail-fast'
+
+      - name: Test locked desktop shell
+        run: '"$HOME/.cargo/bin/cargo" test --locked --manifest-path apps/desktop/src-tauri/Cargo.toml --no-fail-fast'

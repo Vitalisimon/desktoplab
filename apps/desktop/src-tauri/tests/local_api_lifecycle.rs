@@ -166,20 +166,9 @@ fn packaged_local_api_shutdown_preserves_user_owned_ollama_verified_after_start(
 
     authorized_request(
         &api,
-        "POST /v1/setup/accept HTTP/1.1",
-        r#"{"runtimeId":"runtime.ollama","modelId":"model.qwen-coder-7b-q4"}"#,
-    );
-    authorized_request(
-        &api,
         "POST /v1/runtimes/runtime.ollama/verify HTTP/1.1",
         r#"{"versionOutput":"ollama 0.5.0"}"#,
     );
-    authorized_request(
-        &api,
-        "POST /v1/models/model.qwen-coder-7b-q4/verify HTTP/1.1",
-        r#"{"runtimeId":"runtime.ollama"}"#,
-    );
-    authorized_request(&api, "POST /v1/setup/complete HTTP/1.1", "{}");
 
     api.shutdown().expect("packaged local api should stop");
 
@@ -249,19 +238,32 @@ fn persist_ready_ollama_state(app_data: &std::path::Path) {
     let mut router = LocalApiRouter::with_storage_path(app_data.join("desktoplab.sqlite"))
         .expect("router should open");
     router.set_host_memory_gb_for_test(32);
+    let model_id = recommended_ollama_model(&mut router);
     let _ = route_json(
         &mut router,
         "POST",
         "/v1/setup/accept",
-        r#"{"runtimeId":"runtime.ollama","modelId":"model.qwen-coder-7b-q4"}"#,
+        &serde_json::json!({
+            "runtimeId": "runtime.ollama",
+            "modelId": &model_id,
+        })
+        .to_string(),
     );
     router.mark_runtime_verified_for_test("runtime.ollama", "ollama 0.5.0");
-    router.mark_model_verified_for_test(
-        "runtime.ollama",
-        "model.qwen-coder-7b-q4",
-        "qwen2.5-coder:7b",
-    );
+    router.mark_model_verified_for_test("runtime.ollama", &model_id, "catalog-backed test model");
     let _ = route_json(&mut router, "POST", "/v1/setup/complete", "{}");
+}
+
+fn recommended_ollama_model(router: &mut LocalApiRouter) -> String {
+    let preview = route_json(router, "GET", "/v1/setup/preview", "");
+    preview["modelRecommendations"]
+        .as_array()
+        .expect("setup preview should expose model recommendations")
+        .iter()
+        .find(|model| model["runtimeId"] == "runtime.ollama")
+        .and_then(|model| model["manifestId"].as_str())
+        .expect("catalog should recommend an Ollama model for the test host")
+        .to_string()
 }
 
 fn route_json(

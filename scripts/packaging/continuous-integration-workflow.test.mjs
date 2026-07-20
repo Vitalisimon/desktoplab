@@ -24,7 +24,12 @@ test("continuous integration covers contracts, frontend, and the Rust workspace"
     workflow,
     /cargo" metadata --locked --manifest-path apps\/desktop\/src-tauri\/Cargo\.toml/,
   );
+  assert.match(workflow, /bash scripts\/packaging\/check-linux-build-prereqs\.sh/);
   assert.match(workflow, /cargo" test --locked --workspace/);
+  assert.match(
+    workflow,
+    /cargo" test --locked --manifest-path apps\/desktop\/src-tauri\/Cargo\.toml --no-fail-fast/,
+  );
 });
 
 test("continuous integration is read-only and cannot invoke release signing", () => {
@@ -48,4 +53,8 @@ test("continuous integration is pinned to the isolated self-hosted Linux runner 
   assert.match(workflow, /persist-credentials: false/);
   assert.match(workflow, /"\$HOME\/\.cargo\/bin\/cargo" test --locked --workspace/);
   assert.match(workflow, /cargo" test --locked --workspace --no-fail-fast/);
+  assert.match(
+    workflow,
+    /"\$HOME\/\.cargo\/bin\/cargo" test --locked --manifest-path apps\/desktop\/src-tauri\/Cargo\.toml --no-fail-fast/,
+  );
 });
