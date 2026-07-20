@@ -40,7 +40,8 @@ test("stable desktop UI QA covers composer approvals terminal validation and dif
         path: "VISUAL_QA.md",
         content: "# Visual QA\n",
       }),
-      completeCall("Created VISUAL_QA.md.", "changed", ["write-visual-qa"]),
+      toolCall("read-written-visual-qa", "desktoplab.read_file", { path: "VISUAL_QA.md" }),
+      completeCall("Created VISUAL_QA.md.", "changed", ["write-visual-qa", "read-written-visual-qa"]),
     ]);
     await sendPrompt(page, "crea VISUAL_QA.md", "keyboard");
     await expect(page.getByRole("group", { name: "Thread approval required" })).toBeVisible();
@@ -74,12 +75,13 @@ test("stable desktop UI QA covers composer approvals terminal validation and dif
     screenshots.push(await capture(page, qaArtifactDir, run, theme, "05-failed-test.png", "agent", "failure"));
 
     await setNativeAgentBackend(request, [
+      toolCall("read-visual-qa-before-patch", "desktoplab.read_file", { path: "VISUAL_QA.md" }),
       toolCall("patch-visual-qa", "desktoplab.patch_file", {
         path: "VISUAL_QA.md",
         expected: "# Visual QA\n",
         replacement: "# Visual QA\n\nPatch evidence.\n",
       }),
-      completeCall("Updated VISUAL_QA.md.", "changed", ["patch-visual-qa"]),
+      completeCall("Updated VISUAL_QA.md.", "changed", ["read-visual-qa-before-patch", "patch-visual-qa"]),
     ]);
     await sendPrompt(page, "modifica VISUAL_QA.md aggiungendo evidence");
     await approveLatest(page, request, workspace.workspaceId);

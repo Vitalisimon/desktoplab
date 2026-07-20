@@ -16,10 +16,10 @@ test("agent parity: desktop UI can inspect, edit, validate and show diff through
 
   await setNativeAgentBackend(request, [
     toolCall("list-1", "desktoplab.list_files", {}),
-    completeCall("Repository summary: Agent Parity Fixture includes src/lib.rs.", "answered", ["list-1"]),
+    completeCall("Repository files include README.md, AGENTS.md and src/lib.rs.", "answered", ["list-1"]),
   ]);
   await sendPrompt(page, "spiega questa repo");
-  await expect(page.getByText("Repository summary: Agent Parity Fixture includes src/lib.rs.")).toBeVisible();
+  await expect(page.getByText("Repository files include README.md, AGENTS.md and src/lib.rs.")).toBeVisible();
 
   await setNativeAgentBackend(request, [
     toolCall("search-1", "desktoplab.search_text", { query: "AgentComposer", path: "." }),
@@ -39,7 +39,8 @@ test("agent parity: desktop UI can inspect, edit, validate and show diff through
       path: "prova.md",
       content: "# Prova\n\nNota iniziale.\n",
     }),
-    completeCall("Creato prova.md.", "changed", ["write-prova"]),
+    toolCall("read-written-prova", "desktoplab.read_file", { path: "prova.md" }),
+    completeCall("Creato prova.md.", "changed", ["write-prova", "read-written-prova"]),
   ]);
   await sendPrompt(page, "crea prova.md con una nota");
   await approveThreadAction(page, request, workspaceId);
@@ -52,7 +53,8 @@ test("agent parity: desktop UI can inspect, edit, validate and show diff through
       path: "manuale-tastiera.md",
       content: "# Scorciatoie da tastiera\n\n- Invio: invia il prompt.\n",
     }),
-    completeCall("Creato manuale-tastiera.md.", "changed", ["write-shortcuts"]),
+    toolCall("read-written-shortcuts", "desktoplab.read_file", { path: "manuale-tastiera.md" }),
+    completeCall("Creato manuale-tastiera.md.", "changed", ["write-shortcuts", "read-written-shortcuts"]),
   ]);
   await sendPrompt(page, "prova a creare un nuovo file doc, in cui descrivi le scorciatoie da tastiera");
   await approveThreadAction(page, request, workspaceId);
@@ -65,12 +67,13 @@ test("agent parity: desktop UI can inspect, edit, validate and show diff through
   await expect(page.getByText("clarification_required:file_target")).toHaveCount(0);
 
   await setNativeAgentBackend(request, [
+    toolCall("read-notes-before-patch", "desktoplab.read_file", { path: "notes.md" }),
     toolCall("patch-notes", "desktoplab.patch_file", {
       path: "notes.md",
       expected: "beta\n",
       replacement: "beta updated\n",
     }),
-    completeCall("Aggiornato notes.md.", "changed", ["patch-notes"]),
+    completeCall("Aggiornato notes.md.", "changed", ["read-notes-before-patch", "patch-notes"]),
   ]);
   await sendPrompt(page, "modifica notes.md aggiornando beta in beta updated");
   await approveThreadAction(page, request, workspaceId);
@@ -79,12 +82,13 @@ test("agent parity: desktop UI can inspect, edit, validate and show diff through
   expect(readFileSync(rootPath(workspaceRoot, "notes.md"), "utf8")).toBe("alpha\nbeta updated\ngamma\n");
 
   await setNativeAgentBackend(request, [
+    toolCall("read-prova-before-patch", "desktoplab.read_file", { path: "prova.md" }),
     toolCall("patch-prova", "desktoplab.patch_file", {
       path: "prova.md",
       expected: "# Prova\n\nNota iniziale.\n",
       replacement: "# Prova\n\nNota iniziale.\n\n## Seconda sezione\n\nAggiunta.\n",
     }),
-    completeCall("Modificato prova.md.", "changed", ["patch-prova"]),
+    completeCall("Modificato prova.md.", "changed", ["read-prova-before-patch", "patch-prova"]),
   ]);
   await sendPrompt(page, "modifica prova.md aggiungendo una sezione");
   await approveThreadAction(page, request, workspaceId);
@@ -103,13 +107,17 @@ test("agent parity: desktop UI can inspect, edit, validate and show diff through
 
   await setNativeAgentBackend(request, [
     toolCall("diff-1", "desktoplab.git_diff", {}),
-    completeCall("Mostro il diff.", "answered", ["diff-1"]),
+    completeCall("Git diff shows tracked changes in notes.md.", "answered", ["diff-1"]),
   ]);
   await sendPrompt(page, "mostrami il diff");
   const diffEvidence = page.getByLabel("Agent diff and validation evidence");
-  const latestMultiFileDiff = diffEvidence.locator("summary").filter({ hasText: "2 changed files" }).last();
-  await expect(latestMultiFileDiff).toBeVisible();
-  await latestMultiFileDiff.click();
+  const latestTrackedDiff = diffEvidence.locator("summary").filter({ hasText: "Changed notes.md" }).last();
+  await expect(latestTrackedDiff).toBeVisible();
+  await latestTrackedDiff.click();
+  await expect(diffEvidence.locator("pre").filter({ hasText: "diff --git a/notes.md b/notes.md" }).last()).toBeVisible();
+  const createdFilePatch = diffEvidence.locator("summary").filter({ hasText: "Changed prova.md" }).last();
+  await expect(createdFilePatch).toBeVisible();
+  await createdFilePatch.click();
   await expect(diffEvidence.locator("pre").filter({ hasText: "diff --git a/prova.md b/prova.md" }).last()).toBeVisible();
 });
 
@@ -124,6 +132,7 @@ test("agent parity: desktop UI keeps read patch test loop in one native session"
 
   await setNativeAgentBackend(request, [
     toolCall("read-readme", "desktoplab.read_file", { path: "README.md" }),
+    toolCall("read-answer-before-patch", "desktoplab.read_file", { path: "src/lib.rs" }),
     toolCall("patch-answer", "desktoplab.patch_file", {
       path: "src/lib.rs",
       expected: "pub fn answer() -> i32 { 41 }\n",
@@ -132,6 +141,7 @@ test("agent parity: desktop UI keeps read patch test loop in one native session"
     toolCall("test-answer", "desktoplab.run_tests", { command: "node test.js" }),
     completeCall("Summary: README letto, src/lib.rs corretto, node test.js passato.", "verified", [
       "read-readme",
+      "read-answer-before-patch",
       "patch-answer",
       "test-answer",
     ]),
@@ -161,6 +171,7 @@ test("agent parity: desktop UI repairs a failing test and reruns native validati
 
   await setNativeAgentBackend(request, [
     toolCall("test-failing", "desktoplab.run_tests", { command: "node test.js" }),
+    toolCall("read-answer-after-failure", "desktoplab.read_file", { path: "src/lib.rs" }),
     toolCall("patch-from-failure", "desktoplab.patch_file", {
       path: "src/lib.rs",
       expected: "pub fn answer() -> i32 { 41 }\n",
