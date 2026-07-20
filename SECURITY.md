@@ -1,6 +1,6 @@
 # Security Policy
 
-Status: public source published; reporting enabled; current external reverification pending
+Status: public source published; reporting enabled; external path verified
 
 DesktopLab is local-first software that can inspect repositories, start local runtimes, execute commands after approval and store provider credentials through the native OS vault. Security reports must be handled privately before any public disclosure.
 
@@ -23,7 +23,7 @@ Use [GitHub Private Vulnerability Reporting](https://github.com/Vitalisimon/desk
 
 GitHub Private Vulnerability Reporting is enabled on the current public repository. Do not send vulnerability details through public issues or discussions.
 
-No external private test report has been verified on this replacement repository yet. The former repository's reporting exercise remains historical and is not rebound to this source identity. Public beta binaries remain blocked until the current reporter-to-maintainer path is verified. Source publication does not release or support any DesktopLab binary.
+The reporter-to-maintainer path has been verified end to end on this repository by an authorized external non-collaborator report. The report was received, triaged and closed without public disclosure. This channel proof does not release or support any DesktopLab binary; public beta binaries remain blocked by the separate exact-source signing and certification gates.
 
 Reports should include:
 
