@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Default DesktopLab packaged shell capabilities.",
+  "windows": ["main"],
+  "permissions": ["core:default", "dialog:allow-open", "local-api-bootstrap", "window-shell"]
+}

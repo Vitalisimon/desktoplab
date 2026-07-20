@@ -1,0 +1,272 @@
+name: Packaging Evidence
+
+on:
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: "Release channel to package"
+        required: true
+        default: "dev"
+        type: choice
+        options:
+          - dev
+          - beta
+          - stable
+      target:
+        description: "Target platform to package"
+        required: true
+        default: "all"
+        type: choice
+        options:
+          - all
+          - macos-aarch64
+          - windows-x64
+          - linux-x64
+      runner_profile:
+        description: "Runner pool. GitHub-hosted may be billing-blocked; self-hosted labels are for project-owned runners."
+        required: true
+        default: "github-hosted"
+        type: choice
+        options:
+          - github-hosted
+          - self-hosted
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktoplab-packaging-${{ inputs.channel }}-${{ inputs.target }}
+  cancel-in-progress: false
+
+env:
+  CARGO_INCREMENTAL: "0"
+  CARGO_PROFILE_DEV_DEBUG: "0"
+  CARGO_PROFILE_TEST_DEBUG: "0"
+
+jobs:
+  package-macos:
+    name: Package macos-aarch64
+    if: inputs.target == 'all' || inputs.target == 'macos-aarch64'
+    runs-on: ${{ fromJSON(inputs.runner_profile == 'self-hosted' && '["self-hosted","desktoplab-macos-aarch64"]' || '"macos-latest"') }}
+    env:
+      DESKTOPLAB_RELEASE_CHANNEL: ${{ inputs.channel }}
+      DESKTOPLAB_RELEASE_TARGET: macos-aarch64
+      DESKTOPLAB_RUNNER_PROFILE: ${{ inputs.runner_profile }}
+      DESKTOPLAB_MACOS_SIGNING_IDENTITY: ${{ secrets.DESKTOPLAB_MACOS_SIGNING_IDENTITY }}
+      APPLE_KEYCHAIN_PROFILE: ${{ secrets.APPLE_KEYCHAIN_PROFILE }}
+      WINDOWS_SIGNING_CERTIFICATE_PATH: ${{ secrets.WINDOWS_SIGNING_CERTIFICATE_PATH }}
+      WINDOWS_SIGNING_TIMESTAMP_URL: ${{ secrets.WINDOWS_SIGNING_TIMESTAMP_URL }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4 # stable
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate locked dependency graphs
+        run: |
+          cargo check --locked --workspace --all-targets
+          cargo check --locked --manifest-path apps/desktop/src-tauri/Cargo.toml --all-targets
+
+      - name: Validate packaging contracts
+        run: cargo test --locked -p desktoplab-packaging
+
+      - name: Check packaging prerequisites
+        run: npm run desktop:package:check-prereqs
+
+      - name: Build unsigned dev package evidence
+        if: inputs.channel == 'dev'
+        run: npm run desktop:package:dev
+
+      - name: Reject lockfile drift
+        if: inputs.channel == 'dev'
+        run: bash scripts/packaging/verify-lockfiles-clean.sh
+
+      - name: Block unsigned beta and stable package evidence
+        if: inputs.channel != 'dev'
+        run: |
+          echo "beta/stable packaging requires signing evidence before artifacts are built in CI."
+          exit 1
+
+      - name: Verify current-head artifact manifest and checksums
+        if: inputs.channel == 'dev'
+        run: npm run packaging:verify
+
+      - name: Upload packaging evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: desktoplab-packaging-macos-aarch64-${{ inputs.channel }}
+          path: |
+            dist/desktoplab-packaging/**
+            apps/desktop/src-tauri/target/debug/bundle/**
+          if-no-files-found: error
+
+  package-windows:
+    name: Package windows-x64
+    if: inputs.target == 'all' || inputs.target == 'windows-x64'
+    runs-on: ${{ fromJSON(inputs.runner_profile == 'self-hosted' && '["self-hosted","desktoplab-windows-x64"]' || '"windows-latest"') }}
+    env:
+      DESKTOPLAB_RELEASE_CHANNEL: ${{ inputs.channel }}
+      DESKTOPLAB_RELEASE_TARGET: windows-x64
+      DESKTOPLAB_RUNNER_PROFILE: ${{ inputs.runner_profile }}
+      DESKTOPLAB_MACOS_SIGNING_IDENTITY: ${{ secrets.DESKTOPLAB_MACOS_SIGNING_IDENTITY }}
+      APPLE_KEYCHAIN_PROFILE: ${{ secrets.APPLE_KEYCHAIN_PROFILE }}
+      WINDOWS_SIGNING_CERTIFICATE_PATH: ${{ secrets.WINDOWS_SIGNING_CERTIFICATE_PATH }}
+      WINDOWS_SIGNING_TIMESTAMP_URL: ${{ secrets.WINDOWS_SIGNING_TIMESTAMP_URL }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4 # stable
+
+      - name: Set up MSVC x64 environment
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756
+        with:
+          arch: x64
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate locked dependency graphs
+        run: |
+          cargo check --locked --workspace --all-targets
+          cargo check --locked --manifest-path apps/desktop/src-tauri/Cargo.toml --all-targets
+
+      - name: Validate packaging contracts
+        run: cargo test --locked -p desktoplab-packaging
+
+      - name: Check packaging prerequisites
+        run: npm run desktop:package:check-prereqs
+
+      - name: Build unsigned dev package evidence
+        if: inputs.channel == 'dev'
+        run: npm run desktop:package:dev
+
+      - name: Reject lockfile drift
+        if: inputs.channel == 'dev'
+        run: bash scripts/packaging/verify-lockfiles-clean.sh
+
+      - name: Block unsigned beta and stable package evidence
+        if: inputs.channel != 'dev'
+        run: |
+          echo "beta/stable packaging requires signing evidence before artifacts are built in CI."
+          exit 1
+
+      - name: Verify current-head artifact manifest and checksums
+        if: inputs.channel == 'dev'
+        run: npm run packaging:verify
+
+      - name: Report source drift after a failed Windows package
+        if: failure() && inputs.channel == 'dev'
+        run: |
+          git status --short
+          git diff -- apps/desktop/src-tauri/Cargo.toml
+
+      - name: Upload packaging evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: desktoplab-packaging-windows-x64-${{ inputs.channel }}
+          path: |
+            dist/desktoplab-packaging/**
+            apps/desktop/src-tauri/target/debug/bundle/**
+          if-no-files-found: error
+
+  package-linux:
+    name: Package linux-x64
+    if: inputs.target == 'all' || inputs.target == 'linux-x64'
+    runs-on: ${{ fromJSON(inputs.runner_profile == 'self-hosted' && '["self-hosted","desktoplab-linux-x64"]' || '"ubuntu-latest"') }}
+    env:
+      DESKTOPLAB_RELEASE_CHANNEL: ${{ inputs.channel }}
+      DESKTOPLAB_RELEASE_TARGET: linux-x64
+      DESKTOPLAB_RUNNER_PROFILE: ${{ inputs.runner_profile }}
+      DESKTOPLAB_MACOS_SIGNING_IDENTITY: ${{ secrets.DESKTOPLAB_MACOS_SIGNING_IDENTITY }}
+      APPLE_KEYCHAIN_PROFILE: ${{ secrets.APPLE_KEYCHAIN_PROFILE }}
+      WINDOWS_SIGNING_CERTIFICATE_PATH: ${{ secrets.WINDOWS_SIGNING_CERTIFICATE_PATH }}
+      WINDOWS_SIGNING_TIMESTAMP_URL: ${{ secrets.WINDOWS_SIGNING_TIMESTAMP_URL }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4 # stable
+
+      - name: Install Linux build prerequisites
+        if: inputs.runner_profile == 'github-hosted'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential curl file libayatana-appindicator3-dev librsvg2-dev \
+            libssl-dev libwebkit2gtk-4.1-dev libxdo-dev patchelf rpm wget
+
+      - name: Verify self-hosted Linux build prerequisites
+        if: inputs.runner_profile == 'self-hosted'
+        run: bash scripts/packaging/check-linux-build-prereqs.sh
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate locked dependency graphs
+        run: |
+          cargo check --locked --workspace --all-targets
+          cargo check --locked --manifest-path apps/desktop/src-tauri/Cargo.toml --all-targets
+
+      - name: Validate packaging contracts
+        run: cargo test --locked -p desktoplab-packaging
+
+      - name: Check packaging prerequisites
+        run: npm run desktop:package:check-prereqs
+
+      - name: Build unsigned dev package evidence
+        if: inputs.channel == 'dev'
+        run: npm run desktop:package:dev
+
+      - name: Reject lockfile drift
+        if: inputs.channel == 'dev'
+        run: bash scripts/packaging/verify-lockfiles-clean.sh
+
+      - name: Block unsigned beta and stable package evidence
+        if: inputs.channel != 'dev'
+        run: |
+          echo "beta/stable packaging requires signing evidence before artifacts are built in CI."
+          exit 1
+
+      - name: Verify current-head artifact manifest and checksums
+        if: inputs.channel == 'dev'
+        run: npm run packaging:verify
+
+      - name: Upload packaging evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: desktoplab-packaging-linux-x64-${{ inputs.channel }}
+          path: |
+            dist/desktoplab-packaging/**
+            apps/desktop/src-tauri/target/debug/bundle/**
+          if-no-files-found: error

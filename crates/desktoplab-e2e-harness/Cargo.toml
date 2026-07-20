@@ -1,0 +1,30 @@
+[package]
+name = "desktoplab-e2e-harness"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "DesktopLab backend/core end-to-end harness."
+
+[dependencies]
+desktoplab-agent-engine = { path = "../desktoplab-agent-engine" }
+desktoplab-backend-services = { path = "../desktoplab-backend-services" }
+desktoplab-hardware-wizard = { path = "../desktoplab-hardware-wizard" }
+desktoplab-policy = { path = "../desktoplab-policy" }
+desktoplab-tool-gateway = { path = "../desktoplab-tool-gateway" }
+desktoplab-workspace = { path = "../desktoplab-workspace" }
+
+[dev-dependencies]
+desktoplab-agent-session = { path = "../desktoplab-agent-session" }
+desktoplab-acp-plugin = { path = "../desktoplab-acp-plugin" }
+desktoplab-backends = { path = "../desktoplab-backends" }
+desktoplab-downloads = { path = "../desktoplab-downloads" }
+desktoplab-domain = { path = "../desktoplab-domain" }
+desktoplab-execution-router = { path = "../desktoplab-execution-router" }
+desktoplab-registry = { path = "../desktoplab-registry" }
+desktoplab-smoke-cli = { path = "../desktoplab-smoke-cli" }
+tempfile = "3"
+xtask = { path = "../../xtask" }
+
+[lib]
+path = "src/lib.rs"

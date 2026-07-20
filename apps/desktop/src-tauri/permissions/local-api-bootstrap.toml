@@ -1,0 +1,4 @@
+[[permission]]
+identifier = "local-api-bootstrap"
+description = "Allows the DesktopLab shell to fetch the local API base URL and per-run auth token."
+commands.allow = ["local_api_bootstrap"]

@@ -1,0 +1,56 @@
+name: Feature request
+description: Propose a product capability or improvement.
+title: "[Feature]: "
+labels:
+  - enhancement
+  - triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe the user problem before proposing implementation. Do not include private repository data, credentials or confidential provider details.
+  - type: textarea
+    id: problem
+    attributes:
+      label: User problem
+      description: Who is blocked, what are they trying to do and why is the current behavior insufficient?
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome
+      description: Describe the observable result without prescribing internal architecture.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Product area
+      options:
+        - Agent execution
+        - Files and terminal
+        - Runtime and models
+        - Providers and bridges
+        - Projects and sessions
+        - Approvals and security
+        - Setup and diagnostics
+        - Packaging and updates
+        - User interface
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Include current workarounds or related tools when relevant.
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Submission check
+      options:
+        - label: I searched existing issues and discussions for the same request.
+          required: true
+        - label: This request contains no secrets, credentials or private repository content.
+          required: true

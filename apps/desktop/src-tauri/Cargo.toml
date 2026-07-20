@@ -1,0 +1,27 @@
+[package]
+name = "desktoplab-desktop"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "desktoplab_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[dependencies]
+desktoplab-control-plane = { path = "../../../crates/desktoplab-control-plane" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2.7.2"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dev-dependencies]
+tempfile = "3"
+xtask = { path = "../../../xtask" }
+
+[workspace]
+
+[patch.crates-io]
+glib = { path = "../../../third_party/glib-0.18.5-desktoplab" }

@@ -1,0 +1,20 @@
+[package]
+name = "desktoplab-model-manager"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "DesktopLab model inventory, download planning and verification."
+
+[dependencies]
+desktoplab-compatibility = { path = "../desktoplab-compatibility" }
+desktoplab-runtime = { path = "../desktoplab-runtime" }
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "rustls-tls"] }
+sha2 = "0.10"
+
+[dev-dependencies]
+tempfile = "3"
+xtask = { path = "../../xtask" }
+
+[lib]
+path = "src/lib.rs"

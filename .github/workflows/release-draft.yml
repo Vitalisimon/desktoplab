@@ -1,0 +1,159 @@
+name: Draft Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_ref:
+        description: "Existing exact tag ref, for example refs/tags/v0.1.0-beta.1"
+        required: true
+        type: string
+      channel:
+        description: "Release channel"
+        required: true
+        type: choice
+        options: [beta, stable]
+      candidate_artifacts:
+        description: "One run-id:artifact-name pair per line"
+        required: true
+        type: string
+      candidate_state_artifact:
+        description: "One run-id:artifact-name pair containing post-sign release candidate evidence"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: desktoplab-release-draft-${{ inputs.release_ref }}
+  cancel-in-progress: false
+
+jobs:
+  draft:
+    name: Assemble private draft release
+    runs-on: ubuntu-24.04
+    environment: release-draft
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_REF: ${{ inputs.release_ref }}
+      RELEASE_CHANNEL: ${{ inputs.channel }}
+    steps:
+      - name: Check out exact tagged source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_ref }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact immutable source
+        shell: bash
+        run: |
+          if [ "$RELEASE_CHANNEL" = "beta" ]; then
+            [[ "$RELEASE_REF" =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+-beta\.[1-9][0-9]*$ ]]
+          else
+            [[ "$RELEASE_REF" =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          fi
+          test "$GITHUB_REF" = "$RELEASE_REF"
+          test -z "$(git status --porcelain=v1)"
+          test "$(git cat-file -t "$RELEASE_REF")" = "tag"
+          test "$(git rev-parse HEAD)" = "$(git rev-parse "$RELEASE_REF^{commit}")"
+
+      - name: Verify canonical public source
+        run: npm run release:verify-public-source
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Download exact candidate state
+        shell: bash
+        env:
+          CANDIDATE_STATE_ARTIFACT: ${{ inputs.candidate_state_artifact }}
+        run: |
+          [[ "$CANDIDATE_STATE_ARTIFACT" =~ ^[0-9]+:[A-Za-z0-9._-]+$ ]]
+          run_id="${CANDIDATE_STATE_ARTIFACT%%:*}"
+          artifact_name="${CANDIDATE_STATE_ARTIFACT#*:}"
+          run_json="$(gh run view "$run_id" --json headSha,conclusion)"
+          test "$(jq -r .conclusion <<<"$run_json")" = "success"
+          test "$(jq -r .headSha <<<"$run_json")" = "$(git rev-parse HEAD)"
+          mkdir -p dist/release/candidate-state
+          gh run download "$run_id" --name "$artifact_name" --dir dist/release/candidate-state
+          mapfile -t candidates < <(find dist/release/candidate-state -name release-candidate.json -type f -print)
+          test "${#candidates[@]}" -eq 1
+          printf 'CANDIDATE_STATE=%s\n' "${candidates[0]}" >> "$GITHUB_ENV"
+
+      - name: Verify admitted release tag
+        run: npm run release:verify-tag -- --candidate "$CANDIDATE_STATE" --release-ref "$RELEASE_REF"
+
+      - name: Download exact-head candidate evidence
+        shell: bash
+        env:
+          CANDIDATE_ARTIFACTS: ${{ inputs.candidate_artifacts }}
+        run: |
+          mkdir -p dist/release/candidates
+          count=0
+          while IFS= read -r candidate; do
+            test -z "$candidate" && continue
+            [[ "$candidate" =~ ^[0-9]+:[A-Za-z0-9._-]+$ ]]
+            run_id="${candidate%%:*}"
+            artifact_name="${candidate#*:}"
+            run_json="$(gh run view "$run_id" --json headSha,conclusion)"
+            test "$(jq -r .conclusion <<<"$run_json")" = "success"
+            test "$(jq -r .headSha <<<"$run_json")" = "$(git rev-parse HEAD)"
+            destination="dist/release/candidates/$count-$artifact_name"
+            gh run download "$run_id" --name "$artifact_name" --dir "$destination"
+            count=$((count + 1))
+          done <<< "$CANDIDATE_ARTIFACTS"
+          test "$count" -gt 0
+
+      - name: Generate exact-head SBOM and updater boundary
+        run: |
+          npm run release:sbom -- --output dist/release/sbom.cdx.json
+          npm run packaging:verify:updater-disabled
+
+      - name: Verify platform candidate convergence
+        shell: bash
+        run: |
+          evidence_args=()
+          while IFS= read -r path; do evidence_args+=(--evidence "$path"); done < <(find dist/release/candidates -type f \( -name artifact-manifest.json -o -name linux-signed-artifact-manifest.json -o -name signpath-provenance.json \) -print | sort)
+          npm run release:verify-platform-convergence -- --candidate "$CANDIDATE_STATE" "${evidence_args[@]}" --output dist/release/platform-convergence.json
+          npm run release:candidate -- transition --candidate "$CANDIDATE_STATE" --to cross_platform_pass --evidence dist/release/platform-convergence.json --output "$CANDIDATE_STATE"
+
+      - name: Assemble verified release allowlist
+        shell: bash
+        run: |
+          evidence_args=()
+          while IFS= read -r directory; do evidence_args+=(--evidence-dir "$directory"); done < <(find dist/release/candidates -mindepth 1 -maxdepth 1 -type d -print | sort)
+          node scripts/release/prepare-release-assembly.mjs \
+            --release-ref "$RELEASE_REF" \
+            --channel "$RELEASE_CHANNEL" \
+            "${evidence_args[@]}" \
+            --sbom dist/release/sbom.cdx.json \
+            --updater-proof dist/release/updater-disabled-proof.json \
+            --candidate "$CANDIDATE_STATE" \
+            --output-dir dist/release/assembly
+
+      - name: Create draft from existing tag only
+        shell: bash
+        run: |
+          release_tag="${RELEASE_REF#refs/tags/}"
+          mapfile -t assets < dist/release/assembly/release-files.txt
+          test "${#assets[@]}" -gt 0
+          gh release create "$release_tag" \
+            --verify-tag \
+            --draft \
+            --title "DesktopLab $release_tag" \
+            --notes-file dist/release/assembly/draft-release-notes.md \
+            "${assets[@]}"
+
+      - name: Preserve manual publication gate
+        run: echo "Private draft assembled. Binary publication remains blocked on the final release gate."

@@ -1,0 +1,111 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktoplab-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_INCREMENTAL: "0"
+  CARGO_PROFILE_TEST_DEBUG: "0"
+
+jobs:
+  contracts:
+    name: Contracts and public boundary
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on:
+      - self-hosted
+      - desktoplab-linux-x64
+    steps:
+      - name: Check out source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Run script contract tests
+        shell: bash
+        run: find scripts -name '*.test.mjs' -print0 | sort -z | xargs -0 node --test
+
+      - name: Guard public product claims
+        run: npm run product:claim-guard
+
+      - name: Scan tracked source for secrets
+        run: node scripts/security/scan-tracked-secrets.mjs
+
+      - name: Verify historyless public export boundary
+        run: npm run product:public-export:audit
+
+  frontend:
+    name: Frontend
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on:
+      - self-hosted
+      - desktoplab-linux-x64
+    steps:
+      - name: Check out source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Run frontend checks
+        run: npm run desktop:check
+
+      - name: Build frontend
+        run: npm run desktop:build
+
+  rust:
+    name: Rust workspace
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on:
+      - self-hosted
+      - desktoplab-linux-x64
+    steps:
+      - name: Check out source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Node for executor integration tests
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+
+      - name: Install pinned Rust toolchain
+        run: |
+          "$HOME/.cargo/bin/rustup" toolchain install 1.96.0 --profile minimal
+          "$HOME/.cargo/bin/rustup" default 1.96.0
+
+      - name: Verify locked desktop packaging graph
+        run: '"$HOME/.cargo/bin/cargo" metadata --locked --manifest-path apps/desktop/src-tauri/Cargo.toml --format-version 1 --no-deps >/dev/null'
+
+      - name: Test locked workspace
+        run: '"$HOME/.cargo/bin/cargo" test --locked --workspace --no-fail-fast'

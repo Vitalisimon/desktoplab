@@ -1,0 +1,15 @@
+{
+  "kind": "desktoplab.skill-distribution",
+  "schemaVersion": 1,
+  "id": "desktoplab.repo-agent-distribution",
+  "clients": [],
+  "instructions": [
+    {
+      "id": "desktoplab.repo.instructions",
+      "owner": "repo",
+      "path": "AGENTS.md",
+      "authoritative": true
+    }
+  ],
+  "skills": []
+}

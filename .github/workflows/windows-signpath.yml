@@ -1,0 +1,230 @@
+name: Windows SignPath Trusted Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_ref:
+        description: "Exact annotated release tag, for example refs/tags/v0.1.0-beta.1"
+        required: true
+        type: string
+      version:
+        description: "Exact tag version without v, including beta suffix when applicable"
+        required: true
+        type: string
+      channel:
+        description: "Signed release channel"
+        required: true
+        default: "beta"
+        type: choice
+        options:
+          - beta
+          - stable
+      submit_for_signing:
+        description: "Submit to SignPath after Foundation acceptance"
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: desktoplab-windows-signpath-${{ inputs.release_ref }}
+  cancel-in-progress: false
+
+jobs:
+  eligibility:
+    name: Validate public signing eligibility
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_ref }}
+
+      - name: Verify exact annotated release source
+        shell: bash
+        env:
+          RELEASE_REF: ${{ inputs.release_ref }}
+          RELEASE_VERSION: ${{ inputs.version }}
+          RELEASE_CHANNEL: ${{ inputs.channel }}
+        run: |
+          test "$(git cat-file -t "$RELEASE_REF")" = "tag"
+          test "$(git rev-parse HEAD)" = "$(git rev-parse "$RELEASE_REF^{commit}")"
+          if [ "$RELEASE_CHANNEL" = "beta" ]; then
+            test "$RELEASE_REF" = "refs/tags/v${RELEASE_VERSION}"
+            [[ "$RELEASE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+-beta\.[1-9][0-9]*$ ]]
+          else
+            test "$RELEASE_REF" = "refs/tags/v${RELEASE_VERSION}"
+            [[ "$RELEASE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          fi
+
+      - name: Verify canonical public source
+        run: npm run release:verify-public-source
+
+      - name: Validate SignPath workflow contract
+        run: npm run packaging:signpath:contract-test
+
+      - name: Reject signing before the repository is public
+        if: inputs.submit_for_signing && github.event.repository.visibility != 'public'
+        run: |
+          echo "SignPath Foundation submission requires the public repository and accepted project configuration."
+          exit 1
+
+      - name: Keep contract-only runs inert
+        if: ${{ !inputs.submit_for_signing }}
+        run: echo "SignPath contract is ready; no signing request was submitted."
+
+  build-sign-verify:
+    name: Build, sign and verify windows-x64
+    needs: eligibility
+    if: inputs.submit_for_signing
+    runs-on: windows-latest
+    env:
+      DESKTOPLAB_RELEASE_CHANNEL: ${{ inputs.channel }}
+      DESKTOPLAB_RELEASE_TARGET: windows-x64
+      DESKTOPLAB_RUNNER_PROFILE: github-hosted:windows-x64
+      DESKTOPLAB_BUILD_WORKFLOW: github:windows-signpath
+      SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
+      SIGNPATH_ORGANIZATION_ID: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+      SIGNPATH_PROJECT_SLUG: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+      SIGNPATH_SIGNING_POLICY_SLUG: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+      SIGNPATH_ARTIFACT_CONFIGURATION_SLUG: ${{ vars.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_ref }}
+
+      - name: Verify exact annotated release source
+        shell: bash
+        env:
+          RELEASE_REF: ${{ inputs.release_ref }}
+        run: |
+          test "$(git cat-file -t "$RELEASE_REF")" = "tag"
+          test "$(git rev-parse HEAD)" = "$(git rev-parse "$RELEASE_REF^{commit}")"
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Verify canonical public source
+        run: npm run release:verify-public-source
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Require accepted SignPath configuration
+        shell: pwsh
+        run: |
+          $required = @(
+            "SIGNPATH_API_TOKEN",
+            "SIGNPATH_ORGANIZATION_ID",
+            "SIGNPATH_PROJECT_SLUG",
+            "SIGNPATH_SIGNING_POLICY_SLUG",
+            "SIGNPATH_ARTIFACT_CONFIGURATION_SLUG"
+          )
+          foreach ($name in $required) {
+            if ([string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($name))) {
+              throw "Missing required SignPath configuration: $name"
+            }
+          }
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate packaging and signing contracts
+        run: |
+          cargo test --locked -p desktoplab-packaging
+          npm run packaging:verify:windows-signing
+          npm run packaging:signpath:contract-test
+
+      - name: Build unsigned Windows input artifact
+        shell: bash
+        run: npm run desktop:package:dev
+
+      - name: Stage one NSIS input artifact
+        id: stage
+        shell: pwsh
+        run: |
+          $installers = @(Get-ChildItem apps/desktop/src-tauri/target/debug/bundle/nsis/*.exe)
+          if ($installers.Count -ne 1) {
+            throw "Expected exactly one unsigned NSIS installer, found $($installers.Count)."
+          }
+          New-Item -ItemType Directory -Force dist/signpath-input | Out-Null
+          $name = "DesktopLab-${{ inputs.version }}-windows-x64-${{ inputs.channel }}.exe"
+          $destination = Join-Path (Resolve-Path dist/signpath-input) $name
+          Copy-Item -LiteralPath $installers[0].FullName -Destination $destination
+          "artifact_path=$destination" >> $env:GITHUB_OUTPUT
+
+      - name: Upload unsigned artifact for trusted-build verification
+        id: upload-unsigned
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktoplab-signpath-input-${{ inputs.version }}-${{ inputs.channel }}
+          path: ${{ steps.stage.outputs.artifact_path }}
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Submit SignPath signing request
+        id: signpath
+        uses: signpath/github-action-submit-signing-request@v2
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+          artifact-configuration-slug: ${{ vars.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG }}
+          github-artifact-id: ${{ steps.upload-unsigned.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: dist/signpath-signed
+          parameters: |
+            version: ${{ toJSON(inputs.version) }}
+
+      - name: Verify trusted signatures and installed product
+        id: verify
+        shell: pwsh
+        run: |
+          $installers = @(Get-ChildItem dist/signpath-signed -Recurse -Filter *.exe)
+          if ($installers.Count -ne 1) {
+            throw "Expected exactly one signed NSIS installer, found $($installers.Count)."
+          }
+          $signature = Get-AuthenticodeSignature -LiteralPath $installers[0].FullName
+          if ($signature.Status -ne "Valid") {
+            throw "SignPath artifact Authenticode status is $($signature.Status)."
+          }
+          if ($signature.SignerCertificate.Subject -eq $signature.SignerCertificate.Issuer) {
+            throw "Public SignPath evidence cannot use a self-signed certificate."
+          }
+          & signtool.exe verify /pa /all /v $installers[0].FullName
+          if ($LASTEXITCODE -ne 0) { throw "signtool verification failed." }
+          pwsh -NoProfile -File scripts/packaging/windows-install-smoke.ps1 `
+            -ArtifactPath $installers[0].FullName `
+            -RequireValidSignature |
+            Tee-Object -FilePath dist/signpath-signed/windows-install-smoke.log
+          [ordered]@{
+            status = $signature.Status.ToString()
+            subject = $signature.SignerCertificate.Subject
+            issuer = $signature.SignerCertificate.Issuer
+            thumbprint = $signature.SignerCertificate.Thumbprint
+          } | ConvertTo-Json | Set-Content dist/signpath-signed/authenticode.json
+          "artifact_path=$($installers[0].FullName)" >> $env:GITHUB_OUTPUT
+
+      - name: Record signed artifact provenance
+        env:
+          SIGNPATH_SIGNING_REQUEST_ID: ${{ steps.signpath.outputs.signing-request-id }}
+          SIGNPATH_SIGNING_REQUEST_URL: ${{ steps.signpath.outputs.signing-request-web-url }}
+          SIGNPATH_SOURCE_ARTIFACT_ID: ${{ steps.upload-unsigned.outputs.artifact-id }}
+          SIGNPATH_SIGNED_ARTIFACT: ${{ steps.verify.outputs.artifact_path }}
+        run: node scripts/packaging/windows-signpath-evidence.mjs
+
+      - name: Upload signed Windows evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktoplab-windows-x64-${{ inputs.channel }}-signed
+          path: dist/signpath-signed/**
+          if-no-files-found: error
+          retention-days: 30

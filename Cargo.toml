@@ -1,0 +1,35 @@
+[workspace]
+members = [
+  "crates/desktoplab-agent-engine",
+  "crates/desktoplab-agent-session",
+  "crates/desktoplab-backends",
+  "crates/desktoplab-backend-services",
+  "crates/desktoplab-control-plane",
+  "crates/desktoplab-downloads",
+  "crates/desktoplab-e2e-harness",
+  "crates/desktoplab-compatibility",
+  "crates/desktoplab-packaging",
+  "crates/desktoplab-domain",
+  "crates/desktoplab-events",
+  "crates/desktoplab-execution-router",
+  "crates/desktoplab-hardware-wizard",
+  "crates/desktoplab-model-manager",
+  "crates/desktoplab-policy",
+  "crates/desktoplab-redaction",
+  "crates/desktoplab-registry",
+  "crates/desktoplab-runtime",
+  "crates/desktoplab-security-gates",
+  "crates/desktoplab-smoke-cli",
+  "crates/desktoplab-storage",
+  "crates/desktoplab-tool-gateway",
+  "crates/desktoplab-vault",
+  "crates/desktoplab-workspace",
+  "crates/desktoplab-acp-plugin",
+  "xtask",
+]
+resolver = "2"
+
+[workspace.package]
+edition = "2024"
+license = "Apache-2.0"
+rust-version = "1.96"

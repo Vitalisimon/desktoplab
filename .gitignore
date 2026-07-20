@@ -1,0 +1,28 @@
+node_modules/
+target/
+dist/
+.env
+.env.*
+!.env.example
+
+# Private local planning and operating documents. Public docs live in docs-public/.
+docs/
+.DS_Store
+*.tsbuildinfo
+apps/desktop/dist/
+apps/desktop/test-results/
+apps/desktop/playwright-report/
+apps/desktop/test-artifacts/
+apps/desktop/src-tauri/gen/
+dist/desktoplab-packaging/
+*.dmg
+*.msi
+*.AppImage
+*.deb
+*.rpm
+
+# Local third-party source references used for product/code audits.
+.external-references/
+
+# Private evaluation tasks and answers must never enter Git or app bundles.
+.desktoplab/evaluation/holdouts/

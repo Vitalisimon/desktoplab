@@ -1,0 +1,146 @@
+name: Linux Release Signing
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_ref:
+        description: "Exact release tag ref, for example refs/tags/v0.1.0-beta.1"
+        required: true
+        type: string
+      channel:
+        description: "Signed release channel"
+        required: true
+        type: choice
+        options:
+          - beta
+          - stable
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: desktoplab-linux-signing-${{ inputs.release_ref }}
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    name: Verify public release boundary
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Reject private repository signing
+        if: github.event.repository.private
+        run: |
+          echo "Linux public signing is blocked until the repository is public."
+          exit 1
+
+      - name: Validate immutable release ref
+        shell: bash
+        env:
+          RELEASE_REF: ${{ inputs.release_ref }}
+        run: |
+          if [[ ! "$RELEASE_REF" =~ ^refs/tags/v[0-9] ]]; then
+            echo "Linux signing requires an explicit version tag ref."
+            exit 1
+          fi
+          test "$GITHUB_REF" = "$RELEASE_REF"
+
+  sign-linux:
+    name: Sign linux-x64 release artifacts
+    needs: preflight
+    runs-on: ubuntu-24.04
+    environment: linux-release-signing
+    env:
+      DESKTOPLAB_PUBLIC_REPOSITORY: "true"
+      DESKTOPLAB_RELEASE_CHANNEL: dev
+      DESKTOPLAB_RELEASE_TARGET: linux-x64
+      DESKTOPLAB_RUNNER_PROFILE: github-hosted-linux-signing
+      LINUX_RELEASE_CHANNEL: ${{ inputs.channel }}
+      LINUX_RPM_OPENPGP_KEY_ID: ${{ secrets.LINUX_RPM_OPENPGP_KEY_ID }}
+      COSIGN_CERTIFICATE_OIDC_ISSUER: https://token.actions.githubusercontent.com
+      COSIGN_CERTIFICATE_IDENTITY_REGEXP: ^https://github.com/${{ github.repository }}/.github/workflows/linux-release-signing.yml@refs/tags/v.*$
+    steps:
+      - name: Check out tagged source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_ref }}
+          persist-credentials: false
+
+      - name: Verify exact immutable source
+        shell: bash
+        env:
+          RELEASE_REF: ${{ inputs.release_ref }}
+        run: |
+          test -z "$(git status --porcelain=v1)"
+          test "$(git cat-file -t "$RELEASE_REF")" = "tag"
+          if [ "$LINUX_RELEASE_CHANNEL" = "beta" ]; then
+            [[ "$RELEASE_REF" =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+-beta\.[1-9][0-9]*$ ]]
+          else
+            [[ "$RELEASE_REF" =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          fi
+          test "$(git rev-parse HEAD)" = "$(git rev-parse "$RELEASE_REF^{commit}")"
+
+      - name: Verify canonical public source
+        run: npm run release:verify-public-source
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Linux build and signing tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential curl file libayatana-appindicator3-dev librsvg2-dev \
+            libssl-dev libwebkit2gtk-4.1-dev libxdo-dev patchelf rpm wget
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Verify Linux signing contracts
+        run: |
+          npm run packaging:sign:linux:test
+          npm run packaging:sign:linux:dry-run
+
+      - name: Build exact-tag Linux packages
+        run: npm run desktop:package:dev
+
+      - name: Verify unsigned source provenance
+        run: npm run packaging:verify
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac
+        with:
+          cosign-release: v2.5.2
+          install-dir: ${{ runner.temp }}/cosign
+
+      - name: Verify Cosign installation
+        run: cosign version
+
+      - name: Import protected RPM signing subkey
+        env:
+          LINUX_RPM_OPENPGP_PRIVATE_KEY_B64: ${{ secrets.LINUX_RPM_OPENPGP_PRIVATE_KEY_B64 }}
+        shell: bash
+        run: |
+          test -n "$LINUX_RPM_OPENPGP_PRIVATE_KEY_B64"
+          printf '%s' "$LINUX_RPM_OPENPGP_PRIVATE_KEY_B64" | base64 --decode | gpg --batch --import
+          gpg --batch --list-secret-keys "$LINUX_RPM_OPENPGP_KEY_ID"
+
+      - name: Sign and verify staged Linux release
+        run: npm run packaging:sign:linux
+
+      - name: Verify signed release independently
+        run: npm run packaging:verify:linux-signed
+
+      - name: Upload signed candidate without publishing
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktoplab-linux-x64-${{ inputs.channel }}-${{ github.sha }}
+          path: dist/release/linux-signed/**
+          if-no-files-found: error
+          retention-days: 14

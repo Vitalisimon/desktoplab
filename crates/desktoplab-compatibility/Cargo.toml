@@ -1,0 +1,13 @@
+[package]
+name = "desktoplab-compatibility"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "DesktopLab compatibility evaluation and recommendation rules."
+
+[dev-dependencies]
+xtask = { path = "../../xtask" }
+
+[lib]
+path = "src/lib.rs"

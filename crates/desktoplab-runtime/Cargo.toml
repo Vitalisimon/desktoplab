@@ -1,0 +1,16 @@
+[package]
+name = "desktoplab-runtime"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "DesktopLab runtime manager contracts and setup planning."
+
+[dependencies]
+serde_json = "1"
+
+[dev-dependencies]
+xtask = { path = "../../xtask" }
+
+[lib]
+path = "src/lib.rs"

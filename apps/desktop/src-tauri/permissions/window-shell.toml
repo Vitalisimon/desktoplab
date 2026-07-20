@@ -1,0 +1,4 @@
+[[permission]]
+identifier = "window-shell"
+description = "Allows the DesktopLab shell toolbar to move and maximize the native desktop window and open the active repository folder."
+commands.allow = ["start_window_drag", "toggle_window_maximized", "open_repository_in_file_manager", "repository_open_targets", "open_repository_in_target", "open_external_url"]

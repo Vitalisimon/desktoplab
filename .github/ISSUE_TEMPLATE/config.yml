@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Ask for help
+    url: https://github.com/Vitalisimon/desktoplab/discussions/categories/q-a
+    about: Use GitHub Discussions for setup, hardware, runtime and model questions.
+  - name: Report a security vulnerability
+    url: https://github.com/Vitalisimon/desktoplab/security/advisories/new
+    about: Use the private reporting channel. Never publish exploit details or secrets in an issue.
+  - name: Read troubleshooting guidance
+    url: https://github.com/Vitalisimon/desktoplab/blob/main/docs-public/troubleshooting.md
+    about: Check known setup, runtime, provider and diagnostics guidance before filing a report.

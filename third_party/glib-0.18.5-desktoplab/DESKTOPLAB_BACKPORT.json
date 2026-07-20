@@ -1,0 +1,9 @@
+{
+  "package": "glib",
+  "version": "0.18.5",
+  "cratesIoChecksum": "233daaf6e83ae6a12a52055f568f9d7cf4671dabb78ff9560ab6da230ce00ee5",
+  "advisory": "RUSTSEC-2024-0429",
+  "upstreamFixCommit": "05dff0ee696f9bcd8617cd48c4b812d046d440cb",
+  "patchedFile": "src/variant_iter.rs",
+  "patchedFileSha256": "a0f5ee8acb8faa089bcdfbc9a57372609fce7654026ccef7d9a224d05a654ccc"
+}

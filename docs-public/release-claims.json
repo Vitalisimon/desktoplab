@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "sourceAvailability": "candidate_not_public",
+  "binaryReleasePlatforms": [
+    "macosAppleSilicon"
+  ],
+  "platforms": {
+    "macosAppleSilicon": {
+      "publicAvailability": "candidate_not_public",
+      "evidenceClaim": "signed_notarized_exact_candidate",
+      "currentEvidence": "historical_candidate_rebuild_required"
+    },
+    "linuxX64": {
+      "publicAvailability": "not_public",
+      "evidenceClaim": "unsigned_physical_host_development",
+      "currentEvidence": "historical_host_evidence_recertification_required"
+    },
+    "windowsX64": {
+      "publicAvailability": "not_public",
+      "evidenceClaim": "test_signed_physical_host_development",
+      "currentEvidence": "historical_host_evidence_public_trust_required"
+    }
+  },
+  "claims": {
+    "installedLocalAgent": "exact_installed_evidence_required",
+    "cloudProviders": "not_publicly_certified",
+    "frontierLocal": "exact_certified_envelope_only",
+    "updater": "disabled"
+  }
+}

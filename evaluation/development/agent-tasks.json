@@ -1,0 +1,24 @@
+{
+  "kind": "desktoplab.agent-evaluation-catalog",
+  "schemaVersion": 1,
+  "tasks": [
+    {
+      "taskId": "development.file-create-natural",
+      "capability": "file.create",
+      "evaluationRole": "development",
+      "promptStyle": "natural_vague",
+      "promptTemplates": [
+        "Create {fileName} and write a concise note about {topic}.",
+        "Please add a short {topic} note in a new file called {fileName}."
+      ],
+      "variables": {
+        "fileName": ["agent-notes.md", "runtime-notes.md", "tooling-notes.md"],
+        "topic": ["local agents", "runtime selection", "tool approvals"]
+      },
+      "verifier": {
+        "kind": "filesystem.file-content",
+        "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    }
+  ]
+}

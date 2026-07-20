@@ -1,0 +1,22 @@
+[package]
+name = "desktoplab-backends"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "DesktopLab local and external execution backend contracts."
+
+[dependencies]
+desktoplab-agent-session = { path = "../desktoplab-agent-session" }
+desktoplab-domain = { path = "../desktoplab-domain" }
+desktoplab-execution-router = { path = "../desktoplab-execution-router" }
+desktoplab-runtime = { path = "../desktoplab-runtime" }
+serde_json = "1"
+sha2 = "0.10"
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls"] }
+
+[dev-dependencies]
+xtask = { path = "../../xtask" }
+
+[lib]
+path = "src/lib.rs"

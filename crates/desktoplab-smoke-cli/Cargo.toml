@@ -1,0 +1,18 @@
+[package]
+name = "desktoplab-smoke-cli"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "DesktopLab backend-only smoke CLI client."
+
+[dependencies]
+desktoplab-backend-services = { path = "../desktoplab-backend-services" }
+desktoplab-control-plane = { path = "../desktoplab-control-plane" }
+desktoplab-hardware-wizard = { path = "../desktoplab-hardware-wizard" }
+
+[dev-dependencies]
+xtask = { path = "../../xtask" }
+
+[lib]
+path = "src/lib.rs"

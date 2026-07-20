@@ -1,0 +1,18 @@
+[package]
+name = "desktoplab-acp-plugin"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "DesktopLab ACP backend plugin proof outside core."
+
+[dependencies]
+desktoplab-backends = { path = "../desktoplab-backends" }
+desktoplab-execution-router = { path = "../desktoplab-execution-router" }
+serde_json = "1"
+
+[dev-dependencies]
+xtask = { path = "../../xtask" }
+
+[lib]
+path = "src/lib.rs"

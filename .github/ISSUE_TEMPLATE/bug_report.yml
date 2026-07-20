@@ -1,0 +1,93 @@
+name: Bug report
+description: Report a reproducible problem in DesktopLab.
+title: "[Bug]: "
+labels:
+  - bug
+  - triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve DesktopLab. Do not include credentials, secrets, private repository content, prompts, raw tool output or private local paths. Report security vulnerabilities through Private Vulnerability Reporting instead.
+  - type: input
+    id: version
+    attributes:
+      label: DesktopLab version
+      description: Use the version shown in Settings or the exact source commit.
+      placeholder: 0.1.0 or commit SHA
+    validations:
+      required: true
+  - type: dropdown
+    id: package
+    attributes:
+      label: Installation type
+      options:
+        - macOS DMG
+        - Windows installer
+        - Linux AppImage
+        - Linux deb
+        - Linux rpm
+        - Source build
+    validations:
+      required: true
+  - type: dropdown
+    id: operating-system
+    attributes:
+      label: Operating system
+      options:
+        - macOS
+        - Windows 11
+        - Linux
+    validations:
+      required: true
+  - type: input
+    id: operating-system-version
+    attributes:
+      label: Operating system version
+      placeholder: macOS 26.0, Windows 11 24H2, Ubuntu 24.04
+    validations:
+      required: true
+  - type: input
+    id: runtime-model
+    attributes:
+      label: Runtime and model
+      description: Include only when relevant. Never include API keys or endpoint credentials.
+      placeholder: Ollama 0.x with qwen2.5-coder:14b
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Describe one observable problem and its user impact.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      description: Provide the smallest repeatable sequence, with sensitive values replaced.
+      placeholder: |
+        1. Open ...
+        2. Select ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Redacted diagnostics
+      description: Attach only a DesktopLab diagnostic bundle that you reviewed. A concise error message is preferable to raw logs.
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy check
+      options:
+        - label: I reviewed this report and its attachments and removed secrets, private paths, repository content, prompts and raw tool output.
+          required: true
+        - label: This is not a security vulnerability or a report that requires private handling.
+          required: true

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleURLTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleURLName</key>
+      <string>ai.desktoplab.desktop</string>
+      <key>CFBundleURLSchemes</key>
+      <array>
+        <string>desktoplab</string>
+      </array>
+    </dict>
+  </array>
+  <key>NSDesktopFolderUsageDescription</key>
+  <string>DesktopLab opens repositories you select so the local agent can inspect and edit project files.</string>
+  <key>NSDocumentsFolderUsageDescription</key>
+  <string>DesktopLab opens repositories you select so the local agent can inspect and edit project files.</string>
+  <key>NSDownloadsFolderUsageDescription</key>
+  <string>DesktopLab can open a repository from Downloads only when you explicitly choose that folder.</string>
+</dict>
+</plist>

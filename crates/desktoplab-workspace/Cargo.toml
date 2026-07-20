@@ -1,0 +1,25 @@
+[package]
+name = "desktoplab-workspace"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "DesktopLab workspace registration and git engine primitives."
+
+[dependencies]
+desktoplab-domain = { path = "../desktoplab-domain" }
+desktoplab-redaction = { path = "../desktoplab-redaction" }
+ignore = "0.4.28"
+regex = "1"
+sha2 = "0.10"
+tree-sitter = "0.26.10"
+tree-sitter-python = "0.25.0"
+tree-sitter-rust = "0.24.2"
+tree-sitter-typescript = "0.23.2"
+
+[dev-dependencies]
+tempfile = "3"
+xtask = { path = "../../xtask" }
+
+[lib]
+path = "src/lib.rs"
