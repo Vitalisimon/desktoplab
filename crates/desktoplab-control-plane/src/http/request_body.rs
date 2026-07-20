@@ -1,4 +1,4 @@
-use std::io::Read;
+use std::io::{ErrorKind, Read};
 use std::net::TcpStream;
 use std::time::Duration;
 
@@ -22,8 +22,7 @@ pub(super) fn read_http_request(stream: &mut TcpStream) -> Result<Vec<u8>, HttpR
     let mut expected_body_len = None;
 
     loop {
-        let bytes_read = stream
-            .read(&mut buffer)
+        let bytes_read = read_retrying_interrupts(stream, &mut buffer)
             .map_err(|_| HttpRequestReadError::Malformed)?;
         if bytes_read == 0 {
             break;
@@ -52,6 +51,15 @@ pub(super) fn read_http_request(stream: &mut TcpStream) -> Result<Vec<u8>, HttpR
     }
 }
 
+fn read_retrying_interrupts(reader: &mut impl Read, buffer: &mut [u8]) -> std::io::Result<usize> {
+    loop {
+        match reader.read(buffer) {
+            Err(error) if error.kind() == ErrorKind::Interrupted => continue,
+            result => return result,
+        }
+    }
+}
+
 fn header_end(request: &[u8]) -> Option<usize> {
     request
         .windows(4)
@@ -77,12 +85,42 @@ fn content_length(headers: &[u8]) -> Result<Option<usize>, HttpRequestReadError>
 
 #[cfg(test)]
 mod tests {
-    use std::io::Write;
+    use std::io::{Error, ErrorKind, Read, Write};
     use std::net::{Ipv4Addr, SocketAddr, TcpListener, TcpStream};
     use std::thread;
     use std::time::Duration;
 
-    use super::read_http_request;
+    use super::{read_http_request, read_retrying_interrupts};
+
+    struct InterruptedOnceReader {
+        interrupted: bool,
+        bytes: &'static [u8],
+    }
+
+    impl Read for InterruptedOnceReader {
+        fn read(&mut self, buffer: &mut [u8]) -> std::io::Result<usize> {
+            if !self.interrupted {
+                self.interrupted = true;
+                return Err(Error::from(ErrorKind::Interrupted));
+            }
+            let length = self.bytes.len().min(buffer.len());
+            buffer[..length].copy_from_slice(&self.bytes[..length]);
+            Ok(length)
+        }
+    }
+
+    #[test]
+    fn interrupted_reads_are_retried_without_reclassifying_the_request() {
+        let mut reader = InterruptedOnceReader {
+            interrupted: false,
+            bytes: b"request",
+        };
+        let mut buffer = [0_u8; 16];
+
+        let bytes_read = read_retrying_interrupts(&mut reader, &mut buffer).unwrap();
+
+        assert_eq!(&buffer[..bytes_read], b"request");
+    }
 
     #[test]
     fn accepted_nonblocking_stream_waits_for_a_delayed_valid_request() {
