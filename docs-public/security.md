@@ -1,6 +1,6 @@
 # Security
 
-Status: public source published; reporting enabled; current external reverification pending
+Status: public source published; reporting enabled; external path verified
 Date: 2026-07-20
 
 DesktopLab is a local-first development agent environment. Security boundaries matter because the app can work with repositories, local files, terminals, runtimes, providers and secrets.
@@ -15,7 +15,7 @@ Use [GitHub Private Vulnerability Reporting](https://github.com/Vitalisimon/desk
 
 GitHub Private Vulnerability Reporting is enabled on the current public repository. Do not send vulnerability details through public issues or discussions.
 
-No external private test report has been verified on this replacement repository yet. The former repository's reporting exercise remains historical and is not rebound to this source identity. Public beta binaries remain blocked until the current end-to-end path is verified. This page does not claim released-binary support.
+The reporter-to-maintainer path has been verified end to end on this repository by an authorized external non-collaborator report. The report was received, triaged and closed without public disclosure. This page does not claim released-binary support; public beta binaries remain blocked by the separate exact-source signing and certification gates.
 
 ## Supported Versions
 

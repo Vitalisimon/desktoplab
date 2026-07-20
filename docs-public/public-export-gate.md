@@ -1,6 +1,6 @@
 # Public Export Gate
 
-Status: historyless public source published; external reporting reverification pending
+Status: historyless public source published; external reporting path verified
 Date: 2026-07-20
 
 This gate defines how DesktopLab can become public without publishing the internal planning method.
@@ -106,8 +106,8 @@ transport manifest records the exact private source commit, clean-tree state
 and lockfile hashes without entering the public tree.
 
 Issues, Discussions and Private Vulnerability Reporting are enabled, and the
-authenticated support-channel audit completes without findings. A new external
-report has not yet reverified the reporter-to-maintainer path on this repository,
-so that final reporting check remains open. This gate does not accept a public
-beta binary; signing, notarization and exact-candidate product evidence remain
-separate blockers.
+authenticated support-channel audit completes without findings. An authorized
+external non-collaborator report completed the reporter-to-maintainer path on
+this repository: it was received, triaged and closed without public disclosure.
+This gate does not accept a public beta binary; signing, notarization and
+exact-candidate product evidence remain separate blockers.

@@ -28,10 +28,11 @@ Git commit and all three lockfile hashes. The evidence includes:
 
 The command exits non-zero for any local evidence failure. GitHub Private
 Vulnerability Reporting is enabled and the authenticated channel audit passes
-on the current repository. The external reporter-to-maintainer path still
-requires current-repository reverification. No environment flag can replace
-that external evidence, and binary release remains blocked whenever reporting
-or exact-source artifact provenance is stale or missing.
+on the current repository. An authorized external non-collaborator report
+completed the reporter-to-maintainer path: it was received, triaged and closed
+without public disclosure. No environment flag can replace that external
+evidence, and binary release remains blocked whenever reporting or exact-source
+artifact provenance is stale or missing.
 
 ## Artifact Hygiene
 
