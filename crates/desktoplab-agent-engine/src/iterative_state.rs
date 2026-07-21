@@ -5,7 +5,7 @@ use crate::{
 };
 use crate::{IterativeLoopEvent, IterativeLoopStatus, IterativeStopReason, ToolObservation};
 
-const MAX_DISTINCT_MODEL_PROTOCOL_RETRIES: usize = 2;
+const MAX_MODEL_PROTOCOL_RETRIES: usize = 2;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct IterativeLoopState {
@@ -142,9 +142,7 @@ impl IterativeLoopState {
             return false;
         }
         let reason = reason.into();
-        if self.model_protocol_retry_count >= MAX_DISTINCT_MODEL_PROTOCOL_RETRIES
-            || self.model_protocol_recovery.as_deref() == Some(reason.as_str())
-        {
+        if self.model_protocol_retry_count >= MAX_MODEL_PROTOCOL_RETRIES {
             return false;
         }
         self.model_protocol_retry_count += 1;

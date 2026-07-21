@@ -135,11 +135,12 @@ fn model_clarification_blocks_the_native_session_without_fake_execution() {
 }
 
 #[test]
-fn malformed_model_tool_name_gets_one_canonical_protocol_retry() {
+fn repeated_malformed_tool_names_get_two_bounded_protocol_retries() {
     let workspace = TempDir::new().expect("temp workspace");
     create_repo(workspace.path());
     let (mut router, workspace_id) = ready_router(workspace.path());
     router.complete_native_iterative_backend_sequence_for_test([
+        r#"{"tool":"read_file","arguments":{"path":"README.md"}}"#,
         r#"{"tool":"read_file","arguments":{"path":"README.md"}}"#,
         r#"{"tool":"desktoplab.complete","arguments":{"message":"Recovered through the canonical protocol.","outcome":"answered","evidenceCallIds":[]}}"#,
     ]);
