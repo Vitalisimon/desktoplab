@@ -227,6 +227,7 @@ function provenance(descriptor) {
     modelRequestCount: 1,
     testControlRequests: 0,
     uiDriverSha256: `sha256:${"1".repeat(64)}`,
+    uiDriverBundleSha256: `sha256:${"5".repeat(64)}`,
     interactionSha256: `sha256:${"2".repeat(64)}`,
     screenshotSha256: `sha256:${"3".repeat(64)}`,
   };
