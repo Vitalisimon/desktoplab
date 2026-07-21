@@ -85,6 +85,7 @@ test("connects a provider through the vault flow and clears the raw key from the
   );
   expect(screen.queryByDisplayValue("sk-test-secret")).not.toBeInTheDocument();
   expect(await screen.findByText("Credential reference connected")).toBeInTheDocument();
+  expect(screen.getAllByText("Credential reference connected")).toHaveLength(1);
 });
 
 test("blocked vault responses stay explicitly not stored", async () => {
