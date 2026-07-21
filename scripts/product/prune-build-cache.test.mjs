@@ -11,6 +11,7 @@ const policyPath = new URL("./build-cache-policy.mjs", import.meta.url);
 test("cache maintenance prunes known build caches over budget", () => {
   withFixture(({ root, marker }) => {
     writeCache(root, "target", 256);
+    writeCache(root, "node_modules", 512);
     writeCache(root, "dist/public-publication/candidate-old/target", 512);
     writeCache(root, "dist/public-publication/candidate-next/node_modules", 512);
     const legacyBuildInfo = path.join(
@@ -29,8 +30,9 @@ test("cache maintenance prunes known build caches over budget", () => {
 
     assert.equal(result.status, 0, result.stdout + result.stderr);
     assert.equal(existsSync(path.join(root, "target")), false);
+    assert.equal(existsSync(path.join(root, "node_modules", "cache.bin")), true);
     assert.equal(existsSync(path.join(root, "dist/public-publication/candidate-old/target")), false);
-    assert.equal(existsSync(path.join(root, "dist/public-publication/candidate-next/node_modules")), false);
+    assert.equal(existsSync(path.join(root, "dist/public-publication/candidate-next/node_modules", "cache.bin")), true);
     assert.equal(
       existsSync(legacyBuildInfo),
       false,
