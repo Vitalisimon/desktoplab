@@ -77,7 +77,16 @@ test("safe signing validates a prebuilt candidate without rebuilding it", () => 
   assert.match(agentReleaseGates.args.join(" "), /agent-reliability-campaign\.json/);
   assert.match(agentReleaseGates.args.join(" "), /--executor .*recorded-agent-reliability-driver\.mjs/);
   assert.match(agentReleaseGates.args.join(" "), /--ui-driver .*macos-installed-agent-reliability-ui\.mjs/);
-  assert.match(agentReleaseGates.args.join(" "), /--ui-driver-dependency .*macos-installed-agent-ui\.mjs/);
+  const uiDependencies = agentReleaseGates.args.flatMap((value, index, values) =>
+    value === "--ui-driver-dependency" ? [values[index + 1]] : [],
+  );
+  assert.deepEqual(uiDependencies, [
+    "scripts/product/drivers/macos-installed-agent-ui.mjs",
+    "scripts/product/drivers/macos-installed-agent-ui-wait.mjs",
+    "scripts/product/drivers/macos-installed-agent-reliability-run.mjs",
+    "scripts/product/drivers/reliability-run-collector.mjs",
+    "scripts/product/drivers/memory-pressure-helper.mjs",
+  ]);
   const stableUi = run.steps.find((step) => step.id === "stable-ui");
   assert.match(stableUi.args.join(" "), /--candidate .*admission\.json/);
   assert.match(stableUi.args.join(" "), /--app .*DesktopLab\.app/);
