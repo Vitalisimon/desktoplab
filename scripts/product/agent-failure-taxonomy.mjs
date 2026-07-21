@@ -7,6 +7,7 @@ const priority = [
   "validation_failed",
   "state_regression",
   "repeated_error_loop",
+  "model_protocol_failure",
   "timeout",
   "local_inference_failure",
   "model_transport_failure",
@@ -23,6 +24,7 @@ const messages = Object.freeze({
   validation_failed: "The latest validation command failed. Review the output, repair the issue, and run it again.",
   state_regression: "The session lost or contradicted previously recorded state.",
   repeated_error_loop: "The agent repeated the same failing action without progress.",
+  model_protocol_failure: "The model did not produce a valid agent protocol response within the bounded recovery budget.",
   unsafe_mutation: "A workspace change did not satisfy the required safety controls.",
   environment_unavailable: "The required local runtime or workspace was unavailable.",
   timeout: "The agent run exceeded its time limit.",
@@ -48,6 +50,7 @@ export function classifyAgentFailure({ status, scoreResult, trace, verification,
   if (criteria.traceContract?.score === 0 || matches(reason, /state.*(?:lost|regression)|continuity|replay.*failed/)) findings.add("state_regression");
   if (repeatedFailure(events) || matches(reason, /no.progress|repeated.*(?:action|error|failure)/)) findings.add("repeated_error_loop");
   if (criteria.approvalSafety?.score === 0 || criteria.boundedMutation?.score === 0 || matches(reason, /unsafe mutation|approval.*bypass/)) findings.add("unsafe_mutation");
+  if (status === "agent_failure" && matches(reason, /model_(?:failure|protocol_error)|invalid_final_response|duplicate_tool_call/)) findings.add("model_protocol_failure");
   if (status === "timeout" || matches(reason, /timed?\s*out|timeout/)) findings.add("timeout");
   if (matches(reason, /local_inference_failed/)) findings.add("local_inference_failure");
   if (matches(reason, /(?:ollama|lm_studio|openai_compatible).*(?:request_failed|http_status|stream_read_failed)/)) findings.add("model_transport_failure");

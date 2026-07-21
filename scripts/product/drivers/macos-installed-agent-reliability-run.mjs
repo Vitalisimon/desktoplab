@@ -81,6 +81,7 @@ export async function recordReliabilityRun({ descriptor, root, appPath, seedStat
     const failure = desktopSessionFailure(ui, descriptor.runId, error);
     const diagnostics = captureFailureDiagnostics(ui, runRoot, statePath, workspaceId);
     failure.reliabilityDiagnostics = diagnostics;
+    failure.reliabilityRunContext = { workspaceId, workspacePath, statePath, sessionId: sessionId ?? diagnostics.session?.sessionId ?? null };
     throw failure;
   } finally {
     await stop().catch(() => {});

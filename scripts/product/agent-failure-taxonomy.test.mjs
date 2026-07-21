@@ -43,6 +43,9 @@ test("operational and agent failures keep original stop reason separate", () => 
   const transport = classifyAgentFailure({ status: "failed", originalStopReason: "ollama_request_failed" });
   assert.equal(transport.primary, "model_transport_failure");
 
+  const protocol = classifyAgentFailure({ status: "agent_failure", originalStopReason: "model_failure:model_protocol_error:patch_requires_prior_read" });
+  assert.equal(protocol.primary, "model_protocol_failure");
+
   const delegation = classifyAgentFailure({
     status: "failed",
     trace: { events: [{ kind: "delegation", source: "a2a", success: false, detail: "failed" }] },

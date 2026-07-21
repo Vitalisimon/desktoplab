@@ -113,15 +113,16 @@ test("campaign rejects duplicate trace evidence behind unique declared ids", asy
   assert.match(report.failures.join("\n"), /trace evidence reused/);
 });
 
-test("timeouts cancellations and infrastructure failures remain explicit", async () => {
+test("agent timeouts cancellations and infrastructure failures remain explicit", async () => {
   let ordinal = 0;
-  const report = await runCampaign(campaignManifest({ cases: ["inspect"], seeds: [1, 2, 3], repetitions: 1 }), async (descriptor) => {
+  const report = await runCampaign(campaignManifest({ cases: ["inspect"], seeds: [1, 2, 3, 4], repetitions: 1 }), async (descriptor) => {
       ordinal += 1;
-      const status = ["timeout", "cancelled", "infrastructure_failure"][ordinal - 1];
+      const status = ["agent_failure", "timeout", "cancelled", "infrastructure_failure"][ordinal - 1];
       return { status, reason: `${status} detail`, isolation: isolation(descriptor) };
     });
 
   assert.equal(report.status, "fail");
+  assert.equal(report.metrics.outcomes.agent_failure, 1);
   assert.equal(report.metrics.outcomes.timeout, 1);
   assert.equal(report.metrics.outcomes.cancelled, 1);
   assert.equal(report.metrics.outcomes.infrastructure_failure, 1);
