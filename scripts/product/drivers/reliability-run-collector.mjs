@@ -35,6 +35,7 @@ function errorAbortsCampaign(run, error) {
 function failedRun(descriptor, root, error) {
   const runRoot = join(root, descriptor.runId);
   const stopReason = boundedReason(error instanceof Error ? error.message : String(error));
+  const context = error instanceof Error ? error.reliabilityRunContext ?? {} : {};
   return {
     runId: descriptor.runId,
     caseId: descriptor.caseId,
@@ -42,14 +43,20 @@ function failedRun(descriptor, root, error) {
     profileId: descriptor.profileId,
     repetition: descriptor.repetition,
     recordingStatus: "failed",
-    operationalStatus: /(?:timed? out|timeout|did not complete before)/i.test(stopReason) ? "timeout" : "infrastructure_failure",
+    outcomeStatus: failureStatus(stopReason),
     stopReason,
-    workspaceId: null,
-    workspacePath: join(runRoot, "workspace"),
-    statePath: join(runRoot, "app-data", "desktoplab.sqlite"),
-    sessionId: null,
+    workspaceId: context.workspaceId ?? null,
+    workspacePath: context.workspacePath ?? join(runRoot, "workspace"),
+    statePath: context.statePath ?? join(runRoot, "app-data", "desktoplab.sqlite"),
+    sessionId: context.sessionId ?? null,
     diagnostics: error instanceof Error ? error.reliabilityDiagnostics ?? null : null,
   };
+}
+
+function failureStatus(reason) {
+  if (/(?:timed? out|timeout|did not complete before)/i.test(reason)) return "timeout";
+  if (/(?:model_failure|model_protocol_error|invalid_final_response|duplicate_tool_call):?/i.test(reason)) return "agent_failure";
+  return "infrastructure_failure";
 }
 
 function boundedReason(value) {

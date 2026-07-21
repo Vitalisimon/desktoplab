@@ -4,7 +4,7 @@ import { classifyAgentFailure } from "./agent-failure-taxonomy.mjs";
 import { compareAgentConfigurations, fingerprintAgentConfiguration } from "./agent-configuration-fingerprint.mjs";
 import { normalizeIsolation, sanitizedIsolation, sanitizedProvenance, sanitizeExecutorProvenance, validateExecutorProvenance, validateRunEvidence } from "./agent-reliability-evidence.mjs";
 
-const terminalStatuses = new Set(["pass", "failed", "partial", "blocked", "timeout", "cancelled", "infrastructure_failure"]);
+const terminalStatuses = new Set(["pass", "failed", "partial", "blocked", "agent_failure", "timeout", "cancelled", "infrastructure_failure"]);
 const digestPattern = /^sha256:[a-f0-9]{64}$/i;
 
 export async function runReliabilityCampaign(manifest, { executor, executorProvenance } = {}) {
@@ -100,7 +100,7 @@ async function executeRun(descriptor, executor) {
   const startedAt = Date.now();
   try {
     const output = await executor(descriptor);
-    if (["timeout", "cancelled", "infrastructure_failure"].includes(output?.status)) {
+    if (["agent_failure", "timeout", "cancelled", "infrastructure_failure"].includes(output?.status)) {
       return operationalRun(descriptor, output, startedAt);
     }
     const canonicalIsolation = normalizeIsolation(output?.isolation);

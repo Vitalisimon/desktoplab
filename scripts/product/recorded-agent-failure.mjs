@@ -1,10 +1,11 @@
-const operationalStatuses = new Set(["timeout", "infrastructure_failure"]);
+const failureStatuses = new Set(["timeout", "infrastructure_failure", "agent_failure"]);
 
 export function recordedFailureOutcome(run) {
   if (run.recordingStatus !== "failed") return null;
-  if (!operationalStatuses.has(run.operationalStatus)) throw new Error("recorded failure status is invalid");
+  const status = run.outcomeStatus ?? run.operationalStatus;
+  if (!failureStatuses.has(status)) throw new Error("recorded failure status is invalid");
   return {
-    status: run.operationalStatus,
+    status,
     reason: run.stopReason,
     isolation: {
       workspaceId: run.workspaceId,

@@ -90,6 +90,15 @@ test("schema v4 exposes recorded failures without hiding later campaign runs", (
   assert.match(result.reason, /timeout/);
 });
 
+test("schema v4 keeps model protocol failures distinct from infrastructure", () => {
+  const fixture = createFixture("inspect");
+  const catalog = JSON.parse(readFileSync(fixture.catalogPath, "utf8"));
+  catalog.schemaVersion = 4;
+  Object.assign(catalog.runs[0], { recordingStatus: "failed", outcomeStatus: "agent_failure", stopReason: "model_failure:model_protocol_error:provider_canonical_tool_call_required" });
+  writeFileSync(fixture.catalogPath, JSON.stringify(catalog));
+  assert.equal(runFixture(fixture).status, "agent_failure");
+});
+
 test("recorded driver sources stay below focused line guards", () => {
   for (const [path, limit] of [
     ["scripts/product/recorded-agent-reliability-driver.mjs", 240],

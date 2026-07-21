@@ -24,7 +24,7 @@ test("recorder preserves a failed run and continues through the full matrix", as
 
   assert.deepEqual(visited, ["run-one", "run-two", "run-three"]);
   assert.deepEqual(progress, ["completed", "failed", "completed"]);
-  assert.equal(runs[1].operationalStatus, "infrastructure_failure");
+  assert.equal(runs[1].outcomeStatus, "infrastructure_failure");
   assert.deepEqual(runs[1].diagnostics, { accessibility: { buttons: ["Working"] } });
   assert.match(runs[1].workspacePath, /run-two\/workspace$/);
 });
@@ -39,7 +39,7 @@ test("recorder keeps timeout outcomes explicit without stopping later runs", asy
       return { caseId: entry.caseId, seed: entry.seed, profileId: entry.profileId, repetition: 1 };
     },
   });
-  assert.equal(runs[0].operationalStatus, "timeout");
+  assert.equal(runs[0].outcomeStatus, "timeout");
   assert.equal(runs[1].recordingStatus, "completed");
 });
 
@@ -58,6 +58,23 @@ test("recorder resumes matching checkpointed runs without executing them again",
   assert.deepEqual(runs.map((run) => run.runId), ["run-saved", "run-new"]);
   assert.deepEqual(visited, ["run-new"]);
   assert.deepEqual(checkpointed, ["run-new"]);
+});
+
+test("recorder preserves agent failure isolation instead of reporting infrastructure loss", async () => {
+  const runs = await collectReliabilityRuns({
+    descriptors: [descriptor("protocol")],
+    root: "/tmp/reliability",
+    record: async () => {
+      const error = new Error("model_failure:model_protocol_error:patch_requires_prior_read");
+      error.reliabilityRunContext = { workspaceId: "workspace.7", workspacePath: "/tmp/workspace.7", statePath: "/tmp/state.7", sessionId: "session.7" };
+      throw error;
+    },
+  });
+  assert.equal(runs[0].outcomeStatus, "agent_failure");
+  assert.deepEqual(
+    [runs[0].workspaceId, runs[0].workspacePath, runs[0].statePath, runs[0].sessionId],
+    ["workspace.7", "/tmp/workspace.7", "/tmp/state.7", "session.7"],
+  );
 });
 
 test("recorder retries failed checkpoints instead of treating them as evidence", async () => {
@@ -88,7 +105,7 @@ test("recorder checkpoints and aborts when the desktop session becomes unavailab
     checkpoint: async (run) => checkpointed.push(run),
   }), /desktop session unavailable/);
   assert.deepEqual(visited, ["run-locked"]);
-  assert.equal(checkpointed[0].operationalStatus, "infrastructure_failure");
+  assert.equal(checkpointed[0].outcomeStatus, "infrastructure_failure");
 });
 
 function descriptor(id) {
