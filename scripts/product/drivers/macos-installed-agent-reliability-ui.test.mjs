@@ -123,7 +123,8 @@ test("driver accepts only explicit release paths and writes no claimed outcomes"
   const runSource = readFileSync("scripts/product/drivers/macos-installed-agent-reliability-run.mjs", "utf8");
   assert.match(runSource, /DESKTOPLAB_APP_DATA_DIR/);
   assert.match(runSource, /denyFirstApproval/);
-  assert.match(runSource, /cancelFirstReadOnly/); assert.match(runSource, /stopExistingDesktopLab/); assert.match(runSource, /captureWhenReady/); assert.match(runSource, /macosAppLaunchArguments/); assert.match(runSource, /ui\.hasButton\("Send prompt"\).*composer after cancellation/); assert.doesNotMatch(runSource, /ui\.buttonEnabled\("Send prompt"\).*composer after cancellation/);
+  assert.match(runSource, /cancelFirstReadOnly/); assert.match(runSource, /stopExistingDesktopLab/); assert.match(runSource, /captureWhenReady/); assert.match(runSource, /macosAppLaunchSpec/); assert.match(runSource, /ui\.hasButton\("Send prompt"\).*composer after cancellation/); assert.doesNotMatch(runSource, /ui\.buttonEnabled\("Send prompt"\).*composer after cancellation/);
+  assert.doesNotMatch(runSource, /\/usr\/bin\/open|macosAppLaunchArguments/);
   const core = readFileSync("scripts/product/installed-agent-reliability-recording-core.mjs", "utf8");
   assert.doesNotMatch(core, /(?:execFileSync|spawnSync)\(\s*["']sqlite3["']/);
 });
