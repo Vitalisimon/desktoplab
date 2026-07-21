@@ -12,6 +12,7 @@ const PRIORITY: &[&str] = &[
     "state_regression",
     "repeated_error_loop",
     "timeout",
+    "local_inference_failure",
     "model_transport_failure",
     "environment_unavailable",
     "failed_delegation",
@@ -107,6 +108,11 @@ pub(crate) fn session_failure_payload(session: &AgentSession) -> Value {
         &mut codes,
         "timeout",
         contains_any(&lower, &["timeout", "timed out"]),
+    );
+    add_if(
+        &mut codes,
+        "local_inference_failure",
+        lower.contains("local_inference_failed"),
     );
     add_if(
         &mut codes,
@@ -224,6 +230,7 @@ fn message(code: &str) -> &'static str {
         "state_regression" => "The session lost or contradicted previously recorded state.",
         "repeated_error_loop" => "The agent repeated the same failing action without progress.",
         "timeout" => "The agent run exceeded its time limit.",
+        "local_inference_failure" => "Local inference failed before the agent could continue.",
         "model_transport_failure" => {
             "The local model runner stopped responding. Check that it is running, then retry the turn."
         }

@@ -55,6 +55,16 @@ fn local_model_transport_failure_has_actionable_user_copy() {
 }
 
 #[test]
+fn local_inference_failure_has_actionable_user_copy() {
+    let payload = failure_payload("session.inference", "local_inference_failed");
+    assert_eq!(payload["primary"], "local_inference_failure");
+    assert_eq!(
+        payload["userMessage"],
+        "Local inference failed before the agent could continue."
+    );
+}
+
+#[test]
 fn persisted_failed_validation_overrides_a_generic_final_stop_reason() {
     let session = SessionReplay::replay(vec![
         SessionEvent::created("session.5", "backend.ollama"),
