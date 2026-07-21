@@ -56,6 +56,14 @@ fn first_prompt_records_runtime_failure_without_claiming_local_inference_is_unco
     assert_eq!(failed["state"], "failed");
     assert_eq!(failed["timeline"][1]["kind"], "failed");
     assert_eq!(failed["timeline"][1]["message"], "local_inference_failed");
+    assert_eq!(
+        failed["failureClassification"]["primary"],
+        "local_inference_failure"
+    );
+    assert_eq!(
+        failed["failureClassification"]["userMessage"],
+        "Local inference failed before the agent could continue."
+    );
     assert!(
         failed["timeline"]
             .as_array()

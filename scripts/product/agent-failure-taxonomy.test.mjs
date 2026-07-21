@@ -36,6 +36,13 @@ test("operational and agent failures keep original stop reason separate", () => 
   const environment = classifyAgentFailure({ status: "infrastructure_failure", originalStopReason: "runtime unavailable" });
   assert.equal(environment.primary, "environment_unavailable");
 
+  const inference = classifyAgentFailure({ status: "failed", originalStopReason: "local_inference_failed" });
+  assert.equal(inference.primary, "local_inference_failure");
+  assert.equal(inference.userMessage, "Local inference failed before the agent could continue.");
+
+  const transport = classifyAgentFailure({ status: "failed", originalStopReason: "ollama_request_failed" });
+  assert.equal(transport.primary, "model_transport_failure");
+
   const delegation = classifyAgentFailure({
     status: "failed",
     trace: { events: [{ kind: "delegation", source: "a2a", success: false, detail: "failed" }] },
