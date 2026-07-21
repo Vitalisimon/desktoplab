@@ -29,11 +29,15 @@ test("24.5 product: provider setup is secondary and every visible action is back
   await expect(page.getByText("Credential reference connected")).toBeVisible();
   await expect(page.getByText("sk-product-secret")).toHaveCount(0);
 
-  await page.getByRole("button", { name: "Test credential" }).click();
-  await expect(page.getByText(/live provider calls are not certified yet/i)).toBeVisible();
+  await page.getByRole("button", { name: "Check stored credential" }).click();
+  await expect(page.getByText(
+    "The credential is readable from the operating-system vault. Remote authentication was not attempted.",
+  )).toBeVisible();
 
   await page.getByRole("button", { name: "Remove credential" }).click();
-  await expect(page.getByText("Credential reference removed from DesktopLab provider state.")).toBeVisible();
+  await expect(page.getByText(
+    "Credential removed from the operating-system vault and DesktopLab provider state.",
+  )).toBeVisible();
 
   await page.getByLabel("Account mode").selectOption("subscription_account");
   await expect(page.getByRole("textbox", { name: "API key" })).toHaveCount(0);

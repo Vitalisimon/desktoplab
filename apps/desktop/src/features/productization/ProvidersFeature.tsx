@@ -80,7 +80,7 @@ function providerTrustLabel(trust: ProviderAccount["trust"]): string {
 }
 
 function providerAccountDetail(provider: ProviderAccount): string {
-  if (provider.status === "connected") return "Credential reference connected.";
+  if (provider.status === "connected") return "Ready for approved cloud routing.";
   if (provider.status === "missing_credential") {
     return "Connect this account only if you want DesktopLab to route selected work to it.";
   }
