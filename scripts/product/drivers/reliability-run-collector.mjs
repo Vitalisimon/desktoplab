@@ -2,7 +2,7 @@ import { join } from "node:path";
 
 export async function collectReliabilityRuns({ descriptors, root, record, existingRuns = [], checkpoint = async () => {}, onProgress = () => {} }) {
   const runs = [];
-  const existing = new Map(existingRuns.map((run) => [run.runId, run]));
+  const existing = new Map(existingRuns.filter((run) => run.recordingStatus === "completed").map((run) => [run.runId, run]));
   for (const [index, descriptor] of descriptors.entries()) {
     if (existing.has(descriptor.runId)) {
       const run = existing.get(descriptor.runId);
@@ -11,16 +11,25 @@ export async function collectReliabilityRuns({ descriptors, root, record, existi
       continue;
     }
     let run;
+    let failureError = null;
     try {
       run = { runId: descriptor.runId, recordingStatus: "completed", ...await record(descriptor) };
     } catch (error) {
+      failureError = error;
       run = failedRun(descriptor, root, error);
     }
     runs.push(run);
     await checkpoint(run);
     onProgress({ index: index + 1, total: descriptors.length, run, resumed: false });
+    if (errorAbortsCampaign(run, failureError)) throw failureError;
   }
   return runs;
+}
+
+function errorAbortsCampaign(run, error) {
+  return run.recordingStatus === "failed"
+    && error instanceof Error
+    && error.reliabilityAbortCampaign === true;
 }
 
 function failedRun(descriptor, root, error) {

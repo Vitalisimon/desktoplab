@@ -33,6 +33,7 @@ export function nativeAccessibilityCommand(command, value = "") {
 
 export const macosAccessibilityUi = {
   trusted: () => nativeAccessibilityCommand("trusted") === "true",
+  sessionAvailable: () => nativeAccessibilityCommand("session-available") === "true",
   ready: () => nativeAccessibilityCommand("ready") === "true",
   activate: () => nativeAccessibilityCommand("activate"),
   hasButton: (name) => nativeAccessibilityCommand("button-exists", name) === "true",

@@ -37,6 +37,8 @@ test("driver uses Accessibility and persisted state without test-control or API 
   assert.match(nativeSource, /Open Repository/);
   assert.match(nativeSource, /kAXEnabledAttribute/);
   assert.match(nativeSource, /case "focus-prompt"/);
+  assert.match(nativeSource, /command == "session-available"/);
+  assert.match(nativeSource, /kCGSessionLoginDoneKey/);
   assert.match(nativeSource, /Accessibility text input did not reach/);
   assert.match(nativeSource, /for character in value/);
   assert.doesNotMatch(nativeSource, /usleep/);
@@ -65,4 +67,7 @@ test("native Accessibility automation compiles and reports process trust on macO
   const result = spawnSync(helper, ["trusted"], { input: "", encoding: "utf8" });
   assert.equal(result.status, 0, result.stderr || result.stdout);
   assert.equal(result.stdout.trim(), "true");
+  const session = spawnSync(helper, ["session-available"], { input: "", encoding: "utf8" });
+  assert.equal(session.status, 0, session.stderr || session.stdout);
+  assert.match(session.stdout.trim(), /^(?:true|false)$/);
 });

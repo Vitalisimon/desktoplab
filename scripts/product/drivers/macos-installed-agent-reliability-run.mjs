@@ -23,6 +23,7 @@ export async function recordReliabilityRun({ descriptor, root, appPath, seedStat
   const preludes = [];
   const lifecycle = { profileId: profile.id, restartedAtUnixMs: null, deniedAtUnixMs: null, cancelledAtUnixMs: null, cancelledSessionId: null, memoryPressure: pressure.evidence };
   const launch = async (selectWorkspace) => {
+    requireDesktopSession(ui, descriptor.runId);
     await stopExistingDesktopLab(ui);
     for (let attempt = 1; attempt <= 2; attempt += 1) {
       const opened = spawnSync("/usr/bin/open", macosAppLaunchArguments(appPath, appDataPath, logPath), {
@@ -83,13 +84,33 @@ export async function recordReliabilityRun({ descriptor, root, appPath, seedStat
     final.record.screenshot = { path: screenshotPath, sha256: digest(readFileSync(screenshotPath)) };
     return { caseId: descriptor.caseId, seed: descriptor.seed, profileId: descriptor.profileId, repetition: descriptor.repetition, workspaceId, workspacePath, statePath, sessionId, interaction: final.record, preludeInteractions: preludes, lifecycle };
   } catch (error) {
+    const failure = desktopSessionFailure(ui, descriptor.runId, error);
     const diagnostics = captureFailureDiagnostics(ui, runRoot, statePath, workspaceId);
-    if (error instanceof Error) error.reliabilityDiagnostics = diagnostics;
-    throw error;
+    failure.reliabilityDiagnostics = diagnostics;
+    throw failure;
   } finally {
     await stop().catch(() => {});
     pressure.stop();
   }
+}
+
+function requireDesktopSession(ui, runId) {
+  if (desktopSessionAvailable(ui)) return;
+  const error = new Error(`${runId} macOS desktop session unavailable`);
+  error.reliabilityAbortCampaign = true;
+  throw error;
+}
+
+function desktopSessionFailure(ui, runId, error) {
+  if (desktopSessionAvailable(ui) && error instanceof Error) return error;
+  const failure = new Error(`${runId} macOS desktop session unavailable`);
+  failure.cause = error;
+  failure.reliabilityAbortCampaign = true;
+  return failure;
+}
+
+function desktopSessionAvailable(ui) {
+  try { return typeof ui.sessionAvailable !== "function" || ui.sessionAvailable(); } catch { return false; }
 }
 
 function captureFailureDiagnostics(ui, runRoot, statePath, workspaceId) {

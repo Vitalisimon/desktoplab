@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-import { existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, writeFileSync } from "node:fs";
+import { spawn } from "node:child_process";
+import { existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -53,33 +54,43 @@ export async function runMacosReliabilityUi(args, dependencies = {}) {
   const uiDriver = macosAccessibilityDriverEvidence(driverPath, [fileURLToPath(new URL("./macos-installed-agent-ui.mjs", import.meta.url)), fileURLToPath(new URL("./macos-installed-agent-reliability-run.mjs", import.meta.url)), fileURLToPath(new URL("./reliability-run-collector.mjs", import.meta.url)), pressureHelperPath]);
   const checkpointIdentity = { candidateId: candidate.candidateId, appHash, uiDriverBundleSha256: uiDriver.bundleSha256 };
   if (!ui.trusted()) throw new Error("Accessibility permission is not available to the reliability UI driver");
-  await stopExistingDesktopLab(ui);
-  const descriptors = reliabilityDescriptors(manifest);
-  const runs = await collectReliabilityRuns({
-    descriptors,
-    root,
-    existingRuns: args.resume ? loadRunCheckpoints(root, descriptors, checkpointIdentity) : [],
-    record: (descriptor) => recordReliabilityRun({ descriptor, root, appPath, seedState, ui, pressureHelperPath }),
-    checkpoint: (run) => writeRunCheckpoint(root, run, checkpointIdentity),
-    onProgress: dependencies.onProgress ?? (({ index, total, run, resumed }) => process.stderr.write(`[${index}/${total}] ${run.caseId}/${run.profileId} ${run.recordingStatus}${resumed ? " resumed" : ""}\n`)),
-  });
-  const catalog = {
-    kind: "desktoplab.recorded-agent-reliability-catalog",
-    schemaVersion: 4,
-    candidateId: candidate.candidateId,
-    appHash,
-    installation: {
-      kind: "installed_application",
-      platform: process.platform,
-      artifactPath: appPath,
-      executablePath,
-      uiDriver,
-    },
-    runs,
-  };
-  writeJson(args.manifest, manifest);
-  writeJson(args.catalog, catalog);
-  return { kind: "desktoplab.recorded-agent-reliability-output", schemaVersion: 1, runCount: runs.length, failedRunCount: runs.filter((run) => run.recordingStatus === "failed").length, manifestPath: resolve(args.manifest), catalogPath: resolve(args.catalog) };
+  const wakeLock = dependencies.wakeLock ?? startMacosWakeLock(dependencies.spawnProcess);
+  try {
+    requireDesktopSession(ui);
+    await stopExistingDesktopLab(ui);
+    const descriptors = reliabilityDescriptors(manifest);
+    const runs = await collectReliabilityRuns({
+      descriptors,
+      root,
+      existingRuns: args.resume ? loadRunCheckpoints(root, descriptors, checkpointIdentity) : [],
+      record: (descriptor) => recordReliabilityRun({ descriptor, root, appPath, seedState, ui, pressureHelperPath }),
+      checkpoint: (run) => writeRunCheckpoint(root, run, checkpointIdentity),
+      onProgress: dependencies.onProgress ?? (({ index, total, run, resumed }) => process.stderr.write(`[${index}/${total}] ${run.caseId}/${run.profileId} ${run.recordingStatus}${resumed ? " resumed" : ""}\n`)),
+    });
+    const catalog = {
+      kind: "desktoplab.recorded-agent-reliability-catalog",
+      schemaVersion: 4,
+      candidateId: candidate.candidateId,
+      appHash,
+      installation: { kind: "installed_application", platform: process.platform, artifactPath: appPath, executablePath, uiDriver },
+      runs,
+    };
+    writeJson(args.manifest, manifest);
+    writeJson(args.catalog, catalog);
+    return { kind: "desktoplab.recorded-agent-reliability-output", schemaVersion: 1, runCount: runs.length, failedRunCount: runs.filter((run) => run.recordingStatus === "failed").length, manifestPath: resolve(args.manifest), catalogPath: resolve(args.catalog) };
+  } finally {
+    wakeLock.stop();
+  }
+}
+
+export function startMacosWakeLock(spawnProcess = spawn) {
+  const child = spawnProcess("/usr/bin/caffeinate", ["-dimsu", "-w", String(process.pid)], { stdio: "ignore" });
+  return { stop() { if (child.exitCode === null) child.kill("SIGTERM"); } };
+}
+
+function requireDesktopSession(ui) {
+  if (typeof ui.sessionAvailable === "function" && ui.sessionAvailable()) return;
+  throw new Error("macOS desktop session is unavailable; unlock the console before recording UI reliability evidence");
 }
 
 function requireEvidenceRoot(path, resume) {
@@ -93,7 +104,7 @@ function writeRunCheckpoint(root, run, identity) {
   writeJson(join(root, run.runId, "run-result.json"), { kind: "desktoplab.reliability-run-checkpoint", schemaVersion: 1, ...identity, run });
 }
 
-function loadRunCheckpoints(root, descriptors, identity) {
+export function loadRunCheckpoints(root, descriptors, identity) {
   return descriptors.flatMap((descriptor) => {
     const path = join(root, descriptor.runId, "run-result.json");
     if (!existsSync(path)) return [];
@@ -103,6 +114,10 @@ function loadRunCheckpoints(root, descriptors, identity) {
       || checkpoint.uiDriverBundleSha256 !== identity.uiDriverBundleSha256 || checkpoint.run?.runId !== descriptor.runId
       || checkpoint.run?.caseId !== descriptor.caseId || checkpoint.run?.seed !== descriptor.seed || checkpoint.run?.repetition !== descriptor.repetition) {
       throw new Error(`reliability checkpoint identity mismatch for ${descriptor.runId}`);
+    }
+    if (checkpoint.run.recordingStatus !== "completed") {
+      rmSync(join(root, descriptor.runId), { recursive: true, force: true });
+      return [];
     }
     return [checkpoint.run];
   });

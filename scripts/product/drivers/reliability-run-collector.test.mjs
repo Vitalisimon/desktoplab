@@ -60,6 +60,37 @@ test("recorder resumes matching checkpointed runs without executing them again",
   assert.deepEqual(checkpointed, ["run-new"]);
 });
 
+test("recorder retries failed checkpoints instead of treating them as evidence", async () => {
+  const retry = descriptor("retry");
+  const visited = [];
+  const runs = await collectReliabilityRuns({
+    descriptors: [retry],
+    root: "/tmp/reliability",
+    existingRuns: [{ ...retry, recordingStatus: "failed" }],
+    record: async (entry) => { visited.push(entry.runId); return entry; },
+  });
+  assert.deepEqual(visited, ["run-retry"]);
+  assert.equal(runs[0].recordingStatus, "completed");
+});
+
+test("recorder checkpoints and aborts when the desktop session becomes unavailable", async () => {
+  const visited = [];
+  const checkpointed = [];
+  await assert.rejects(() => collectReliabilityRuns({
+    descriptors: [descriptor("locked"), descriptor("after")],
+    root: "/tmp/reliability",
+    record: async (entry) => {
+      visited.push(entry.runId);
+      const error = new Error("macOS desktop session unavailable");
+      error.reliabilityAbortCampaign = true;
+      throw error;
+    },
+    checkpoint: async (run) => checkpointed.push(run),
+  }), /desktop session unavailable/);
+  assert.deepEqual(visited, ["run-locked"]);
+  assert.equal(checkpointed[0].operationalStatus, "infrastructure_failure");
+});
+
 function descriptor(id) {
   return { runId: `run-${id}`, caseId: "inspect", seed: id.length, profileId: "medium", repetition: 1 };
 }
