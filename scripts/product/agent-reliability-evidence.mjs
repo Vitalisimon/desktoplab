@@ -60,6 +60,7 @@ export function validateRunEvidence(descriptor, output, isolation) {
   if (!Number.isInteger(provenance?.modelRequestCount) || provenance.modelRequestCount < 1) failures.push("real model request provenance missing");
   if (provenance?.testControlRequests !== 0) failures.push("test-control execution is forbidden");
   if (!digestPattern.test(provenance?.uiDriverSha256 ?? "")) failures.push("versioned UI driver provenance missing");
+  if (!digestPattern.test(provenance?.uiDriverBundleSha256 ?? "")) failures.push("versioned UI driver dependency bundle missing");
   if (!digestPattern.test(provenance?.interactionSha256 ?? "")) failures.push("UI interaction provenance missing");
   if (!digestPattern.test(provenance?.screenshotSha256 ?? "")) failures.push("UI screenshot provenance missing");
   return failures;
@@ -72,6 +73,7 @@ export function sanitizedProvenance(provenance) {
     modelRequestCount: Number.isInteger(provenance?.modelRequestCount) ? provenance.modelRequestCount : null,
     testControlRequests: Number.isInteger(provenance?.testControlRequests) ? provenance.testControlRequests : null,
     uiDriverSha256: safeDigest(provenance?.uiDriverSha256),
+    uiDriverBundleSha256: safeDigest(provenance?.uiDriverBundleSha256),
     interactionSha256: safeDigest(provenance?.interactionSha256),
     screenshotSha256: safeDigest(provenance?.screenshotSha256),
   };
