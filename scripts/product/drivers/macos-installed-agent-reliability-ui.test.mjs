@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -9,7 +9,7 @@ import test from "node:test";
 import { agentConfiguration } from "../test-fixtures/agent-configuration-fixture.mjs";
 import { createReliabilityManifest, prepareReliabilityWorkspace, reliabilityDescriptors, reliabilityDriverPlan, snapshotReliabilityState, snapshotSqlite } from "../installed-agent-reliability-recording-core.mjs";
 import { localModelProvenance } from "../ollama-model-provenance.mjs";
-import { parseReliabilityArgs } from "./macos-installed-agent-reliability-ui.mjs";
+import { loadRunCheckpoints, parseReliabilityArgs, startMacosWakeLock } from "./macos-installed-agent-reliability-ui.mjs";
 
 test("reliability plan creates twenty-five isolated descriptors across canonical cases and stress profiles", () => {
   const plan = reliabilityDriverPlan();
@@ -128,6 +128,32 @@ test("driver accepts only explicit release paths and writes no claimed outcomes"
   assert.doesNotMatch(core, /(?:execFileSync|spawnSync)\(\s*["']sqlite3["']/);
 });
 
+test("wake lock follows the recording process lifetime", () => {
+  const calls = [];
+  const child = { exitCode: null, kill: (signal) => calls.push(["kill", signal]) };
+  const lock = startMacosWakeLock((command, args, options) => {
+    calls.push([command, args, options]);
+    return child;
+  });
+  lock.stop();
+  assert.deepEqual(calls[0], ["/usr/bin/caffeinate", ["-dimsu", "-w", String(process.pid)], { stdio: "ignore" }]);
+  assert.deepEqual(calls[1], ["kill", "SIGTERM"]);
+});
+
+test("resume deletes failed evidence roots and retains completed checkpoints", () => {
+  const root = mkdtempSync(join(tmpdir(), "desktoplab-reliability-resume-"));
+  const identity = { candidateId: sha("a"), appHash: sha("b"), uiDriverBundleSha256: sha("c") };
+  const descriptors = [{ runId: "run-pass", caseId: "inspect", seed: 7, profileId: "medium", repetition: 1 }, { runId: "run-fail", caseId: "patch", seed: 43, profileId: "long_session", repetition: 1 }];
+  for (const descriptor of descriptors) {
+    const directory = join(root, descriptor.runId);
+    mkdirSync(directory, { recursive: true });
+    writeFileSync(join(directory, "run-result.json"), JSON.stringify({ kind: "desktoplab.reliability-run-checkpoint", schemaVersion: 1, ...identity, run: { ...descriptor, recordingStatus: descriptor.runId === "run-pass" ? "completed" : "failed" } }));
+  }
+  const runs = loadRunCheckpoints(root, descriptors, identity);
+  assert.deepEqual(runs.map((run) => run.runId), ["run-pass"]);
+  assert.equal(existsSync(join(root, "run-fail")), false);
+});
+
 test("reliability recording sources stay within focused line guards", () => {
   for (const [path, limit] of [
     ["scripts/product/installed-agent-reliability-recording-core.mjs", 180],
@@ -135,11 +161,11 @@ test("reliability recording sources stay within focused line guards", () => {
     ["scripts/product/agent-reliability-profiles.mjs", 90],
     ["scripts/product/ollama-model-provenance.mjs", 80],
     ["scripts/product/drivers/macos-installed-agent-reliability-ui.mjs", 240],
-    ["scripts/product/drivers/macos-installed-agent-reliability-run.mjs", 240], ["scripts/product/drivers/macos-installed-agent-completion.test.mjs", 45], ["scripts/product/drivers/macos-installed-agent-state.test.mjs", 55], ["scripts/product/drivers/reliability-run-collector.mjs", 65], ["scripts/product/drivers/reliability-run-collector.test.mjs", 75],
+    ["scripts/product/drivers/macos-installed-agent-reliability-run.mjs", 240], ["scripts/product/drivers/macos-installed-agent-completion.test.mjs", 45], ["scripts/product/drivers/macos-installed-agent-state.test.mjs", 55], ["scripts/product/drivers/reliability-run-collector.mjs", 65], ["scripts/product/drivers/reliability-run-collector.test.mjs", 105],
     ["scripts/product/drivers/memory-pressure-helper.mjs", 20], ["scripts/product/drivers/process-memory-observation.mjs", 40],
-    ["scripts/product/drivers/macos-installed-agent-reliability-ui.test.mjs", 140],
+    ["scripts/product/drivers/macos-installed-agent-reliability-ui.test.mjs", 180],
     ["scripts/product/drivers/macos-native-accessibility.mjs", 90],
-    ["scripts/product/drivers/macos-native-accessibility.swift", 260],
+    ["scripts/product/drivers/macos-native-accessibility.swift", 280],
     ["scripts/product/drivers/macos-system-keyboard-events.mjs", 60],
     ["scripts/product/versioned-ui-driver-evidence.mjs", 65],
   ]) {

@@ -64,6 +64,14 @@ func runningApp() throws -> NSRunningApplication {
   return app
 }
 
+func desktopSessionAvailable() -> Bool {
+  guard let session = CGSessionCopyCurrentDictionary() as? [String: Any] else { return false }
+  let loginDone = session[kCGSessionLoginDoneKey as String] as? Bool ?? false
+  let onConsole = session[kCGSessionOnConsoleKey as String] as? Bool ?? false
+  let frontmost = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
+  return loginDone && onConsole && frontmost != "com.apple.loginwindow"
+}
+
 func appElement(_ app: NSRunningApplication) -> AXUIElement {
   AXUIElementCreateApplication(app.processIdentifier)
 }
@@ -185,6 +193,10 @@ func run() throws {
   let input = String(data: FileHandle.standardInput.readDataToEndOfFile(), encoding: .utf8) ?? ""
   if command == "trusted" {
     print(AXIsProcessTrusted() ? "true" : "false")
+    return
+  }
+  if command == "session-available" {
+    print(desktopSessionAvailable() ? "true" : "false")
     return
   }
   guard AXIsProcessTrusted() else { throw DriverFailure.message("Accessibility permission is unavailable") }
