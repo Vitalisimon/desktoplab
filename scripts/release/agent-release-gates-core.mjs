@@ -3,6 +3,7 @@ import { validateExecutorProvenance } from "../product/agent-reliability-evidenc
 
 const requiredCases = ["inspect", "create", "patch", "test_repair", "diff"];
 const zeroToleranceCases = new Set(["create", "patch", "diff"]);
+const completedAgentStatuses = new Set(["pass", "failed", "partial", "blocked"]);
 
 export function assessAgentReleaseGates({ candidate, runtime, campaign, expectedExecutorSha256, expectedExecutorBundleSha256, expectedUiDriverSha256, expectedUiDriverBundleSha256 }) {
   const runtimeFailures = [];
@@ -46,24 +47,28 @@ export function assessAgentReleaseGates({ candidate, runtime, campaign, expected
     modelFailures.push("model campaign requires at least 15 completed planned runs");
   }
   if ((campaign?.metrics?.passRate ?? 0) < 0.9) modelFailures.push("model campaign pass rate is below 0.90");
-  if ((campaign?.metrics?.outcomes?.timeout ?? 0) > 0 || (campaign?.metrics?.outcomes?.infrastructure_failure ?? 0) > 0) {
-    modelFailures.push("model campaign contains operational failures");
+  const outcomes = campaign?.metrics?.outcomes ?? {};
+  if ((outcomes.timeout ?? 0) > 0 || (outcomes.cancelled ?? 0) > 0 || (outcomes.agent_failure ?? 0) > 0) {
+    modelFailures.push("model campaign contains agent, timeout or cancellation failures");
   }
 
   const runs = campaign?.runs ?? [];
+  const completedAgentRuns = runs.filter((run) => completedAgentStatuses.has(run.status));
+  const infrastructureFailureCount = outcomes.infrastructure_failure ?? 0;
+  const warnings = infrastructureFailureCount > 0 ? [`model campaign retained ${infrastructureFailureCount} infrastructure failure without classifying it as an agent failure`] : [];
   if (runs.some((run) => run.candidateId !== candidate?.candidateId)) {
     modelFailures.push("model campaign contains runs from another candidate");
   }
-  if (runs.some((run) => run.provenance?.uiDriverSha256 !== expectedUiDriverSha256)) {
+  if (completedAgentRuns.some((run) => run.provenance?.uiDriverSha256 !== expectedUiDriverSha256)) {
     modelFailures.push("model campaign contains runs from an unversioned UI driver");
   }
-  if (runs.some((run) => run.provenance?.uiDriverBundleSha256 !== expectedUiDriverBundleSha256)) {
+  if (completedAgentRuns.some((run) => run.provenance?.uiDriverBundleSha256 !== expectedUiDriverBundleSha256)) {
     modelFailures.push("model campaign contains runs from an unattested UI driver dependency bundle");
   }
   for (const caseId of requiredCases) {
-    const cases = runs.filter((run) => run.caseId === caseId);
+    const cases = completedAgentRuns.filter((run) => run.caseId === caseId);
     const passes = cases.filter((run) => run.status === "pass").length;
-    if (cases.length < 3) modelFailures.push(`${caseId} requires at least three isolated runs`);
+    if (cases.length < 3) modelFailures.push(`${caseId} requires at least three completed agent runs`);
     if (zeroToleranceCases.has(caseId) && passes !== cases.length) {
       modelFailures.push(`${caseId} is a zero-tolerance release capability`);
     } else if (!zeroToleranceCases.has(caseId) && cases.length > 0 && passes / cases.length < 2 / 3) {
@@ -86,7 +91,10 @@ export function assessAgentReleaseGates({ candidate, runtime, campaign, expected
       model: campaign?.configuration?.model ?? null,
       configurationFingerprint: campaign?.configurationFingerprint ?? null,
       completedRunCount: campaign?.completedRunCount ?? 0,
+      completedAgentRunCount: completedAgentRuns.length,
+      infrastructureFailureCount,
       passRate: campaign?.metrics?.passRate ?? null,
+      warnings,
       failures: modelFailures,
     },
     failures,

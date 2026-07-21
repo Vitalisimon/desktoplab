@@ -73,6 +73,30 @@ test("mutation and safety capabilities are zero tolerance", () => {
   assert.match(report.failures.join("\n"), /patch is a zero-tolerance/);
 });
 
+test("one infrastructure failure does not falsify completed agent runs", () => {
+  const campaign = passingCampaign(5);
+  const interrupted = campaign.runs.find((run) => run.caseId === "patch");
+  interrupted.status = "infrastructure_failure";
+  interrupted.provenance = null;
+  campaign.metrics = { passRate: 24 / 25, outcomes: { agent_failure: 0, timeout: 0, cancelled: 0, infrastructure_failure: 1 } };
+  const report = assess(campaign);
+  assert.equal(report.status, "pass", report.failures.join("; "));
+  assert.equal(report.modelGate.completedAgentRunCount, 24);
+  assert.equal(report.modelGate.infrastructureFailureCount, 1);
+  assert.match(report.modelGate.warnings.join("\n"), /infrastructure failure/);
+});
+
+test("infrastructure failures cannot erase minimum agent coverage", () => {
+  const campaign = passingCampaign();
+  const interrupted = campaign.runs.find((run) => run.caseId === "patch");
+  interrupted.status = "infrastructure_failure";
+  interrupted.provenance = null;
+  campaign.metrics = { passRate: 14 / 15, outcomes: { agent_failure: 0, timeout: 0, cancelled: 0, infrastructure_failure: 1 } };
+  const report = assess(campaign);
+  assert.equal(report.status, "fail");
+  assert.match(report.failures.join("\n"), /patch requires at least three completed agent runs/);
+});
+
 test("requires three isolated runs for every declared case", () => {
   const campaign = passingCampaign();
   campaign.runs = campaign.runs.filter((run) => !(run.caseId === "inspect" && run.repetition > 1));
@@ -124,9 +148,9 @@ test("rejects campaign reports produced by substituted verifier or UI driver byt
   assert.match(assess(dependency).failures.join("\n"), /dependency bundle/);
 });
 
-function passingCampaign() {
+function passingCampaign(repetitions = 3) {
   const runs = ["inspect", "create", "patch", "test_repair", "diff"].flatMap((caseId) => (
-    [1, 2, 3].map((repetition) => ({ candidateId, caseId, repetition, status: "pass", provenance: { uiDriverSha256: expectedUiDriverSha256, uiDriverBundleSha256: expectedUiDriverBundleSha256 } }))
+    Array.from({ length: repetitions }, (_, index) => index + 1).map((repetition) => ({ candidateId, caseId, repetition, status: "pass", provenance: { uiDriverSha256: expectedUiDriverSha256, uiDriverBundleSha256: expectedUiDriverBundleSha256 } }))
   ));
   return {
     kind: "desktoplab.agent-reliability-campaign",
