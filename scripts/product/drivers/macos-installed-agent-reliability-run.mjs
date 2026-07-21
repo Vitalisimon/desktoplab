@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { closeSync, existsSync, openSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { spawn, spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 
 import { installedAgentPrompts } from "../installed-agent-recording-core.mjs";
 import { reliabilityProfile } from "../agent-reliability-profiles.mjs";
@@ -27,13 +27,7 @@ export async function recordReliabilityRun({ descriptor, root, appPath, seedStat
     requireDesktopSession(ui, descriptor.runId);
     await stopExistingDesktopLab(ui);
     for (let attempt = 1; attempt <= 2; attempt += 1) {
-      const opened = spawnSync("/usr/bin/open", macosAppLaunchArguments(appPath, appDataPath, logPath), {
-        encoding: "utf8",
-        timeout: 30_000,
-      });
-      if (opened.status !== 0) {
-        throw new Error(`${descriptor.runId} could not launch DesktopLab: ${(opened.stderr || opened.stdout || "open failed").trim()}`);
-      }
+      await launchInstalledApp(appPath, appDataPath, logPath, descriptor.runId);
       try {
         await waitForActiveUi(ui, () => {
           try { return ui.ready(); } catch { return false; }
@@ -129,14 +123,32 @@ function captureFailureDiagnostics(ui, runRoot, statePath, workspaceId) {
   return diagnostics;
 }
 
-export function macosAppLaunchArguments(appPath, appDataPath, logPath) {
-  return [
-    "-F", "-n", "-a", appPath,
-    "--stdout", logPath,
-    "--stderr", logPath,
-    "--env", `DESKTOPLAB_APP_DATA_DIR=${appDataPath}`,
-    "--env", "DESKTOPLAB_TEST_CONTROLS=0",
-  ];
+export function macosAppLaunchSpec(appPath, appDataPath) {
+  return {
+    executablePath: join(appPath, "Contents/MacOS/desktoplab-desktop"),
+    environment: {
+      DESKTOPLAB_APP_DATA_DIR: appDataPath,
+      DESKTOPLAB_TEST_CONTROLS: "0",
+    },
+  };
+}
+
+async function launchInstalledApp(appPath, appDataPath, logPath, runId) {
+  const spec = macosAppLaunchSpec(appPath, appDataPath);
+  if (!existsSync(spec.executablePath)) throw new Error(`${runId} installed DesktopLab executable missing`);
+  const log = openSync(logPath, "a", 0o600);
+  try {
+    const child = spawn(spec.executablePath, [], {
+      env: { ...process.env, ...spec.environment },
+      stdio: ["ignore", log, log],
+    });
+    await new Promise((resolve, reject) => {
+      child.once("spawn", resolve);
+      child.once("error", (error) => reject(new Error(`${runId} could not launch DesktopLab: ${error.message}`, { cause: error })));
+    });
+  } finally {
+    closeSync(log);
+  }
 }
 
 async function sendAndComplete({ ui, statePath, workspaceId, prompt, caseId, timeoutMs, allowApprovals }) {

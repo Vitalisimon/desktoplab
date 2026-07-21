@@ -6,7 +6,7 @@ import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 
 import { approvalForSession, stopExistingDesktopLab } from "./macos-installed-agent-ui.mjs";
-import { macosAppLaunchArguments, terminalSessionState } from "./macos-installed-agent-reliability-run.mjs";
+import { macosAppLaunchSpec, terminalSessionState } from "./macos-installed-agent-reliability-run.mjs";
 
 test("terminal session state is derived from persisted lifecycle events", () => {
   const session = { events: [
@@ -35,12 +35,10 @@ test("approval state follows the persisted approval record contract", () => {
   assert.equal(approvalForSession(path, "session.1", "pending"), null);
 });
 
-test("macOS launch uses fresh LaunchServices state and isolated app data", () => {
-  const args = macosAppLaunchArguments("/Applications/DesktopLab.app", "/tmp/run/app-data", "/tmp/run/desktoplab.log");
-  assert.deepEqual(args.slice(0, 4), ["-F", "-n", "-a", "/Applications/DesktopLab.app"]);
-  assert.equal(args.includes("-W"), false);
-  assert.ok(args.includes("DESKTOPLAB_APP_DATA_DIR=/tmp/run/app-data"));
-  assert.ok(args.includes("DESKTOPLAB_TEST_CONTROLS=0"));
+test("macOS reliability launches the installed executable with isolated app data", () => {
+  const spec = macosAppLaunchSpec("/Applications/DesktopLab.app", "/tmp/run/app-data");
+  assert.equal(spec.executablePath, "/Applications/DesktopLab.app/Contents/MacOS/desktoplab-desktop");
+  assert.deepEqual(spec.environment, { DESKTOPLAB_APP_DATA_DIR: "/tmp/run/app-data", DESKTOPLAB_TEST_CONTROLS: "0" });
 });
 
 test("DesktopLab shutdown escalates from graceful quit to exact-process SIGTERM", async () => {
