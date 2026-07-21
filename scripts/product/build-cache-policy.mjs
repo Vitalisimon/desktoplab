@@ -2,7 +2,6 @@ import { existsSync, lstatSync, readdirSync } from "node:fs";
 import path from "node:path";
 
 export const BUILD_CACHE_RELATIVE_PATHS = [
-  "node_modules",
   "target",
   "apps/desktop/dist",
   "apps/desktop/src-tauri/target",
