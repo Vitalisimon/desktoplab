@@ -7,6 +7,7 @@ import { installedAgentPrompts } from "../installed-agent-recording-core.mjs";
 import { reliabilityProfile } from "../agent-reliability-profiles.mjs";
 import { prepareReliabilityWorkspace, snapshotReliabilityState } from "../installed-agent-reliability-recording-core.mjs";
 import { approvalForSession, completeCase, currentSession, stopExistingDesktopLab, waitFor, workspaceIdentity } from "./macos-installed-agent-ui.mjs";
+import { waitForActiveUi } from "./macos-installed-agent-ui-wait.mjs";
 import { observeProcessMemory } from "./process-memory-observation.mjs";
 
 export async function recordReliabilityRun({ descriptor, root, appPath, seedState, ui, pressureHelperPath }) {
@@ -34,7 +35,7 @@ export async function recordReliabilityRun({ descriptor, root, appPath, seedStat
         throw new Error(`${descriptor.runId} could not launch DesktopLab: ${(opened.stderr || opened.stdout || "open failed").trim()}`);
       }
       try {
-        await waitFor(() => {
+        await waitForActiveUi(ui, () => {
           try { return ui.ready(); } catch { return false; }
         }, 45_000, `${descriptor.runId} DesktopLab window`);
         break;
@@ -43,14 +44,13 @@ export async function recordReliabilityRun({ descriptor, root, appPath, seedStat
         if (attempt === 2) throw error;
       }
     }
-    ui.activate();
     if (selectWorkspace) {
-      await waitFor(() => ui.hasButton("Open project"), 45_000, `${descriptor.runId} Open project command`);
+      await waitForActiveUi(ui, () => ui.hasButton("Open project"), 45_000, `${descriptor.runId} Open project command`);
       ui.openProject(workspacePath);
       workspaceId = await waitFor(() => workspaceIdentity(statePath, workspacePath), 30_000, `${descriptor.runId} workspace selection`);
-      await waitFor(() => ui.hasButton("Send prompt"), 45_000, `${descriptor.runId} mounted composer`);
+      await waitForActiveUi(ui, () => ui.hasButton("Send prompt"), 45_000, `${descriptor.runId} mounted composer`);
     } else {
-      await waitFor(() => ui.hasButton("Send prompt"), 45_000, `${descriptor.runId} restored composer`);
+      await waitForActiveUi(ui, () => ui.hasButton("Send prompt"), 45_000, `${descriptor.runId} restored composer`);
     }
   };
   const stop = async () => {
@@ -152,23 +152,23 @@ async function sendAndComplete({ ui, statePath, workspaceId, prompt, caseId, tim
 async function sendForDenial({ ui, statePath, workspaceId, prompt, caseId, timeoutMs }) {
   await setPromptWhenReady(ui, prompt, `${caseId} denial prompt`);
   ui.send("button");
-  await waitFor(() => ui.hasButton("Deny"), timeoutMs, `${caseId} denial approval`);
+  await waitForActiveUi(ui, () => ui.hasButton("Deny"), timeoutMs, `${caseId} denial approval`);
   const deniedAtUnixMs = Date.now();
   ui.clickButton("Deny");
   await waitFor(() => denialObserved(statePath, workspaceId), 30_000, `${caseId} persisted denial`);
-  await waitFor(() => ui.hasButton("Send prompt"), timeoutMs, `${caseId} denial completion`);
+  await waitForActiveUi(ui, () => ui.hasButton("Send prompt"), timeoutMs, `${caseId} denial completion`);
   return { deniedAtUnixMs };
 }
 
 async function sendForCancellation({ ui, statePath, workspaceId, prompt, timeoutMs }) {
   await setPromptWhenReady(ui, prompt, "cancellation prompt");
   ui.send("button");
-  await waitFor(() => ui.hasButton("Stop agent"), 30_000, "Stop agent command");
+  await waitForActiveUi(ui, () => ui.hasButton("Stop agent"), 30_000, "Stop agent command");
   const sessionId = await waitFor(() => currentSession(statePath, workspaceId)?.events?.[0]?.sessionId, 30_000, "running cancellation session");
   const cancelledAtUnixMs = Date.now();
   ui.clickButton("Stop agent");
   await waitFor(() => sessionState(statePath, workspaceId, sessionId) === "cancelled", timeoutMs, "persisted cancellation");
-  await waitFor(() => ui.hasButton("Send prompt"), 30_000, "composer after cancellation");
+  await waitForActiveUi(ui, () => ui.hasButton("Send prompt"), 30_000, "composer after cancellation");
   return { cancelledAtUnixMs, sessionId };
 }
 
@@ -187,15 +187,13 @@ function denialObserved(statePath, workspaceId) {
 }
 
 async function setPromptWhenReady(ui, prompt, label) {
-  await waitFor(() => ui.hasButton("Send prompt"), 45_000, `${label} composer`);
-  ui.activate();
+  await waitForActiveUi(ui, () => ui.hasButton("Send prompt"), 45_000, `${label} composer`);
   ui.setPrompt(prompt);
-  await waitFor(() => ui.buttonEnabled("Send prompt"), 30_000, `${label} send command`);
+  await waitForActiveUi(ui, () => ui.buttonEnabled("Send prompt"), 30_000, `${label} send command`);
 }
 
 async function captureWhenReady(ui, path, runId) {
-  ui.activate();
-  await waitFor(() => terminalUiReady(ui), 30_000, `${runId} terminal UI`);
+  await waitForActiveUi(ui, () => terminalUiReady(ui), 30_000, `${runId} terminal UI`);
   await waitFor(() => {
     try { ui.capture(path); return existsSync(path); } catch { return false; }
   }, 30_000, `${runId} visible UI capture`);

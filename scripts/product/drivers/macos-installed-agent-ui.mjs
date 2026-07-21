@@ -11,6 +11,7 @@ import { hashArtifact, readEmbeddedBuild } from "../../packaging/artifact-proven
 import { installedAgentFixture, installedAgentPrompts } from "../installed-agent-recording-core.mjs";
 import { localModelProvenance } from "../installed-agent-reliability-recording-core.mjs";
 import { macosAccessibilityDriverEvidence, macosAccessibilityUi } from "./macos-native-accessibility.mjs";
+import { installedAgentUiWaitModulePath, latestTerminalTurn, waitForActiveUi } from "./macos-installed-agent-ui-wait.mjs";
 
 export { macosAccessibilityUi } from "./macos-native-accessibility.mjs";
 
@@ -26,6 +27,10 @@ export function driverPlan() {
     platform: "darwin",
     cases: Object.entries(installedAgentPrompts).map(([caseId, prompt]) => ({ caseId, prompt, approvalMayBeRequired: ["create", "patch", "test_repair"].includes(caseId) })),
   };
+}
+
+export function installedAgentUiDriverEvidence() {
+  return macosAccessibilityDriverEvidence(driverPath, [installedAgentUiWaitModulePath]);
 }
 
 export function parseArgs(argv) {
@@ -69,16 +74,16 @@ export async function runMacosInstalledAgentDriver(args, dependencies = {}) {
   let workspaceId = null;
   let sessionId = null;
   try {
-    await waitFor(() => ui.ready(), 45_000, "DesktopLab Accessibility window");
-    ui.activate();
-    await waitFor(() => ui.hasButton("Open project"), 45_000, "DesktopLab Open project command");
+    await waitForActiveUi(ui, () => ui.ready(), 45_000, "DesktopLab Accessibility window");
+    await waitForActiveUi(ui, () => ui.hasButton("Open project"), 45_000, "DesktopLab Open project command");
     ui.openProject(workspacePath);
     workspaceId = await waitFor(() => workspaceIdentity(statePath, workspacePath), 30_000, "persisted workspace selection");
     for (const [caseId, prompt] of Object.entries(installedAgentPrompts)) {
       const previousPromptCount = sessionPromptCount(statePath, workspaceId);
       const enteredAtUnixMs = Date.now();
+      await waitForActiveUi(ui, () => ui.hasButton("Send prompt"), 30_000, `${caseId} composer`);
       ui.setPrompt(prompt);
-      await waitFor(() => ui.buttonEnabled("Send prompt"), 30_000, `${caseId} enabled Send prompt command`);
+      await waitForActiveUi(ui, () => ui.buttonEnabled("Send prompt"), 30_000, `${caseId} enabled Send prompt command`);
       const sendActivatedAtUnixMs = Date.now();
       ui.send(caseId === "inspect" ? "keyboard" : "button");
       const interaction = { caseId, promptSha256: digest(prompt), enteredAtUnixMs, sendActivatedAtUnixMs, approvalActivatedAtUnixMs: null, screenshot: null };
@@ -105,7 +110,7 @@ export async function runMacosInstalledAgentDriver(args, dependencies = {}) {
         platform: process.platform,
         artifactPath: appPath,
         executablePath,
-        uiDriver: macosAccessibilityDriverEvidence(driverPath),
+        uiDriver: installedAgentUiDriverEvidence(),
       },
       recording: { statePath, workspacePath, workspaceId, sessionId },
       interactions,
@@ -139,12 +144,14 @@ export async function completeCase({ ui, statePath, workspaceId, previousPromptC
   while (Date.now() - startedAt < timeoutMs) {
     const session = currentSession(statePath, workspaceId);
     const prompts = session?.trace?.filter((event) => event.kind === "prompt_recorded").length ?? 0;
-    const completed = session?.trace?.some((event) => event.kind === "completed" && event.recordedAtUnixMs >= interaction.sendActivatedAtUnixMs);
-    if (prompts > previousPromptCount && completed) return { sessionId: session.events[0].sessionId };
+    const terminal = latestTerminalTurn(session, interaction.sendActivatedAtUnixMs);
+    if (prompts > previousPromptCount && terminal?.kind === "completed") return { sessionId: session.events[0].sessionId };
+    if (prompts > previousPromptCount && terminal && terminal.kind !== "completed") {
+      throw new Error(`installed UI case ${interaction.caseId} ${terminal.kind}: ${terminal.reason}`);
+    }
     if (pendingApproval(statePath, session?.events?.[0]?.sessionId)) {
       if (!allowApprovals) throw new Error(`installed UI case ${interaction.caseId} requested an unexpected approval`);
-      ui.activate();
-      await waitFor(() => ui.hasButton("Approve"), 30_000, "visible approval command");
+      await waitForActiveUi(ui, () => ui.hasButton("Approve"), 30_000, "visible approval command");
       const activatedAt = Date.now();
       ui.clickButton("Approve");
       interaction.approvalActivatedAtUnixMs ??= activatedAt;

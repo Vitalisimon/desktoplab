@@ -60,6 +60,7 @@ export function Composer(props: AgentComposerProps) {
       <label className="grid gap-1 text-sm font-medium text-ink">
         <span className="sr-only">Prompt</span>
         <textarea
+          aria-label="Prompt"
           className="min-h-24 resize-none rounded-[18px] border-0 bg-transparent px-2 py-2 text-sm leading-6 text-ink caret-ink outline-none ring-accent/20 placeholder:text-muted/70 focus:ring-0"
           placeholder="Ask DesktopLab to work on this repository"
           value={props.prompt}

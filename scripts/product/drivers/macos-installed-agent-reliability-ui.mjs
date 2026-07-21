@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 import { hashArtifact, readEmbeddedBuild } from "../../packaging/artifact-provenance-core.mjs";
 import { createReliabilityManifest, deriveReliabilityConfiguration, reliabilityDescriptors, reliabilityDriverPlan } from "../installed-agent-reliability-recording-core.mjs";
 import { macosAccessibilityUi, stopExistingDesktopLab } from "./macos-installed-agent-ui.mjs";
+import { installedAgentUiWaitModulePath } from "./macos-installed-agent-ui-wait.mjs";
 import { macosAccessibilityDriverEvidence } from "./macos-native-accessibility.mjs";
 import { recordReliabilityRun } from "./macos-installed-agent-reliability-run.mjs";
 import { collectReliabilityRuns } from "./reliability-run-collector.mjs";
@@ -33,6 +34,10 @@ export function parseReliabilityArgs(argv) {
   return args;
 }
 
+export function reliabilityUiDriverEvidence() {
+  return macosAccessibilityDriverEvidence(driverPath, [fileURLToPath(new URL("./macos-installed-agent-ui.mjs", import.meta.url)), installedAgentUiWaitModulePath, fileURLToPath(new URL("./macos-installed-agent-reliability-run.mjs", import.meta.url)), fileURLToPath(new URL("./reliability-run-collector.mjs", import.meta.url)), pressureHelperPath]);
+}
+
 export async function runMacosReliabilityUi(args, dependencies = {}) {
   if ((dependencies.platform ?? process.platform) !== "darwin") throw new Error("installed reliability UI driver requires macOS");
   for (const name of ["app", "candidate", "outputRoot", "manifest", "catalog"]) if (!args[name]) throw new Error(`missing --${name.replace(/[A-Z]/g, (value) => `-${value.toLowerCase()}`)}`);
@@ -51,7 +56,7 @@ export async function runMacosReliabilityUi(args, dependencies = {}) {
   const configuration = deriveReliabilityConfiguration({ statePath: seedState, repoRoot });
   const manifest = createReliabilityManifest({ candidateId: candidate.candidateId, appHash, configuration });
   const ui = dependencies.ui ?? macosAccessibilityUi;
-  const uiDriver = macosAccessibilityDriverEvidence(driverPath, [fileURLToPath(new URL("./macos-installed-agent-ui.mjs", import.meta.url)), fileURLToPath(new URL("./macos-installed-agent-reliability-run.mjs", import.meta.url)), fileURLToPath(new URL("./reliability-run-collector.mjs", import.meta.url)), pressureHelperPath]);
+  const uiDriver = reliabilityUiDriverEvidence();
   const checkpointIdentity = { candidateId: candidate.candidateId, appHash, uiDriverBundleSha256: uiDriver.bundleSha256 };
   if (!ui.trusted()) throw new Error("Accessibility permission is not available to the reliability UI driver");
   const wakeLock = dependencies.wakeLock ?? startMacosWakeLock(dependencies.spawnProcess);
