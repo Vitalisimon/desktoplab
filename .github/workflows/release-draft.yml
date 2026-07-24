@@ -125,7 +125,7 @@ jobs:
         run: |
           evidence_args=()
           while IFS= read -r path; do evidence_args+=(--evidence "$path"); done < <(find dist/release/candidates -type f \( -name artifact-manifest.json -o -name linux-signed-artifact-manifest.json -o -name signpath-provenance.json \) -print | sort)
-          npm run release:verify-platform-convergence -- --candidate "$CANDIDATE_STATE" "${evidence_args[@]}" --output dist/release/platform-convergence.json
+          npm run release:verify-platform-convergence -- --candidate "$CANDIDATE_STATE" --claims docs-public/release-claims.json "${evidence_args[@]}" --output dist/release/platform-convergence.json
           npm run release:candidate -- transition --candidate "$CANDIDATE_STATE" --to cross_platform_pass --evidence dist/release/platform-convergence.json --output "$CANDIDATE_STATE"
 
       - name: Assemble verified release allowlist
@@ -139,6 +139,7 @@ jobs:
             "${evidence_args[@]}" \
             --sbom dist/release/sbom.cdx.json \
             --updater-proof dist/release/updater-disabled-proof.json \
+            --claims docs-public/release-claims.json \
             --candidate "$CANDIDATE_STATE" \
             --output-dir dist/release/assembly
 

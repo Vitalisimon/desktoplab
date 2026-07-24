@@ -2,18 +2,19 @@
   "schemaVersion": 1,
   "sourceAvailability": "public",
   "binaryReleasePlatforms": [
-    "macosAppleSilicon"
+    "macosAppleSilicon",
+    "linuxX64"
   ],
   "platforms": {
     "macosAppleSilicon": {
       "publicAvailability": "candidate_not_public",
       "evidenceClaim": "signed_notarized_exact_candidate",
-      "currentEvidence": "historical_candidate_rebuild_required"
+      "currentEvidence": "new_public_head_recertification_required"
     },
     "linuxX64": {
-      "publicAvailability": "not_public",
-      "evidenceClaim": "unsigned_physical_host_development",
-      "currentEvidence": "historical_host_evidence_recertification_required"
+      "publicAvailability": "candidate_not_public",
+      "evidenceClaim": "sigstore_signed_exact_candidate",
+      "currentEvidence": "new_public_head_recertification_required"
     },
     "windowsX64": {
       "publicAvailability": "not_public",

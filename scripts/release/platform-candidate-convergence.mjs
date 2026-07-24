@@ -6,10 +6,11 @@ import process from "node:process";
 import { assessPlatformCandidateConvergence } from "./platform-candidate-convergence-core.mjs";
 
 const args = parseArgs(process.argv.slice(2));
-if (!args.candidate || args.evidence.length === 0) throw new Error("platform convergence requires candidate and evidence paths");
+if (!args.candidate || !args.claims || args.evidence.length === 0) throw new Error("platform convergence requires candidate, claims and evidence paths");
 const report = assessPlatformCandidateConvergence({
   candidate: readJson(args.candidate),
   evidence: args.evidence.map(readJson),
+  releaseClaims: readJson(args.claims),
 });
 if (args.output) {
   const output = resolve(args.output);
@@ -27,6 +28,7 @@ function parseArgs(values) {
   const parsed = { evidence: [] };
   for (let index = 0; index < values.length; index += 1) {
     if (values[index] === "--candidate") parsed.candidate = values[++index];
+    else if (values[index] === "--claims") parsed.claims = values[++index];
     else if (values[index] === "--evidence") parsed.evidence.push(values[++index]);
     else if (values[index] === "--output") parsed.output = values[++index];
   }

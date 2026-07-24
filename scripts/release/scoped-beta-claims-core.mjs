@@ -1,3 +1,5 @@
+import { resolveReleaseScope } from "./release-scope-core.mjs";
+
 export function assessScopedBetaClaims({
   head,
   exportAudit,
@@ -93,36 +95,11 @@ function classifySourceBoundary(exportAudit) {
 }
 
 function validatePublicClaims(publicClaims, failures) {
-  const supportedPlatforms = new Set(["macosAppleSilicon", "linuxX64", "windowsX64"]);
-  if (publicClaims?.schemaVersion !== 1) failures.push("public release claims schema is missing or unsupported");
-  const releasePlatforms = Array.isArray(publicClaims?.binaryReleasePlatforms)
-    ? publicClaims.binaryReleasePlatforms
-    : [];
-  if (releasePlatforms.length === 0) failures.push("public release platform scope is empty");
-  for (const platform of releasePlatforms) {
-    if (!supportedPlatforms.has(platform)) failures.push(`unsupported public release platform: ${platform}`);
-  }
-
-  const expectedPlatforms = {
-    macosAppleSilicon: {
-      publicAvailability: "candidate_not_public",
-      evidenceClaim: "signed_notarized_exact_candidate",
-    },
-    linuxX64: {
-      publicAvailability: "not_public",
-      evidenceClaim: "unsigned_physical_host_development",
-    },
-    windowsX64: {
-      publicAvailability: "not_public",
-      evidenceClaim: "test_signed_physical_host_development",
-    },
-  };
-  for (const [platform, expected] of Object.entries(expectedPlatforms)) {
-    for (const [field, value] of Object.entries(expected)) {
-      if (publicClaims?.platforms?.[platform]?.[field] !== value) {
-        failures.push(`public release claims overstate or omit ${platform}.${field}`);
-      }
-    }
+  let releasePlatforms = [];
+  try {
+    releasePlatforms = resolveReleaseScope({ claims: publicClaims, channel: "beta" }).claimKeys;
+  } catch (error) {
+    failures.push(error.message);
   }
   const expectedClaims = {
     installedLocalAgent: "exact_installed_evidence_required",
@@ -133,7 +110,7 @@ function validatePublicClaims(publicClaims, failures) {
   for (const [claim, expected] of Object.entries(expectedClaims)) {
     if (publicClaims?.claims?.[claim] !== expected) failures.push(`public capability claim mismatch: ${claim}`);
   }
-  return [...new Set(releasePlatforms.filter((platform) => supportedPlatforms.has(platform)))];
+  return releasePlatforms;
 }
 
 function externalState(evidence, head, blockedState) {

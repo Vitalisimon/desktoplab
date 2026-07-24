@@ -1,18 +1,26 @@
-const requiredPlatforms = ["macos-aarch64", "linux-x64", "windows-x64"];
+import { resolveReleaseScope } from "./release-scope-core.mjs";
 
-export function assessPlatformCandidateConvergence({ candidate, evidence }) {
+export function assessPlatformCandidateConvergence({ candidate, evidence, releaseClaims }) {
   const failures = [];
   if (candidate?.kind !== "desktoplab.release-candidate" || candidate?.schemaVersion !== 1) {
     failures.push("platform convergence candidate contract is invalid");
   }
   if (candidate?.state !== "post_sign_pass") failures.push("platform convergence requires post-sign candidate acceptance");
 
+  let scope = { claimKeys: [], platforms: [] };
+  try {
+    scope = resolveReleaseScope({ claims: releaseClaims, channel: candidate?.release?.channel });
+  } catch (error) {
+    failures.push(error.message);
+  }
+  const requiredPlatforms = scope.platforms;
   const platforms = (evidence ?? []).flatMap(normalizeEvidence);
   for (const platform of requiredPlatforms) {
     const matches = platforms.filter((entry) => entry.platform === platform);
     if (matches.length !== 1) failures.push(`expected one ${platform} evidence, found ${matches.length}`);
   }
   for (const entry of platforms) {
+    if (!requiredPlatforms.includes(entry.platform)) failures.push(`${entry.platform} is outside the declared release scope`);
     if (entry.commit !== candidate?.source?.commit) failures.push(`${entry.platform} commit differs from candidate`);
     if (entry.channel !== candidate?.release?.channel) failures.push(`${entry.platform} channel differs from candidate`);
     if (entry.status !== "pass" || entry.publicTrust !== true) failures.push(`${entry.platform} lacks passing public trust`);
@@ -25,6 +33,7 @@ export function assessPlatformCandidateConvergence({ candidate, evidence }) {
     candidateId: candidate?.candidateId ?? null,
     commit: candidate?.source?.commit ?? null,
     channel: candidate?.release?.channel ?? null,
+    releaseScope: scope.claimKeys,
     requiredPlatforms,
     platforms,
     failures,

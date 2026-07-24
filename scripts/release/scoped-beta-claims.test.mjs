@@ -27,7 +27,7 @@ function fixture(overrides = {}) {
         },
         linuxX64: {
           publicAvailability: "not_public",
-          evidenceClaim: "unsigned_physical_host_development",
+          evidenceClaim: "sigstore_signed_exact_candidate",
         },
         windowsX64: {
           publicAvailability: "not_public",
@@ -104,7 +104,7 @@ test("derives a notarized macOS candidate and installed-agent proof from evidenc
   assert.ok(!report.releaseBlockers.includes("exact-candidate installed-agent recertification"));
 });
 
-test("accepts the macOS-only beta when exact evidence and private reporting pass", () => {
+test("accepts a scoped beta when exact in-scope evidence and private reporting pass", () => {
   const input = fixture({
     installedAgentEvidence: { kind: "installed-agent", status: "pass", provenance: { head: "abc123" } },
   });
@@ -118,6 +118,7 @@ test("accepts the macOS-only beta when exact evidence and private reporting pass
 test("requires host evidence only for platforms in the binary release scope", () => {
   const input = fixture();
   input.publicClaims.binaryReleasePlatforms.push("linuxX64");
+  input.publicClaims.platforms.linuxX64.publicAvailability = "candidate_not_public";
   const report = assessScopedBetaClaims(input);
   assert.ok(report.releaseBlockers.includes("current-head Linux host evidence"));
   assert.ok(!report.releaseBlockers.includes("real Windows host evidence"));

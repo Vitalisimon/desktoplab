@@ -1,3 +1,5 @@
+import { resolveReleaseScope } from "./release-scope-core.mjs";
+
 export function validateReleaseSource({ releaseRef, channel, head, tagCommit, tagObjectType = "tag" }) {
   const match = releaseRef?.match(/^refs\/tags\/v(\d+\.\d+\.\d+)(?:-(beta)\.(\d+))?$/);
   if (!match) throw new Error("release assembly requires an existing version tag ref");
@@ -10,8 +12,20 @@ export function validateReleaseSource({ releaseRef, channel, head, tagCommit, ta
   return { releaseRef, tag: releaseRef.slice("refs/tags/".length), version: match[1], channel, commit: head };
 }
 
-export function buildReleaseAssembly({ source, platformEvidence, sbom, updaterProof }) {
-  const artifacts = platformEvidence.flatMap((evidence) => normalizePlatformEvidence(evidence, source));
+export function buildReleaseAssembly({ source, platformEvidence, releaseClaims, sbom, updaterProof }) {
+  const scope = resolveReleaseScope({ claims: releaseClaims, channel: source.channel });
+  const normalized = platformEvidence.map((evidence) => ({
+    platform: evidencePlatform(evidence),
+    artifacts: normalizePlatformEvidence(evidence, source),
+  }));
+  for (const platform of scope.platforms) {
+    const matches = normalized.filter((item) => item.platform === platform);
+    if (matches.length !== 1) throw new Error(`release assembly expected one ${platform} evidence, found ${matches.length}`);
+  }
+  for (const item of normalized) {
+    if (!scope.platforms.includes(item.platform)) throw new Error(`${item.platform} evidence is outside the declared release scope`);
+  }
+  const artifacts = normalized.flatMap((item) => item.artifacts);
   const verificationAssets = platformEvidence.flatMap((evidence) => verificationAssetsFor(evidence));
   if (artifacts.length === 0) throw new Error("release assembly has no distribution artifacts");
   const names = artifacts.map((artifact) => artifact.fileName);
@@ -23,6 +37,7 @@ export function buildReleaseAssembly({ source, platformEvidence, sbom, updaterPr
     schemaVersion: 1,
     status: "draft-ready",
     source,
+    releaseScope: scope,
     updater: {
       delivery: "disabled",
       hostedManifest: false,
@@ -33,6 +48,19 @@ export function buildReleaseAssembly({ source, platformEvidence, sbom, updaterPr
     verificationAssets,
     sbom: { format: "CycloneDX", specVersion: sbom.specVersion, sourceCommit: source.commit },
   };
+}
+
+function evidencePlatform(evidence) {
+  if (evidence?.kind === "desktoplab.artifact-provenance" && evidence.schemaVersion === 2) {
+    const targets = [...new Set(evidence.entries
+      ?.filter((entry) => entry.kind === "distribution_file")
+      .map((entry) => entry.target) ?? [])];
+    if (targets.length !== 1) throw new Error("artifact provenance must contain one distribution platform");
+    return targets[0];
+  }
+  if (evidence?.kind === "desktoplab.linux-signed-release") return "linux-x64";
+  if (evidence?.kind === "desktoplab.windows-signpath-provenance") return "windows-x64";
+  throw new Error("unsupported platform release evidence");
 }
 
 function verificationAssetsFor(evidence) {
@@ -60,6 +88,7 @@ export function normalizePlatformEvidence(evidence, source) {
   }
   if (evidence?.kind === "desktoplab.linux-signed-release" && evidence.status === "pass") {
     requireExactEvidence(evidence, source);
+    if (evidence.platform !== "linux-x64") throw new Error("Linux release evidence platform is invalid");
     if (evidence.publicTrust !== true) throw new Error("Linux release evidence lacks public trust");
     return evidence.artifacts.map((entry) => artifact(entry, evidence.platform, "signed"));
   }
