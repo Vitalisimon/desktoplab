@@ -19,6 +19,7 @@ test("draft workflow uses an existing exact tag and matching successful runs", (
   assert.match(workflow, /candidate_state_artifact/);
   assert.match(workflow, /release:verify-tag/);
   assert.match(workflow, /release:verify-platform-convergence/);
+  assert.match(workflow, /--claims docs-public\/release-claims\.json/);
   assert.match(workflow, /cross_platform_pass/);
   assert.match(workflow, /--candidate "\$CANDIDATE_STATE"/);
   assert.match(workflow, /--verify-tag/);

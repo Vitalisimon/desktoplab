@@ -1,7 +1,7 @@
 # Platform Support
 
-Status: macOS-first public beta candidate, not public
-Date: 2026-07-20
+Status: scoped macOS and Linux public beta candidate, not public
+Date: 2026-07-24
 
 This page describes what DesktopLab can publicly claim.
 
@@ -11,13 +11,15 @@ It must not be stronger than collected packaging and smoke evidence.
 
 | Platform | Public availability | Evidence state |
 | --- | --- | --- |
-| macOS Apple Silicon | First beta candidate, not public yet | Historical Developer ID signing, notarization and installed-app evidence exists, but later source and verifier changes invalidate it for the next candidate. An exact new public HEAD rebuild and recertification are required. |
-| Linux x64 | Not publicly available | Historical AppImage, deb and rpm physical-host development evidence exists. Exact new public HEAD signing and recertification are required before distribution. |
-| Windows x64 | Not publicly available | Historical self-signed NSIS physical-host evidence exists. Exact new public HEAD recertification and public publisher trust remain blocked. |
+| macOS Apple Silicon | Scoped beta candidate, not public yet | A previous exact candidate passed Developer ID signing, notarization and installed-app certification. This release-policy change requires a new public HEAD build and recertification. |
+| Linux x64 | Scoped beta candidate, not public yet | A previous exact candidate passed Sigstore/OpenPGP signing and physical-host verification. This release-policy change requires a new public HEAD build and recertification. |
+| Windows x64 | Not publicly available | Physical-host development evidence exists, but public publisher trust remains blocked. Windows is outside the scoped beta release and will be reconsidered after trusted signing is available. |
 
-The first binary release has a macOS-only candidate scope. This is a scope
-boundary, not beta acceptance: no artifact becomes public until the exact tagged
-candidate passes its release, security-reporting and installed-agent gates.
+The first binary release has a macOS Apple Silicon and Linux x64 candidate
+scope. This is a scope boundary, not beta acceptance: no artifact becomes public
+until the exact tagged candidate passes every release, public-trust,
+security-reporting and installed-agent gate required for the platforms in scope.
+Stable releases still require macOS, Linux and Windows convergence.
 
 ## Important Boundaries
 
@@ -27,4 +29,4 @@ candidate passes its release, security-reporting and installed-agent gates.
 - Linux public distribution requires activation and exact-candidate evidence for the [prepared Linux code signing policy](linux-code-signing-policy.md); package-format-specific development smoke does not replace that gate.
 - Public release readiness is separate from local packaging evidence.
 - Packaging mechanics do not prove setup, runtime, model, workbench, provider, file drawer or terminal product readiness. Those claims keep separate evidence gates.
-- The macOS-only public candidate scope does not imply Linux or Windows availability, even where development evidence exists.
+- The scoped public candidate does not imply Windows availability, even though development evidence exists.

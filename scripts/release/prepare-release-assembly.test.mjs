@@ -51,9 +51,11 @@ test("prepare command emits a verified draft allowlist from an existing tag", (c
   writeJson(sbom, { bomFormat: "CycloneDX", specVersion: "1.5", metadata: { properties: [{ name: "desktoplab:sourceCommit", value: head }] } });
   const updater = join(root, "dist", "updater.json");
   writeJson(updater, { kind: "desktoplab.updater-disabled-proof", status: "passed", head, delivery: "disabled", hostedManifest: false, installPolicy: "manual-replacement" });
+  const claims = join(root, "dist", "release-claims.json");
+  writeJson(claims, releaseClaims(["macosAppleSilicon"]));
   const output = join(root, "dist", "assembly");
   const script = resolve("scripts/release/prepare-release-assembly.mjs");
-  const result = spawnSync(process.execPath, [script, "--release-ref", "refs/tags/v0.1.0-beta.1", "--channel", "beta", "--evidence-dir", evidenceDir, "--sbom", sbom, "--updater-proof", updater, "--candidate", candidatePath, "--output-dir", output], { cwd: root, encoding: "utf8" });
+  const result = spawnSync(process.execPath, [script, "--release-ref", "refs/tags/v0.1.0-beta.1", "--channel", "beta", "--evidence-dir", evidenceDir, "--sbom", sbom, "--updater-proof", updater, "--claims", claims, "--candidate", candidatePath, "--output-dir", output], { cwd: root, encoding: "utf8" });
 
   assert.equal(result.status, 0, result.stderr);
   assert.equal(JSON.parse(readFileSync(join(output, "release-manifest.json"), "utf8")).status, "draft-ready");
@@ -63,6 +65,9 @@ test("prepare command emits a verified draft allowlist from an existing tag", (c
   assert.match(files, /release-candidate\.json/);
   assert.doesNotMatch(files, /\.app\//);
   assert.equal(JSON.parse(readFileSync(join(output, "release-candidate.json"), "utf8")).state, "draft_ready");
+  const notes = readFileSync(join(output, "draft-release-notes.md"), "utf8");
+  assert.match(notes, /Platforms: macOS Apple Silicon/);
+  assert.match(notes, /Windows x64 is not included/);
 });
 
 function git(cwd, args) {
@@ -82,4 +87,27 @@ function writeJson(path, value) {
 
 function sha256(value) {
   return createHash("sha256").update(value).digest("hex");
+}
+
+function releaseClaims(binaryReleasePlatforms) {
+  return {
+    schemaVersion: 1,
+    binaryReleasePlatforms,
+    platforms: {
+      macosAppleSilicon: {
+        publicAvailability: binaryReleasePlatforms.includes("macosAppleSilicon") ? "candidate_not_public" : "not_public",
+        evidenceClaim: "signed_notarized_exact_candidate",
+      },
+      linuxX64: {
+        publicAvailability: binaryReleasePlatforms.includes("linuxX64") ? "candidate_not_public" : "not_public",
+        evidenceClaim: "sigstore_signed_exact_candidate",
+      },
+      windowsX64: {
+        publicAvailability: binaryReleasePlatforms.includes("windowsX64") ? "candidate_not_public" : "not_public",
+        evidenceClaim: binaryReleasePlatforms.includes("windowsX64")
+          ? "trusted_authenticode_exact_candidate"
+          : "test_signed_physical_host_development",
+      },
+    },
+  };
 }

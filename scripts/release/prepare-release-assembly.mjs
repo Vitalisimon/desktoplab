@@ -23,9 +23,16 @@ if (candidate.state !== "cross_platform_pass" || candidate.source?.commit !== so
   throw new Error("release assembly requires exact cross-platform candidate acceptance");
 }
 const evidence = args.evidenceDirs.map(readPlatformEvidence);
+const releaseClaims = readJson(args.claims);
 const sbom = readJson(args.sbom);
 const updaterProof = readJson(args.updaterProof);
-const assembly = buildReleaseAssembly({ source, platformEvidence: evidence.map((item) => item.value), sbom, updaterProof });
+const assembly = buildReleaseAssembly({
+  source,
+  platformEvidence: evidence.map((item) => item.value),
+  releaseClaims,
+  sbom,
+  updaterProof,
+});
 
 mkdirSync(args.outputDir, { recursive: true });
 const assets = [];
@@ -60,7 +67,7 @@ const candidatePath = join(args.outputDir, "release-candidate.json");
 writeFileSync(candidatePath, `${JSON.stringify(draftCandidate, null, 2)}\n`);
 assets.push(candidatePath);
 const notesPath = join(args.outputDir, "draft-release-notes.md");
-writeFileSync(notesPath, releaseNotes(source));
+writeFileSync(notesPath, releaseNotes(source, assembly));
 assets.push(notesPath);
 const sumsPath = join(args.outputDir, "SHA256SUMS.txt");
 writeFileSync(sumsPath, `${assets.map((file) => `${sha256File(file)}  ${basename(file)}`).join("\n")}\n`);
@@ -115,8 +122,17 @@ function copyAsset(source, outputDir, name = basename(source)) {
   return destination;
 }
 
-function releaseNotes(source) {
-  return `# DesktopLab ${source.tag}\n\nStatus: draft\n\nChannel: ${source.channel}\n\nSource commit: ${source.commit}\n\nIn-app updates are disabled for this build. Installation and rollback remain manual.\n\nThis draft is private release assembly evidence and is not authorization to publish binaries.\n`;
+function releaseNotes(source, assembly) {
+  const labels = {
+    macosAppleSilicon: "macOS Apple Silicon",
+    linuxX64: "Linux x64",
+    windowsX64: "Windows x64",
+  };
+  const platforms = assembly.releaseScope.claimKeys.map((key) => labels[key]).join(", ");
+  const windowsBoundary = assembly.releaseScope.claimKeys.includes("windowsX64")
+    ? ""
+    : "\nWindows x64 is not included in this beta and remains unavailable pending publicly trusted signing.\n";
+  return `# DesktopLab ${source.tag}\n\nStatus: draft\n\nChannel: ${source.channel}\n\nPlatforms: ${platforms}\n\nSource commit: ${source.commit}\n${windowsBoundary}\nIn-app updates are disabled for this build. Installation and rollback remain manual.\n\nThis draft is private release assembly evidence and is not authorization to publish binaries.\n`;
 }
 
 function readJson(path) {
@@ -138,10 +154,11 @@ function parseArgs(values) {
     else if (name === "--evidence-dir") parsed.evidenceDirs.push(resolve(value));
     else if (name === "--sbom") parsed.sbom = resolve(value);
     else if (name === "--updater-proof") parsed.updaterProof = resolve(value);
+    else if (name === "--claims") parsed.claims = resolve(value);
     else if (name === "--candidate") parsed.candidate = resolve(value);
     else if (name === "--output-dir") parsed.outputDir = resolve(value);
     else throw new Error(`unsupported argument: ${name}`);
   }
-  if (!parsed.releaseRef || !parsed.channel || !parsed.sbom || !parsed.updaterProof || !parsed.candidate || parsed.evidenceDirs.length === 0) throw new Error("release assembly arguments are incomplete");
+  if (!parsed.releaseRef || !parsed.channel || !parsed.sbom || !parsed.updaterProof || !parsed.claims || !parsed.candidate || parsed.evidenceDirs.length === 0) throw new Error("release assembly arguments are incomplete");
   return parsed;
 }
