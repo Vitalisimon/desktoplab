@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   directSourceAuditRequired,
   isForbiddenPublicTrackedPath,
+  PUBLIC_AUDIT_GIT_MAX_BUFFER,
 } from "./public-export-audit-policy.mjs";
 
 test("canonical public CI enforces direct source safety automatically", () => {
@@ -19,4 +20,8 @@ test("public tracked-path policy rejects transport and private source", () => {
   for (const path of ["Cargo.lock", "src/main.rs", "README.md"]) {
     assert.equal(isForbiddenPublicTrackedPath(path), false, path);
   }
+});
+
+test("public history audit reserves enough output for a growing repository", () => {
+  assert.ok(PUBLIC_AUDIT_GIT_MAX_BUFFER >= 8 * 1024 * 1024);
 });
