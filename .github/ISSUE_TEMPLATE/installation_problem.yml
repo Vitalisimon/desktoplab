@@ -1,0 +1,96 @@
+name: Installation problem
+description: Report a problem downloading, verifying, installing or first-launching an official DesktopLab beta.
+title: "[Install]: "
+labels:
+  - bug
+  - triage
+  - "area: installation"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form only for official DesktopLab release assets. Windows binaries are not available. Never bypass Gatekeeper or package-signature checks, and never include credentials, private paths or repository content.
+  - type: input
+    id: version
+    attributes:
+      label: DesktopLab release
+      placeholder: v0.1.0-beta.10
+    validations:
+      required: true
+  - type: dropdown
+    id: package
+    attributes:
+      label: Package
+      options:
+        - macOS Apple Silicon DMG
+        - Linux x64 AppImage
+        - Linux x64 deb
+        - Linux x64 rpm
+    validations:
+      required: true
+  - type: input
+    id: operating-system
+    attributes:
+      label: Operating system and version
+      placeholder: macOS 26.0 or Ubuntu 24.04
+    validations:
+      required: true
+  - type: input
+    id: hardware
+    attributes:
+      label: Hardware
+      description: Include CPU architecture and memory. GPU is optional unless relevant.
+      placeholder: Apple M4 Pro, 24 GB RAM
+    validations:
+      required: true
+  - type: dropdown
+    id: stage
+    attributes:
+      label: Failure stage
+      options:
+        - Download
+        - SHA-256 or signature verification
+        - Opening the DMG or package
+        - Installation
+        - First launch
+        - Initial setup
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Include the exact concise error message, with private values removed.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      placeholder: |
+        1. Downloaded ... from the official GitHub Release
+        2. Verified ...
+        3. Opened ...
+        4. Observed ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Safety and privacy checks
+      options:
+        - label: I downloaded this package from the official DesktopLab GitHub Release.
+          required: true
+        - label: I did not bypass Gatekeeper, signing or package verification.
+          required: true
+        - label: I removed credentials, private paths, repository content, prompts and raw tool output.
+          required: true
+        - label: This is not a security vulnerability requiring private handling.
+          required: true

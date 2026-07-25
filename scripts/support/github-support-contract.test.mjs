@@ -22,14 +22,35 @@ test("bug form collects reproducible evidence behind an explicit privacy check",
   assert.deepEqual(form.labels, ["bug", "triage"]);
 
   const fields = new Map(form.body.filter((item) => item.id).map((item) => [item.id, item]));
-  for (const id of ["version", "package", "operating-system", "operating-system-version", "problem", "reproduction", "expected"]) {
+  for (const id of ["version", "package", "operating-system", "operating-system-version", "architecture", "impact", "problem", "reproduction", "expected"]) {
     assert.equal(fields.get(id)?.validations?.required, true, `${id} must be required`);
   }
+  assert.ok(!fields.get("package").attributes.options.includes("Windows installer"));
 
   const privacyOptions = fields.get("privacy")?.attributes?.options ?? [];
   assert.equal(privacyOptions.length, 2);
   assert.ok(privacyOptions.every((option) => option.required));
   assert.match(form.body[0].attributes.value, /Private Vulnerability Reporting/);
+});
+
+test("installation form collects exact public package evidence without trust bypasses", () => {
+  const form = parseForm(".github/ISSUE_TEMPLATE/installation_problem.yml");
+  assert.deepEqual(form.labels, ["bug", "triage", "area: installation"]);
+
+  const fields = new Map(form.body.filter((item) => item.id).map((item) => [item.id, item]));
+  for (const id of ["version", "package", "operating-system", "hardware", "stage", "problem", "reproduction", "expected"]) {
+    assert.equal(fields.get(id)?.validations?.required, true, `${id} must be required`);
+  }
+  assert.deepEqual(fields.get("package").attributes.options, [
+    "macOS Apple Silicon DMG",
+    "Linux x64 AppImage",
+    "Linux x64 deb",
+    "Linux x64 rpm",
+  ]);
+  const checks = fields.get("checks").attributes.options;
+  assert.equal(checks.length, 4);
+  assert.ok(checks.every((option) => option.required));
+  assert.match(form.body[0].attributes.value, /Never bypass Gatekeeper/);
 });
 
 test("feature form starts from a user problem and prevents private-data intake", () => {
@@ -53,6 +74,7 @@ test("public support policy documents every intake channel and audit boundary", 
   }
   assert.match(publicGuide, /ignored `dist\/support-audit\/`/);
   assert.match(publicGuide, /must never be committed/);
+  assert.match(read("docs-public/triage.md"), /release blocker/);
 
   const publicGate = read("docs-public/public-export-gate.md");
   assert.match(publicGate, /Private Vulnerability Reporting is enabled/);
@@ -63,7 +85,8 @@ test("support intake files stay reviewable", () => {
   for (const [path, limit] of [
     [".github/ISSUE_TEMPLATE/bug_report.yml", 120],
     [".github/ISSUE_TEMPLATE/feature_request.yml", 90],
-    ["scripts/support/github-support-contract.test.mjs", 120],
+    [".github/ISSUE_TEMPLATE/installation_problem.yml", 110],
+    ["scripts/support/github-support-contract.test.mjs", 150],
   ]) {
     const logicalLines = read(path).split("\n").filter((line) => line.trim()).length;
     assert.ok(logicalLines <= limit, `${path} has ${logicalLines} logical lines, limit ${limit}`);

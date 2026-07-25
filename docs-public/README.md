@@ -24,6 +24,7 @@ platforms until publicly trusted signing is active.
 - `supply-chain.md`: dependency, license and artifact hygiene boundary.
 - `troubleshooting.md`: user-facing support steps.
 - `support.md`: assistance, bug, feature and security-reporting channels.
+- `triage.md`: public issue priorities, labels and lifecycle.
 - `security.md`: how to report security issues.
 - `public-export-gate.md`: rules that must pass before this repository can become public.
 
