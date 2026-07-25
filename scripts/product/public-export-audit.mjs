@@ -10,6 +10,7 @@ import {
 import {
   directSourceAuditRequired,
   isForbiddenPublicTrackedPath,
+  PUBLIC_AUDIT_GIT_MAX_BUFFER,
 } from "./public-export-audit-policy.mjs";
 
 const repoRoot = execFileSync("git", ["rev-parse", "--show-toplevel"], {
@@ -26,7 +27,11 @@ execFileSync("node", ["scripts/product/create-public-export.mjs"], {
 });
 
 function git(args) {
-  return execFileSync("git", args, { cwd: repoRoot, encoding: "utf8" });
+  return execFileSync("git", args, {
+    cwd: repoRoot,
+    encoding: "utf8",
+    maxBuffer: PUBLIC_AUDIT_GIT_MAX_BUFFER,
+  });
 }
 
 const trackedFiles = git(["ls-files", "-z"])
