@@ -1,43 +1,57 @@
 # DesktopLab
 
-Status: public source published; no public binary release
+Status: public beta available for macOS Apple Silicon and Linux x64
 
 DesktopLab is a local-first desktop environment for development agents. It is designed so a user can install the app, open a repository and reach the first useful prompt with minimal setup.
 
 DesktopLab is not just a chat window for a model. It is a local control plane for agent sessions, runtimes, providers, tools, approvals, repositories and evidence.
 
+## Download
+
+The current prerelease is
+[DesktopLab v0.1.0-beta.10](https://github.com/Vitalisimon/desktoplab/releases/tag/v0.1.0-beta.10):
+
+- macOS Apple Silicon: signed, notarized and stapled DMG;
+- Linux x64: AppImage, deb and rpm with Sigstore bundles; the rpm also carries
+  a native OpenPGP package signature;
+- Windows x64: not publicly available.
+
+Download only from the official GitHub Release, verify `SHA256SUMS.txt`, and
+follow the [installation guide](docs-public/install.md). Never bypass
+Gatekeeper or package-signature checks.
+
 ## Current Release State
 
-DesktopLab's audited historyless public source is live in the
-[canonical GitHub repository](https://github.com/Vitalisimon/desktoplab). No
-public binary has been released. Windows, Linux and macOS package-development
-evidence exists, but installers are not public distribution claims until the
-exact release-head signing, provenance and platform recertification gates pass.
+The audited historyless source and the scoped macOS/Linux beta are public in the
+[canonical GitHub repository](https://github.com/Vitalisimon/desktoplab).
+Release assets are bound to the exact public tag and include provenance,
+checksums, an SBOM and updater-disabled evidence.
 
 The private development repository and its history are never published
 directly. Public source is produced through the audited export described in
-`docs-public/public-export-gate.md`.
+[the public export gate](docs-public/public-export-gate.md).
 
-See:
+Start here:
 
-- `docs-public/README.md`
-- `docs-public/install.md`
-- `docs-public/release-notes.md`
-- `docs-public/platform-support.md`
-- `docs-public/public-export-gate.md`
-- `docs-public/support.md`
+- [Install DesktopLab](docs-public/install.md)
+- [v0.1.0-beta.10 release notes](docs-public/release-notes.md)
+- [Platform support](docs-public/platform-support.md)
+- [Runtime and provider support](docs-public/runtime-and-provider-support.md)
+- [Support](docs-public/support.md)
 
 ## Code Signing Policy
 
-Public binaries are not available yet. The platform signing policies and the
-controls required before any binary release are documented here:
+The macOS beta is Developer ID signed, notarized and stapled. Linux release
+files carry keyless Sigstore bundles, and the rpm carries a native OpenPGP
+package signature. Platform policies and verification boundaries are
+documented here:
 
 - [Windows code signing policy](docs-public/windows-code-signing-policy.md)
 - [Linux code signing policy](docs-public/linux-code-signing-policy.md)
 
-The Windows policy identifies the signing roles, privacy boundary and planned
-SignPath Foundation trusted-build integration. No artifact is represented as
-SignPath-signed until Foundation acceptance and exact-artifact verification.
+No Windows artifact is public or represented as SignPath-signed. Public Windows
+distribution remains blocked until trusted signing and exact-artifact
+verification are available.
 
 ## Product Direction
 

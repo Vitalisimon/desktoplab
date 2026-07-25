@@ -117,7 +117,11 @@ export function validateSecurityReportingClaims(source) {
   const keepsBinaryBoundary =
     /public beta binaries remain blocked\b/i.test(normalized) ||
     /does not claim released-binary support\b/i.test(normalized) ||
-    /no public\b[^.]*\bbinar(?:y|ies)\b[^.]*\b(?:released|shared|available)\b/i.test(normalized);
+    /no public\b[^.]*\bbinar(?:y|ies)\b[^.]*\b(?:released|shared|available)\b/i.test(normalized) ||
+    (
+      /current public beta is supported only for macOS Apple Silicon and Linux x64\b/i.test(normalized) &&
+      /Windows x64 is not publicly available\b/i.test(normalized)
+    );
   if (!keepsBinaryBoundary) {
     failures.push("binary release boundary missing: public beta binaries remain blocked or released-binary support must be explicitly unclaimed");
   }

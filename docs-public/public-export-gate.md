@@ -109,5 +109,5 @@ Issues, Discussions and Private Vulnerability Reporting are enabled, and the
 authenticated support-channel audit completes without findings. An authorized
 external non-collaborator report completed the reporter-to-maintainer path on
 this repository: it was received, triaged and closed without public disclosure.
-This gate does not accept a public beta binary; signing, notarization and
-exact-candidate product evidence remain separate blockers.
+The public source gate is accepted. Binary publication remains a separate gate;
+v0.1.0-beta.10 passed that gate for macOS Apple Silicon and Linux x64 only.

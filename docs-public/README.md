@@ -1,24 +1,24 @@
 # DesktopLab Public Documentation
 
-Status: public source published; no public binary release
-Date: 2026-07-20
+Status: public beta available for macOS Apple Silicon and Linux x64
+Date: 2026-07-25
 
 This directory contains the public documentation for the DesktopLab source
 repository.
 
 Documentation outside `docs-public/` is internal by default unless a later public export gate explicitly promotes it.
 
-DesktopLab is not available as a public beta yet. The first binary candidate is
-limited to macOS Apple Silicon. Windows and Linux remain development-evidence
-platforms until publicly trusted signing is active.
+DesktopLab v0.1.0-beta.10 is available from the official GitHub Release for
+macOS Apple Silicon and Linux x64. Windows is not publicly available.
 
 ## Public Reader Path
 
 - `install.md`: how users install and start DesktopLab.
-- `release-notes.md`: public release-note shape for accepted beta candidates.
+- `release-notes.md`: current public beta contents and boundaries.
+- `launch-kit-v0.1.0-beta.10.md`: reusable announcement copy and truthful launch boundaries.
 - `release-claims.json`: machine-readable platform and capability claim boundary used by release gates.
 - `platform-support.md`: current platform availability and evidence level.
-- `linux-code-signing-policy.md`: prepared Sigstore and RPM trust boundary for future Linux releases.
+- `linux-code-signing-policy.md`: active Sigstore and RPM trust boundary for Linux releases.
 - `windows-code-signing-policy.md`: local test-signing boundary and planned public Windows signing policy.
 - `runtime-and-provider-support.md`: honest runtime, model and provider claims.
 - `supply-chain.md`: dependency, license and artifact hygiene boundary.

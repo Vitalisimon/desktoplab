@@ -37,7 +37,7 @@ Use the feature request form for a concrete user problem and desired outcome. Us
 
 ## Security Reports
 
-Never disclose a vulnerability in an issue or discussion. Follow [SECURITY.md](../SECURITY.md). GitHub Private Vulnerability Reporting is enabled, and its current external reporter-to-maintainer path has been verified. Binary publication remains subject to the separate exact-source signing and certification gates.
+Never disclose a vulnerability in an issue or discussion. Follow [SECURITY.md](../SECURITY.md). GitHub Private Vulnerability Reporting is enabled, and its current external reporter-to-maintainer path has been verified. Public binary support is limited to the exact platforms and packages listed in [platform support](platform-support.md).
 
 ## Maintainer Auditability
 

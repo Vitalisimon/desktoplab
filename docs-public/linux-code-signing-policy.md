@@ -1,11 +1,11 @@
 # Linux Code Signing Policy
 
-Status: signing credentials provisioned, signed candidate pending
-Date: 2026-07-17
+Status: active for public Linux beta releases
+Date: 2026-07-25
 
-DesktopLab is not publicly available for Linux yet. Current package smoke
-evidence covers unsigned development artifacts only. This policy defines the
-trust boundary that must pass before a Linux package is published.
+DesktopLab v0.1.0-beta.10 is publicly available for Linux x64 as AppImage, deb
+and rpm packages. This policy defines the trust boundary each public Linux
+package must pass.
 
 ## Release Trust Stack
 
@@ -60,8 +60,9 @@ loss requires immediate environment-secret removal, key revocation, publication
 of the revocation certificate and a new release signed by a replacement key.
 
 Only the public RPM key exists in the repository. No private key, backup
-password or revocation certificate is tracked, and no public DesktopLab package
-is currently represented as signed by this policy.
+password or revocation certificate is tracked. The public v0.1.0-beta.10 rpm is
+represented as signed by this policy only because its native signature and
+exact release evidence passed independent verification.
 
 ## Verification
 
@@ -86,11 +87,12 @@ rpm --checksig --verbose DesktopLab.rpm
 
 ## Activation Gate
 
-This policy is prepared, not accepted. Activation requires a clean public
-repository, protected-environment review, creation and offline backup of the
-OpenPGP primary key and revocation certificate, installation of the dedicated
-signing subkey, a signed tag candidate, independent signature verification and
-physical-host install/launch smoke on the exact signed packages.
+This policy is active for public Linux beta releases. Activation was accepted
+after clean public-source verification, protected-environment review, offline
+OpenPGP primary-key and revocation-certificate backup, installation of the
+dedicated signing subkey, exact-tag signing, independent signature verification
+and physical-host install/launch smoke on the exact signed packages. Every
+later release must pass the same applicable gates with fresh evidence.
 
 External format references:
 

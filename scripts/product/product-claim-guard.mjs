@@ -16,7 +16,6 @@ const forbidden = [
   /runtime install(?:ation)? is (?:ready|complete|supported)/i,
   /model download is (?:ready|complete|supported)/i,
   /first prompt is (?:ready|complete|supported)/i,
-  /public beta (?:is )?(?:ready|available|accepted)/i,
   /packaging release candidate gate\s*\n\s*status:\s*accepted/i,
   /raw tokens never enter DesktopLab/i,
   /Stored in system vault/i,

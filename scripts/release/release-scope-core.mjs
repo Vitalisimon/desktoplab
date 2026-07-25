@@ -28,8 +28,8 @@ export function resolveReleaseScope({ claims, channel }) {
   for (const key of canonicalKeys) {
     const platform = claims.platforms?.[key];
     const included = claimKeys.includes(key);
-    const expectedAvailability = included ? "candidate_not_public" : "not_public";
-    if (platform?.publicAvailability !== expectedAvailability) {
+    const allowedAvailability = included ? ["candidate_not_public", "public"] : ["not_public"];
+    if (!allowedAvailability.includes(platform?.publicAvailability)) {
       throw new Error(`${key} public availability does not match release scope`);
     }
     if (included && platform.evidenceClaim !== TRUSTED_EVIDENCE_CLAIMS[key]) {
