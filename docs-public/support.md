@@ -14,6 +14,10 @@ Search existing discussions and follow the [troubleshooting guide](troubleshooti
 
 Use the [GitHub issue chooser](https://github.com/Vitalisimon/desktoplab/issues/new/choose) for a reproducible product defect. One issue should describe one observable problem.
 
+Use the dedicated
+[installation problem form](https://github.com/Vitalisimon/desktoplab/issues/new?template=installation_problem.yml)
+for download, checksum, signature, installation or first-launch failures.
+
 The report should contain:
 
 - exact DesktopLab version or source commit;
@@ -23,6 +27,9 @@ The report should contain:
 - a reviewed, redacted diagnostic bundle only when needed.
 
 Do not attach secrets, credentials, private paths, repository content, prompts or raw tool output.
+
+Maintainer labels, priorities and issue states are defined in
+[triage.md](triage.md).
 
 ## Feature Requests
 

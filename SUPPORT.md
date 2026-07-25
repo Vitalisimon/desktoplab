@@ -14,6 +14,9 @@ Use the structured [bug report form](https://github.com/Vitalisimon/desktoplab/i
 
 Review diagnostic bundles before attaching them. Never publish credentials, private paths, repository content, prompts or raw tool output.
 
+For download, checksum, signature, installation or first-launch failures, use
+the dedicated [installation problem form](https://github.com/Vitalisimon/desktoplab/issues/new?template=installation_problem.yml).
+
 ## Request A Feature
 
 Use the [feature request form](https://github.com/Vitalisimon/desktoplab/issues/new/choose) for a concrete user problem and desired outcome. Open-ended ideas and early product discussion belong in GitHub Discussions.
@@ -25,3 +28,6 @@ Do not open a public issue. Follow [SECURITY.md](SECURITY.md) and use the reposi
 ## Support Scope
 
 Support claims are limited to the platforms, runtimes and packages listed in [platform support](docs-public/platform-support.md) and [runtime and provider support](docs-public/runtime-and-provider-support.md). Development evidence does not create a public support commitment.
+
+Maintainer triage states, priorities and labels are documented in
+[public triage policy](docs-public/triage.md).
