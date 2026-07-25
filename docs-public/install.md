@@ -1,14 +1,12 @@
 # Install DesktopLab
 
-Status: macOS beta installation candidate
-Date: 2026-07-20
+Status: public beta installation guide
+Date: 2026-07-25
 
-DesktopLab is not publicly released yet.
-
-When a beta is accepted, download it only from the official
-[DesktopLab GitHub Releases](https://github.com/Vitalisimon/desktoplab/releases)
-page. DesktopLab does not distribute installers through mirrors or third-party
-download sites.
+Download v0.1.0-beta.10 only from the official
+[DesktopLab GitHub Release](https://github.com/Vitalisimon/desktoplab/releases/tag/v0.1.0-beta.10).
+DesktopLab does not distribute installers through mirrors or third-party sites.
+Windows binaries are not available.
 
 ## What DesktopLab Installs
 
@@ -29,26 +27,20 @@ Setup checks the local machine and guides the user toward compatible choices. Th
 | Channel | Meaning |
 | --- | --- |
 | `dev` | Local development evidence. Not public-ready. |
-| `beta` | Candidate channel after the public beta gate accepts platform evidence. |
+| `beta` | Public prerelease after the beta gate accepts exact platform evidence. |
 | `stable` | Public release channel after signing, notarization, update and platform gates pass. |
 
 ## Current Availability
 
-DesktopLab is not available as a public beta yet.
-
-Current platform evidence is tracked in `platform-support.md`.
-
-Current platform status before a public beta installer can be shared:
-
-- Windows NSIS packaging has current physical-host development evidence with a current-user self-signed certificate; it is not publicly trusted or distributable.
-- Linux AppImage, deb and rpm packaging have current unsigned development smoke evidence.
-- macOS has historical Developer ID signing and notarization evidence; the next candidate must be rebuilt and recertified from the exact new public HEAD.
+| Platform | Public beta package |
+| --- | --- |
+| macOS Apple Silicon | `DesktopLab_0.1.0_aarch64.dmg` |
+| Linux x64 | AppImage, deb and rpm |
+| Windows x64 | Not publicly available |
 
 ## macOS Apple Silicon
 
-The first binary beta is limited to Apple Silicon Macs.
-
-1. Download the `.dmg` and `SHA256SUMS.txt` from the same GitHub release.
+1. Download `DesktopLab_0.1.0_aarch64.dmg` and `SHA256SUMS.txt` from the same release.
 2. Verify the checksum before opening the image:
 
    ```bash
@@ -64,8 +56,37 @@ Do not use `xattr`, `spctl --add`, ad-hoc signing or a Gatekeeper bypass to make
 an untrusted download run. Report a rejected official artifact through the
 support channels instead.
 
-Windows and Linux downloads are intentionally absent until their public signing
-and exact-package verification gates pass.
+## Linux x64
+
+Download one package and its adjacent `.sigstore.json` bundle:
+
+- `DesktopLab_0.1.0_amd64.AppImage`
+- `DesktopLab_0.1.0_amd64.deb`
+- `DesktopLab-0.1.0-1.x86_64.rpm`
+
+Verify the selected package against `SHA256SUMS.txt`, then verify its Sigstore
+bundle using the command in the
+[Linux signing policy](linux-code-signing-policy.md#verification).
+
+For the AppImage:
+
+```bash
+chmod +x DesktopLab_0.1.0_amd64.AppImage
+./DesktopLab_0.1.0_amd64.AppImage
+```
+
+For Debian or Ubuntu:
+
+```bash
+sudo apt install ./DesktopLab_0.1.0_amd64.deb
+```
+
+For rpm-based distributions, first verify the public-key fingerprint and native
+rpm signature as described in the signing policy, then install with the
+distribution package manager.
+
+Report checksum, signature, install or first-launch failures through the
+[installation problem form](https://github.com/Vitalisimon/desktoplab/issues/new?template=installation_problem.yml).
 
 ## Updates
 

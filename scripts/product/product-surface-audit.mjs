@@ -107,8 +107,8 @@ function auditPublicDocs() {
   const linuxSigningDoc = readPublicText("docs-public/linux-code-signing-policy.md");
   requirePattern(
     linuxSigningDoc,
-    /This policy is prepared, not accepted\./,
-    "prepared Linux signing must not be presented as accepted"
+    /This policy is active for public Linux beta releases\./,
+    "active Linux signing policy must remain explicit"
   );
   requirePattern(
     linuxSigningDoc,

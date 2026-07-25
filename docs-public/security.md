@@ -1,7 +1,7 @@
 # Security
 
-Status: public source published; reporting enabled; external path verified
-Date: 2026-07-20
+Status: public beta supported; reporting enabled; external path verified
+Date: 2026-07-25
 
 DesktopLab is a local-first development agent environment. Security boundaries matter because the app can work with repositories, local files, terminals, runtimes, providers and secrets.
 
@@ -9,17 +9,20 @@ DesktopLab is a local-first development agent environment. Security boundaries m
 
 Do not publish exploit details in public issues.
 
-The public source repository is live. No public binary is shared by this status.
-
 Use [GitHub Private Vulnerability Reporting](https://github.com/Vitalisimon/desktoplab/security/advisories) for confidential reports.
 
 GitHub Private Vulnerability Reporting is enabled on the current public repository. Do not send vulnerability details through public issues or discussions.
 
-The reporter-to-maintainer path has been verified end to end on this repository by an authorized external non-collaborator report. The report was received, triaged and closed without public disclosure. This page does not claim released-binary support; public beta binaries remain blocked by the separate exact-source signing and certification gates.
+The reporter-to-maintainer path has been verified end to end on this repository
+by an authorized external non-collaborator report. The report was received,
+triaged and closed without public disclosure.
 
 ## Supported Versions
 
-No public version is currently supported because DesktopLab has not reached public beta. Once accepted, the latest beta is supported and the previous beta receives a 30-day transition window. Stable support begins only after the separate stable gate is accepted.
+The current public beta is supported only for macOS Apple Silicon and Linux
+x64. Windows x64 is not publicly available. The previous beta receives a
+30-day transition window after a newer beta is published. Stable support begins
+only after the separate stable gate is accepted.
 
 Security reports are targeted for acknowledgement within 3 business days and initial triage within 7 business days. Accepted critical and high-severity reports target mitigation within 14 and 30 days respectively. Coordinated disclosure normally occurs after mitigation and within 90 days; exact handling remains private while a report is active.
 

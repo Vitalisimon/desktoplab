@@ -9,8 +9,8 @@ import {
 
 const claims = {
   platforms: {
-    macosAppleSilicon: { publicAvailability: "candidate_not_public" },
-    linuxX64: { publicAvailability: "not_public" },
+    macosAppleSilicon: { publicAvailability: "public" },
+    linuxX64: { publicAvailability: "public" },
     windowsX64: { publicAvailability: "not_public" },
   },
 };
@@ -83,6 +83,17 @@ This page does not claim released-binary support.
   assert.deepEqual(validateSecurityReportingClaims(verified), []);
 });
 
+test("security reporting accepts a narrowly scoped public beta", () => {
+  const verified = `
+GitHub Private Vulnerability Reporting is enabled.
+The private end-to-end path has been verified by an external non-collaborator report.
+The authorized test report was received, triaged and closed without public disclosure.
+The current public beta is supported only for macOS Apple Silicon and Linux x64.
+Windows x64 is not publicly available.
+`;
+  assert.deepEqual(validateSecurityReportingClaims(verified), []);
+});
+
 test("security reporting accepts a historical proof only while repository publication is pending", () => {
   const pendingRepublication = `
 GitHub Private Vulnerability Reporting is not currently available because public repository publication is pending.
@@ -115,8 +126,8 @@ function platformDocument({ windows }) {
   return `
 | Platform | Public availability | Evidence state |
 | --- | --- | --- |
-| macOS Apple Silicon | First beta candidate, not public yet | Signed and notarized. |
-| Linux x64 | Not publicly available | Unsigned development evidence. |
+| macOS Apple Silicon | Public beta | Signed and notarized. |
+| Linux x64 | Public beta | Sigstore-signed release evidence. |
 | Windows x64 | ${windows} | Test-signed development evidence. |
 
 - macOS Developer ID signing and notarization evidence exists; this does not by itself authorize publication.

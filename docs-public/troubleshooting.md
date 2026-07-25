@@ -1,11 +1,24 @@
 # Troubleshooting DesktopLab
 
-Status: public-beta-draft
-Date: 2026-06-29
+Status: active for v0.1.0-beta.10
+Date: 2026-07-25
 
-This page is the starting point for future user-facing troubleshooting.
+This page is the starting point for public beta troubleshooting.
 
-DesktopLab is not publicly released yet, so these steps describe the intended public support shape.
+## The Download Fails Verification
+
+Download the package, `SHA256SUMS.txt` and any adjacent signature bundle again
+from the same official GitHub Release. Do not use a mirror and do not disable
+Gatekeeper or package-signature checks.
+
+If verification still fails, stop and use the
+[installation problem form](https://github.com/Vitalisimon/desktoplab/issues/new?template=installation_problem.yml).
+
+## macOS Rejects The App
+
+The official Apple Silicon DMG is Developer ID signed, notarized and stapled.
+Move the app to Applications and open it normally. Do not use `xattr`,
+`spctl --add` or ad-hoc signing to bypass a rejection.
 
 ## Setup Does Not Continue
 
@@ -23,9 +36,14 @@ If Ollama or another local runtime was already running before DesktopLab opened,
 
 If DesktopLab installed and started a runtime itself, it may stop only that DesktopLab-managed instance during app shutdown.
 
-## Linux Package Is Not Available
+## A Linux Package Does Not Start
 
-Linux AppImage, deb and rpm have current development smoke evidence. Public Linux release readiness still depends on the release gate, signing policy and exact package claims.
+Confirm the host is x86_64/amd64 and use the package intended for the
+distribution. The AppImage must be executable. Verify the package checksum and
+Sigstore bundle before retrying. For rpm, also verify the native package
+signature using the published key.
+
+DesktopLab does not currently publish Linux arm64 packages.
 
 ## Cloud API Key Does Not Connect
 

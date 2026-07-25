@@ -1,19 +1,19 @@
 # Security Policy
 
-Status: public source published; reporting enabled; external path verified
+Status: public beta supported; reporting enabled; external path verified
 
 DesktopLab is local-first software that can inspect repositories, start local runtimes, execute commands after approval and store provider credentials through the native OS vault. Security reports must be handled privately before any public disclosure.
 
 ## Supported Versions
 
-No public release is currently supported.
-
 | Version | Supported |
 | --- | --- |
-| public source snapshots | Source available; no versioned binary support commitment |
-| current public beta | Latest beta only, after the beta gate is accepted |
+| v0.1.0-beta.10 | Yes, on macOS Apple Silicon and Linux x64 |
 | previous public beta | 30 days after the next beta is published |
 | future stable release | Current stable release and its immediate predecessor |
+
+The current public beta is supported only for macOS Apple Silicon and Linux
+x64. Windows x64 is not publicly available.
 
 ## Reporting A Vulnerability
 
@@ -23,7 +23,10 @@ Use [GitHub Private Vulnerability Reporting](https://github.com/Vitalisimon/desk
 
 GitHub Private Vulnerability Reporting is enabled on the current public repository. Do not send vulnerability details through public issues or discussions.
 
-The reporter-to-maintainer path has been verified end to end on this repository by an authorized external non-collaborator report. The report was received, triaged and closed without public disclosure. This channel proof does not release or support any DesktopLab binary; public beta binaries remain blocked by the separate exact-source signing and certification gates.
+The reporter-to-maintainer path has been verified end to end on this repository
+by an authorized external non-collaborator report. The report was received,
+triaged and closed without public disclosure. Binary support remains limited
+to the scoped platforms and packages listed above.
 
 Reports should include:
 
