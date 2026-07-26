@@ -68,7 +68,6 @@ writeFileSync(candidatePath, `${JSON.stringify(draftCandidate, null, 2)}\n`);
 assets.push(candidatePath);
 const notesPath = join(args.outputDir, "draft-release-notes.md");
 writeFileSync(notesPath, releaseNotes(source, assembly));
-assets.push(notesPath);
 const sumsPath = join(args.outputDir, "SHA256SUMS.txt");
 writeFileSync(sumsPath, `${assets.map((file) => `${sha256File(file)}  ${basename(file)}`).join("\n")}\n`);
 assets.push(sumsPath);
