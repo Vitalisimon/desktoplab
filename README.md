@@ -137,6 +137,13 @@ modular enough for local, hybrid and future remote execution backends. The
 open-source core is the product; future enterprise capabilities should add
 governance, compliance and fleet scale without weakening that core.
 
+## Maintainer
+
+Created and maintained by [Simone Vitali](https://github.com/Vitalisimon).
+DesktopLab began as an attempt to make long-running AI development work
+inspectable, persistent and portable across local and optional cloud execution
+backends.
+
 ## Contributing and support
 
 DesktopLab is in public beta. Reproducible reports from real macOS and Linux
