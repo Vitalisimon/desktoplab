@@ -63,7 +63,10 @@ test("prepare command emits a verified draft allowlist from an existing tag", (c
   assert.match(files, /DesktopLab\.dmg/);
   assert.match(files, /SHA256SUMS\.txt/);
   assert.match(files, /release-candidate\.json/);
+  assert.doesNotMatch(files, /draft-release-notes\.md/);
   assert.doesNotMatch(files, /\.app\//);
+  const sums = readFileSync(join(output, "SHA256SUMS.txt"), "utf8");
+  assert.doesNotMatch(sums, /draft-release-notes\.md/);
   assert.equal(JSON.parse(readFileSync(join(output, "release-candidate.json"), "utf8")).state, "draft_ready");
   const notes = readFileSync(join(output, "draft-release-notes.md"), "utf8");
   assert.match(notes, /Platforms: macOS Apple Silicon/);
