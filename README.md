@@ -37,6 +37,15 @@ session and coordinates repositories, execution backends, local and optional
 cloud runtimes, tools, approvals and durable evidence. The agent performs the
 work; DesktopLab keeps the work understandable and governed.
 
+## Start with a setup that fits your machine
+
+DesktopLab detects local hardware and existing runtimes, then recommends a
+compatible runner and coding model. The setup plan stays visible, starts only
+after confirmation and clearly separates what is already installed from what
+needs to be downloaded.
+
+![DesktopLab automatically detecting the local setup and recommending a compatible runner and coding model](assets/readme/automatic-setup.png)
+
 ## Work locally without losing control
 
 <table>

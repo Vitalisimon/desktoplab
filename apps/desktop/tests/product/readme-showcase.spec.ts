@@ -27,6 +27,12 @@ test("capture the public README product showcase", async ({ page, request }, tes
   mkdirSync(screenshotRoot, { recursive: true });
   await resetProductState(request);
   await setAuditTheme(page, "dark");
+
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("heading", { name: "Finish local setup" })).toBeVisible();
+  await expect(page.getByText("DesktopLab selected a local setup that fits this computer.")).toBeVisible();
+  await captureShell(page, "automatic-setup.png");
+
   await markSetupReady(request);
 
   const workspace = await localApi(request, "POST", "/v1/workspaces/open", {

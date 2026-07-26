@@ -9,8 +9,10 @@ plane with explicit test controls enabled.
 - The UI is rendered from repository source; it is not an AI-generated mockup.
 - The capture excludes the window command row so absolute local filesystem
   paths are not published.
-- The capture test exercises approval, agent evidence, repository inspection
-  and an actual local test command before it writes the images.
+- The setup capture uses the live local setup preview to show detected
+  inventory and the resulting compatible runner and model recommendation.
+- The remaining capture flow exercises approval, agent evidence, repository
+  inspection and an actual local test command before it writes the images.
 
 Regenerate the set with:
 
