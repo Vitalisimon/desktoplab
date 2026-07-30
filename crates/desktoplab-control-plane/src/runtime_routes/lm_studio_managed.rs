@@ -56,6 +56,19 @@ pub(super) fn status() -> Option<desktoplab_runtime::LmStudioManagedStatus> {
     )
 }
 
+pub(crate) fn models() -> Vec<String> {
+    status()
+        .filter(desktoplab_runtime::LmStudioManagedStatus::ready)
+        .map(|status| status.models().to_vec())
+        .unwrap_or_default()
+}
+
+pub(crate) fn connection() -> Option<(String, Vec<String>)> {
+    status()
+        .filter(desktoplab_runtime::LmStudioManagedStatus::ready)
+        .map(|status| (status.endpoint().to_string(), status.models().to_vec()))
+}
+
 fn managed_root() -> PathBuf {
     if let Some(root) = std::env::var_os("DESKTOPLAB_RUNTIME_DATA_DIR") {
         return PathBuf::from(root)

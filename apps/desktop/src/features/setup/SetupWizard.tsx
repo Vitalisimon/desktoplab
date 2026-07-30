@@ -2,11 +2,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useApiClient } from "../../api/ApiProvider";
 import { useControlPlaneStatus } from "../../app/useControlPlaneStatus";
-import type { ModelInventoryItem, RuntimeInventoryItem, SetupChoice, SetupJobProgressItem, SetupPlanPreview } from "../../api/types";
+import type { ModelInventoryItem, RuntimeInstallRequest, SetupChoice, SetupJobProgressItem } from "../../api/types";
 import { SetupCatalogPanel } from "./SetupCatalogPanel";
 import { HardwareSummary } from "./HardwareSummary";
 import { HighEndLocalSetupPanel } from "./HighEndLocalSetupPanel";
-import { displayLocalModelName } from "../../domain/displayNames";
 import { InstallPlanPreview } from "./InstallPlanPreview";
 import { RecommendationView } from "./RecommendationView";
 import { isSelectableForLocalSetup, selectedRecommendation } from "./RecommendationDetails";
@@ -16,6 +15,8 @@ import { SetupStepper } from "./SetupStepper";
 import { CatalogRefreshPanel, RuntimeOfflineNotice, SetupPanel } from "./SetupSupportPanels";
 import { useSetupPreview } from "./useSetupPreview";
 import { setupFailureCopy } from "./setupFailureCopy";
+import { runtimeConsentRequest, runtimeConsentSatisfied } from "./runtimeConsent";
+import { LocalConfigurationPanel } from "./LocalConfigurationPanel";
 import {
   jobFromModelDownload,
   jobFromRuntimeInstall,
@@ -51,10 +52,11 @@ export function SetupWizard({ onOpenRepository, hasActiveWorkspace = false }: Se
   const [selectedModelId, setSelectedModelId] = useState<string | undefined>();
   const [runtimeSetupChoice, setRuntimeSetupChoice] = useState<SetupChoice>("use_existing");
   const [modelSetupChoice, setModelSetupChoice] = useState<SetupChoice>("use_existing");
+  const [runtimeConsentAccepted, setRuntimeConsentAccepted] = useState(false);
   const models = useQuery({ queryKey: ["setup", "catalog-models"], queryFn: () => api.listModels() });
   const runtimes = useQuery({ queryKey: ["setup", "catalog-runtimes"], queryFn: () => api.listRuntimes() });
   const installRuntime = useMutation({
-    mutationFn: (runtime: RuntimeInventoryItem) => api.startRuntimeInstall({ runtimeId: runtime.runtimeId, setupChoice: "install" }),
+    mutationFn: (request: RuntimeInstallRequest) => api.startRuntimeInstall(request),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["setup", "catalog-runtimes"] });
       void queryClient.invalidateQueries({ queryKey: ["app-state"] });
@@ -117,6 +119,7 @@ export function SetupWizard({ onOpenRepository, hasActiveWorkspace = false }: Se
       && isSelectableForLocalSetup(selectedRuntimeForPlan)
       && modelDownloadAllowed(selectedModelForPlan, selectedRuntimeIdForPlan),
   );
+  const selectedRuntimeChoiceForPlan = setupChoiceFor(selectedRuntimeForPlan, runtimeSetupChoice);
 
   return (
     <div data-ui-route="setup" data-ui-state={setupReady ? "ready" : "recommendation"} className="mx-auto grid w-full max-w-6xl gap-4 pb-16">
@@ -149,7 +152,7 @@ export function SetupWizard({ onOpenRepository, hasActiveWorkspace = false }: Se
               downloading={downloadModel.isPending}
               installingRunner={installRuntime.isPending}
               onDownloadModel={(model) => downloadModel.mutateAsync(model).then(() => undefined)}
-              onInstallRuntime={(runtime) => installRuntime.mutateAsync(runtime).then(() => undefined)}
+              onInstallRuntime={(request) => installRuntime.mutateAsync(request).then(() => undefined)}
             />
           ) : (
             <SetupPanel title="Local catalog unavailable" body="DesktopLab could not read local models and runners right now." />
@@ -159,7 +162,15 @@ export function SetupWizard({ onOpenRepository, hasActiveWorkspace = false }: Se
         <>
           <InstallPlanPreview
             preview={preview}
-            disabled={setup.accept.isPending || !canStartLocalSetup}
+            disabled={
+              setup.accept.isPending
+              || !canStartLocalSetup
+              || !runtimeConsentSatisfied(
+                selectedRuntimeIdForPlan,
+                runtimeConsentAccepted,
+                selectedRuntimeChoiceForPlan,
+              )
+            }
             selectedRuntimeId={selectedRuntimeId}
             selectedModelId={selectedModelId}
             runtimeSetupChoice={runtimeSetupChoice}
@@ -183,6 +194,7 @@ export function SetupWizard({ onOpenRepository, hasActiveWorkspace = false }: Se
                 const runtimeInstall = await api.startRuntimeInstall({
                   runtimeId,
                   ...(runtimeChoice ? { setupChoice: runtimeChoice } : {}),
+                  ...runtimeConsentRequest(runtimeId, runtimeConsentAccepted, runtimeChoice),
                 });
                 const modelDownload = modelId
                   ? await api.startModelDownload({
@@ -209,12 +221,17 @@ export function SetupWizard({ onOpenRepository, hasActiveWorkspace = false }: Se
               preview={preview}
               selectedRuntimeId={selectedRuntimeId}
               selectedModelId={selectedModelId}
-              onSelectRuntime={setSelectedRuntimeId}
+              onSelectRuntime={(runtimeId) => {
+                setSelectedRuntimeId(runtimeId);
+                setRuntimeConsentAccepted(false);
+              }}
               onSelectModel={setSelectedModelId}
               runtimeSetupChoice={runtimeSetupChoice}
               modelSetupChoice={modelSetupChoice}
               onRuntimeSetupChoiceChange={setRuntimeSetupChoice}
               onModelSetupChoiceChange={setModelSetupChoice}
+              runtimeConsentAccepted={runtimeConsentAccepted}
+              onRuntimeConsentChange={setRuntimeConsentAccepted}
             />
           </div>
 
@@ -243,37 +260,4 @@ function modelDownloadAllowed(model: ReturnType<typeof selectedRecommendation>, 
   if (!isSelectableForLocalSetup(model)) return false;
   if (!model?.runtimeId || !runtimeId) return true;
   return model.runtimeId === runtimeId;
-}
-
-function LocalConfigurationPanel({ preview, models, runtimes }: { preview: SetupPlanPreview; models: ModelInventoryItem[]; runtimes: RuntimeInventoryItem[] }) {
-  const activeRuntime = runtimes.find((runtime) => runtime.status === "running" || runtime.status === "ready");
-  const activeModel = models.find((model) => model.installState === "installed" && model.compatibility === "ready");
-  const runtime = activeRuntime?.displayName ?? preview.runtimeRecommendations[0]?.displayName ?? "No local runner verified";
-  const recommendedModel = preview.modelRecommendations[0];
-  const model = activeModel
-    ? displayLocalModelName(activeModel)
-    : recommendedModel
-      ? displayLocalModelName(recommendedModel)
-      : "No local model verified";
-  return (
-    <section aria-labelledby="local-configuration-title" className="rounded-desktop border border-line p-4 dl-panel">
-      <h2 id="local-configuration-title" className="text-lg font-semibold">
-        Local configuration
-      </h2>
-      <p className="mt-1 text-sm leading-6 text-muted">Local tools are configured. Use this page to review them or add another model.</p>
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <ConfigurationRow label="Active local runner" value={runtime} />
-        <ConfigurationRow label="Active coding model" value={model} />
-      </div>
-    </section>
-  );
-}
-
-function ConfigurationRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-desktop border border-line px-4 py-3 dl-elevated">
-      <p className="text-xs font-semibold uppercase text-muted">{label}</p>
-      <p className="mt-1 text-sm font-semibold text-ink">{value}</p>
-    </div>
-  );
 }

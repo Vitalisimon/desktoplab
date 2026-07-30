@@ -82,6 +82,10 @@ fn runtime_inventory_does_not_claim_unimplemented_update_or_uninstall() {
         .iter()
         .find(|runtime| runtime["runtimeId"] == "runtime.lm-studio")
         .expect("LM Studio runtime");
+    let mlx_lm = runtimes
+        .iter()
+        .find(|runtime| runtime["runtimeId"] == "runtime.mlx-lm")
+        .expect("MLX-LM runtime");
 
     assert_eq!(ollama["lifecycle"]["update"]["state"], "packaging_managed");
     assert_eq!(
@@ -94,9 +98,15 @@ fn runtime_inventory_does_not_claim_unimplemented_update_or_uninstall() {
         "user_owned"
     };
     assert_eq!(lm_studio["ownership"], expected_ownership);
-    assert_eq!(lm_studio["install"]["supported"], false);
-    assert_eq!(lm_studio["lifecycle"]["update"]["state"], "blocked");
-    assert_eq!(lm_studio["lifecycle"]["uninstall"]["state"], "blocked");
+    assert_eq!(lm_studio["install"]["supported"], true);
+    assert_eq!(
+        lm_studio["runtimeCapability"]["availability"],
+        "experimental"
+    );
+    for runtime in [lm_studio, mlx_lm] {
+        assert_eq!(runtime["lifecycle"]["update"]["state"], "blocked");
+        assert_eq!(runtime["lifecycle"]["uninstall"]["state"], "blocked");
+    }
 }
 
 #[test]

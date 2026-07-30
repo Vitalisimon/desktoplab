@@ -2,7 +2,7 @@ use desktoplab_backend_services::{AuditAction, BackendEventScope, JobRetryClass}
 use desktoplab_model_manager::{
     MlxLmModelRuntimeAdapter, ModelRuntimeAdapter, OllamaModelRuntimeAdapter,
 };
-use desktoplab_runtime::{ProcessCommand, ProcessRunner, RuntimeId, SystemProcessRunner};
+use desktoplab_runtime::{RuntimeId, SystemProcessRunner};
 use serde_json::{Value, json};
 
 use super::helpers::{body_field, segment};
@@ -14,11 +14,14 @@ impl LocalApiRouter {
             .local_model_inventory_for_test
             .clone()
             .unwrap_or_else(|| {
-                if !self.readiness.runtime_verified() {
-                    return Vec::new();
-                }
-                OllamaModelRuntimeAdapter::new(SystemProcessRunner)
-                    .list(RuntimeId::new("runtime.ollama"))
+                self.readiness
+                    .runtime_verified()
+                    .then(|| {
+                        model_inventory_lines(
+                            self.readiness.runtime_id().unwrap_or("runtime.ollama"),
+                        )
+                    })
+                    .unwrap_or_default()
             });
         let readiness = self.readiness.to_json();
         ApiRouteResponse::ok(crate::model_routes::models_response_with_state(
@@ -89,14 +92,12 @@ impl LocalApiRouter {
                             "test model download completed",
                         ),
                     ModelDownloadExecutionMode::Execute => {
-                        let inventory = model_inventory_output(start.runtime_id());
-                        let already_installed = inventory.as_ref().is_some_and(|output| {
-                            output.succeeded()
-                                && crate::model_routes::verify_model_inventory(
-                                    start.pull_ref(),
-                                    output.stdout(),
-                                ) == desktoplab_model_manager::ModelVerification::passed()
-                        });
+                        let inventory = model_inventory_lines(start.runtime_id()).join("\n");
+                        let already_installed = crate::model_routes::verify_model_inventory(
+                            start.pull_ref(),
+                            &inventory,
+                        )
+                            == desktoplab_model_manager::ModelVerification::passed();
                         if already_installed && start.should_use_existing() {
                             return self.complete_model_download_job(
                                 job.id(),
@@ -417,6 +418,18 @@ fn model_inventory_lines(runtime_id: &str) -> Vec<String> {
     match runtime_id {
         "runtime.ollama" => OllamaModelRuntimeAdapter::new(SystemProcessRunner)
             .list(RuntimeId::new("runtime.ollama")),
+        "runtime.lm-studio" => {
+            let managed = crate::runtime_routes::managed_lm_studio_models();
+            if !managed.is_empty() {
+                return managed;
+            }
+            let existing = desktoplab_runtime::discover_system_lm_studio();
+            existing
+                .ready()
+                .then(|| existing.models().to_vec())
+                .unwrap_or_default()
+        }
+        "runtime.mlx-lm" => crate::runtime_routes::managed_mlx_lm_models(),
         _ => Vec::new(),
     }
 }
@@ -435,16 +448,6 @@ fn resume_response_body(body: &str, previous_job_id: &str) -> Value {
         object.insert("resumeMode".to_string(), json!("runtime_pull_resume"));
     }
     value
-}
-
-fn model_inventory_output(runtime_id: &str) -> Option<desktoplab_runtime::ProcessOutput> {
-    match runtime_id {
-        "runtime.ollama" => Some(<SystemProcessRunner as ProcessRunner>::run(
-            &SystemProcessRunner,
-            ProcessCommand::new("ollama").arg("list"),
-        )),
-        _ => None,
-    }
 }
 
 fn model_pull_result(

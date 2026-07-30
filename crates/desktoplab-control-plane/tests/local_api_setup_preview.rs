@@ -54,7 +54,7 @@ fn setup_preview_warnings_match_the_measured_host_facts() {
 }
 
 #[test]
-fn setup_preview_marks_lm_studio_as_external_guided() {
+fn setup_preview_marks_lm_studio_as_automatic_managed_preview() {
     let mut router = LocalApiRouter::default();
     let preview = route_json(&mut router, "GET", "/v1/setup/preview", "");
 
@@ -65,7 +65,12 @@ fn setup_preview_marks_lm_studio_as_external_guided() {
         .find(|runtime| runtime["manifestId"] == "runtime.lm-studio")
         .expect("LM Studio runtime should be present");
 
-    assert_eq!(lm_studio["installMode"], "external_guided");
+    assert_eq!(lm_studio["installMode"], "automatic");
+    assert_eq!(
+        lm_studio["runtimeCapability"]["availability"],
+        "experimental"
+    );
+    assert_eq!(lm_studio["runtimeCapability"]["setupMode"], "managed");
 }
 
 #[test]
@@ -83,7 +88,7 @@ fn setup_preview_exposes_mlx_lm_as_macos_native_runtime() {
     if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
         let mlx_lm = mlx_lm.expect("MLX-LM runtime should be present on Apple Silicon");
         assert_eq!(mlx_lm["displayName"], "MLX-LM Server");
-        assert_eq!(mlx_lm["installMode"], "python_environment");
+        assert_eq!(mlx_lm["installMode"], "automatic");
     } else {
         assert!(
             mlx_lm.is_none(),

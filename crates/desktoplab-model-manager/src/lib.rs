@@ -4,6 +4,7 @@ mod catalog;
 mod context_window;
 mod download;
 mod download_execution;
+mod download_policy;
 mod frontier_download;
 mod frontier_store;
 mod inventory;
@@ -21,10 +22,11 @@ pub use catalog::{
 pub use context_window::AgentContextWindowPolicy;
 pub use download::{DownloadPolicy, ModelDownloadPlan, SetupSelection};
 pub use download_execution::{
-    ModelDownloadCapacity, ModelDownloadError, ModelDownloadEvent, ModelDownloadExecutionPolicy,
-    ModelDownloadExecutor, ModelDownloadJob, ModelDownloadMetadata, ModelDownloadProcessResult,
-    ModelDownloadState, RuntimeModelDownloadCommand,
+    ModelDownloadError, ModelDownloadEvent, ModelDownloadExecutor, ModelDownloadJob,
+    ModelDownloadMetadata, ModelDownloadProcessResult, ModelDownloadState,
+    RuntimeModelDownloadCommand,
 };
+pub use download_policy::{ModelDownloadCapacity, ModelDownloadExecutionPolicy};
 pub use frontier_download::{
     ArtifactResponse, FrontierArtifactDownload, FrontierDownloadError, FrontierDownloadOutcome,
     FrontierModelStore, HttpsRangeArtifactSource, ResumableArtifactSource,

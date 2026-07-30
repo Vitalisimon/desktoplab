@@ -1,6 +1,6 @@
 import { ChevronDown } from "../../design/icons";
 import { useState } from "react";
-import type { ModelInventoryItem, RuntimeInventoryItem, SetupPlanPreview } from "../../api/types";
+import type { ModelInventoryItem, RuntimeInstallRequest, RuntimeInventoryItem, SetupPlanPreview } from "../../api/types";
 import { visibleExpectedLimitations } from "./expectedLimitationCopy";
 import { setupFailureCopy } from "./setupFailureCopy";
 import { displayLocalModelName } from "../../domain/displayNames";
@@ -10,6 +10,8 @@ import {
   runtimeInventoryConfigurable,
   runtimeSetupAction,
 } from "./runtimeCapabilityCopy";
+import { RuntimeConsentControl } from "./RuntimeConsentControl";
+import { runtimeConsentRequest, runtimeConsentSatisfied } from "./runtimeConsent";
 
 type SetupCatalogPanelProps = {
   preview: SetupPlanPreview;
@@ -18,7 +20,7 @@ type SetupCatalogPanelProps = {
   downloading: boolean;
   installingRunner: boolean;
   onDownloadModel: (model: ModelInventoryItem) => Promise<void>;
-  onInstallRuntime: (runtime: RuntimeInventoryItem) => Promise<void>;
+  onInstallRuntime: (request: RuntimeInstallRequest) => Promise<void>;
 };
 
 export function SetupCatalogPanel({ preview, models, runtimes, downloading, installingRunner, onDownloadModel, onInstallRuntime }: SetupCatalogPanelProps) {
@@ -34,11 +36,14 @@ export function SetupCatalogPanel({ preview, models, runtimes, downloading, inst
   const [selectedRuntimeId, setSelectedRuntimeId] = useState(defaultRuntimeId);
   const [startedModelName, setStartedModelName] = useState<string | null>(null);
   const [startedRuntimeName, setStartedRuntimeName] = useState<string | null>(null);
+  const [runtimeConsentAccepted, setRuntimeConsentAccepted] = useState(false);
   const selectedModel = downloadableModels.find((model) => model.modelId === (selectedModelId || defaultModelId));
   const selectedRuntime = configurableRuntimes.find((runtime) => runtime.runtimeId === (selectedRuntimeId || defaultRuntimeId));
   const visibleLimitations = visibleExpectedLimitations(preview.expectedLimitations);
   const blocked = !selectedModel || selectedModel.installState === "blocked" || selectedModel.compatibility === "blocked";
-  const runtimeBlocked = !selectedRuntime || !selectedRuntime.install.supported;
+  const runtimeBlocked = !selectedRuntime
+    || !selectedRuntime.install.supported
+    || !runtimeConsentSatisfied(selectedRuntime.runtimeId, runtimeConsentAccepted, "install");
 
   const downloadSelected = async () => {
     if (!selectedModel || blocked) return;
@@ -47,7 +52,11 @@ export function SetupCatalogPanel({ preview, models, runtimes, downloading, inst
   };
   const installSelectedRuntime = async () => {
     if (!selectedRuntime || runtimeBlocked) return;
-    await onInstallRuntime(selectedRuntime);
+    await onInstallRuntime({
+      runtimeId: selectedRuntime.runtimeId,
+      setupChoice: "install",
+      ...runtimeConsentRequest(selectedRuntime.runtimeId, runtimeConsentAccepted, "install"),
+    });
     setStartedRuntimeName(selectedRuntime.displayName);
   };
 
@@ -77,7 +86,10 @@ export function SetupCatalogPanel({ preview, models, runtimes, downloading, inst
                   className="h-10 w-full appearance-none rounded-desktop border border-line bg-panel px-3 pr-9 text-sm text-ink transition-colors duration-150 focus:border-accent"
                   disabled={installingRunner}
                   value={selectedRuntime?.runtimeId ?? ""}
-                  onChange={(event) => setSelectedRuntimeId(event.target.value)}
+                  onChange={(event) => {
+                    setSelectedRuntimeId(event.target.value);
+                    setRuntimeConsentAccepted(false);
+                  }}
                 >
                   {configurableRuntimes.map((runtime) => (
                     <option key={runtime.runtimeId} value={runtime.runtimeId}>
@@ -89,6 +101,13 @@ export function SetupCatalogPanel({ preview, models, runtimes, downloading, inst
               </span>
             </label>
             {selectedRuntime ? <p className="text-sm text-muted">{runnerSetupLabel(selectedRuntime)}</p> : null}
+            <RuntimeConsentControl
+              runtimeId={selectedRuntime?.runtimeId}
+              setupChoice="install"
+              accepted={runtimeConsentAccepted}
+              disabled={installingRunner}
+              onChange={setRuntimeConsentAccepted}
+            />
             {startedRuntimeName ? <p className="text-sm font-medium text-success">Runner setup started for {startedRuntimeName}.</p> : null}
             <button
               type="button"
@@ -205,6 +224,9 @@ function formatParams(parametersBillion?: number) {
 
 function runnerSetupLabel(runtime: RuntimeInventoryItem): string {
   if (!runtime.install.supported) return runtimeCapabilityLabel(runtime.runtimeCapability);
+  if (runtime.runtimeCapability?.availability === "experimental") {
+    return runtimeCapabilityLabel(runtime.runtimeCapability);
+  }
   if (runtime.runtimeCapability?.setupMode === "connect_existing") return "Use existing installation";
   if (runtime.ownership === "user_owned") return "Already installed on this computer";
   return "DesktopLab-managed setup";

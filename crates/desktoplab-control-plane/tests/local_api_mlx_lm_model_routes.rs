@@ -33,6 +33,30 @@ fn uncertified_mlx_model_is_absent_from_download_and_verify_routes() {
 }
 
 #[test]
+fn exact_managed_mlx_model_is_available_to_the_setup_pipeline() {
+    let mut router = LocalApiRouter::default();
+    router.plan_model_downloads_for_test();
+    router.set_host_memory_gb_for_test(32);
+    router.mark_runtime_verified_for_test("runtime.mlx-lm", "managed MLX-LM ready");
+
+    let download = router
+        .route(
+            "POST",
+            "/v1/models/model.smollm3-3b-4bit-mlx/download",
+            r#"{"setupAccepted":true,"networkAvailable":true,"diskAvailableMb":100000}"#,
+        )
+        .unwrap();
+    let payload: serde_json::Value = serde_json::from_str(download.body()).unwrap();
+
+    assert_eq!(payload["runtimeId"], "runtime.mlx-lm");
+    assert_eq!(payload["state"], "running");
+    assert_eq!(
+        payload["executionEvidence"],
+        "managed runtime model acquisition runtime.mlx-lm mlx-community/SmolLM3-3B-4bit"
+    );
+}
+
+#[test]
 fn mlx_lm_route_tests_stay_small() {
     check_logical_line_limit(
         "crates/desktoplab-control-plane/tests/local_api_mlx_lm_model_routes.rs",

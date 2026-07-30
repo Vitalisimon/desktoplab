@@ -114,7 +114,8 @@ fn default_catalog_seeds_multiple_model_families_without_ui_branching() {
     assert_eq!(catalog.variants_for_family("family.qwen3.5").len(), 2);
     assert_eq!(catalog.variants_for_family("family.qwen3-coder").len(), 2);
     assert_eq!(catalog.variants_for_family("family.gemma4").len(), 2);
-    assert_eq!(catalog.variants_for_family("family.gpt-oss").len(), 2);
+    assert_eq!(catalog.variants_for_family("family.gpt-oss").len(), 3);
+    assert_eq!(catalog.variants_for_family("family.smollm3").len(), 1);
     assert_eq!(
         catalog.variants_for_family("family.nemotron-3-nano").len(),
         2
@@ -146,7 +147,7 @@ fn default_catalog_seeds_multiple_model_families_without_ui_branching() {
 }
 
 #[test]
-fn default_catalog_excludes_uncertified_community_conversions() {
+fn default_catalog_includes_only_the_exact_managed_preview_models() {
     let catalog = ModelManager::new().default_family_catalog();
     let mlx_variants: Vec<_> = catalog
         .variants()
@@ -154,7 +155,22 @@ fn default_catalog_excludes_uncertified_community_conversions() {
         .filter(|variant| variant.runtime_compatibility().runtime_id() == "runtime.mlx-lm")
         .collect();
 
-    assert!(mlx_variants.is_empty());
+    assert_eq!(mlx_variants.len(), 1);
+    assert_eq!(mlx_variants[0].model_id(), "model.smollm3-3b-4bit-mlx");
+    assert_eq!(
+        mlx_variants[0].runtime_compatibility().pull_ref(),
+        "mlx-community/SmolLM3-3B-4bit"
+    );
+    let lm_studio = catalog
+        .variants()
+        .iter()
+        .find(|variant| variant.runtime_compatibility().runtime_id() == "runtime.lm-studio")
+        .expect("managed LM Studio preview model should be present");
+    assert_eq!(lm_studio.model_id(), "model.gpt-oss-20b-lm-studio");
+    assert_eq!(
+        lm_studio.runtime_compatibility().pull_ref(),
+        "desktoplab-gpt-oss-20b"
+    );
 }
 
 #[test]
@@ -191,6 +207,11 @@ fn model_manager_source_files_stay_below_initial_line_count_guard() {
             "crates/desktoplab-model-manager/src/download.rs",
             include_str!("../src/download.rs"),
             250,
+        ),
+        (
+            "crates/desktoplab-model-manager/src/download_policy.rs",
+            include_str!("../src/download_policy.rs"),
+            80,
         ),
         (
             "crates/desktoplab-model-manager/src/context_window.rs",

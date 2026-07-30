@@ -44,12 +44,13 @@ fn model_inventory_exposes_curated_agent_candidates_and_excludes_unsuitable_mode
         .iter()
         .filter_map(|model| model["modelId"].as_str())
         .collect::<Vec<_>>();
-    assert_eq!(ids.len(), 19);
+    assert_eq!(ids.len(), 21);
     assert!(!ids.contains(&"model.qwen-coder-7b-q4"));
-    assert!(!ids.contains(&"model.qwen-coder-14b-q4"));
     assert!(ids.contains(&"model.gemma4-12b-q4"));
     assert!(ids.contains(&"model.qwen3-coder-next-80b-q4"));
     assert!(ids.contains(&"model.qwen3-coder-480b-q4"));
+    assert!(ids.contains(&"model.gpt-oss-20b-lm-studio"));
+    assert!(ids.contains(&"model.smollm3-3b-4bit-mlx"));
     assert!(inventory["models"].as_array().unwrap().iter().all(|model| {
         model["recommended"] == false
             && model["agentQualification"] == "runtime_validation_required"

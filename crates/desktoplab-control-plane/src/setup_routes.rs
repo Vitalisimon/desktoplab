@@ -21,7 +21,7 @@ pub fn setup_preview_response() -> Value {
     let model_manager = ModelManager::new();
     let model_catalog = model_manager.default_family_catalog();
     let available_memory_gb = effective_memory_gb(&profile);
-    let host = HostSetupInventory::detect();
+    let host = HostSetupInventory::detect(&model_catalog);
     let high_end_local = crate::frontier_setup_preview::frontier_setup_preview();
     let model_fit = model_manager.rank_variants(
         &model_catalog,
@@ -212,6 +212,11 @@ fn recommendation_json(recommendation: &SetupRecommendation, host: &HostSetupInv
                 object.insert("defaultSetupChoice".to_string(), json!("use_existing"));
                 object.insert("setupChoiceRequired".to_string(), json!(true));
             }
+            if recommendation.manifest_id() == "runtime.lm-studio" && host.lm_studio_available {
+                object.insert("hostInstallState".to_string(), json!("installed"));
+                object.insert("defaultSetupChoice".to_string(), json!("use_existing"));
+                object.insert("setupChoiceRequired".to_string(), json!(true));
+            }
         }
     }
     value
@@ -295,7 +300,7 @@ fn model_recommendation_json(
         let pull_ref = ModelDownloadPlan::from_variant(variant, true)
             .pull_ref()
             .to_string();
-        if host.has_model(&pull_ref) {
+        if host.has_model(variant.runtime_compatibility().runtime_id(), &pull_ref) {
             object.insert("hostInstallState".to_string(), json!("installed"));
             object.insert("defaultSetupChoice".to_string(), json!("use_existing"));
             object.insert("setupChoiceRequired".to_string(), json!(true));
@@ -317,10 +322,26 @@ fn parameter_class_json(parameter_class: ModelParameterClass) -> &'static str {
 struct HostSetupInventory {
     ollama_installed: bool,
     ollama_models: Vec<String>,
+    lm_studio_available: bool,
+    lm_studio_models: Vec<String>,
 }
 
 impl HostSetupInventory {
-    fn detect() -> Self {
+    fn detect(model_catalog: &ModelFamilyCatalog) -> Self {
+        let lm_studio = desktoplab_runtime::discover_system_lm_studio();
+        let lm_studio_models = lm_studio
+            .ready()
+            .then(|| lm_studio.models().to_vec())
+            .unwrap_or_default();
+        let lm_studio_available = model_catalog
+            .variants()
+            .iter()
+            .filter(|variant| variant.runtime_compatibility().runtime_id() == "runtime.lm-studio")
+            .any(|variant| {
+                lm_studio_models.iter().any(|model| {
+                    inventory_entry_has_model(model, variant.runtime_compatibility().pull_ref())
+                })
+            });
         let version = <SystemProcessRunner as ProcessRunner>::run(
             &SystemProcessRunner,
             ProcessCommand::new("ollama").arg("--version"),
@@ -329,6 +350,8 @@ impl HostSetupInventory {
             return Self {
                 ollama_installed: false,
                 ollama_models: Vec::new(),
+                lm_studio_available,
+                lm_studio_models,
             };
         }
         let list = <SystemProcessRunner as ProcessRunner>::run(
@@ -347,11 +370,17 @@ impl HostSetupInventory {
             } else {
                 Vec::new()
             },
+            lm_studio_available,
+            lm_studio_models,
         }
     }
 
-    fn has_model(&self, pull_ref: &str) -> bool {
-        self.ollama_models
+    fn has_model(&self, runtime_id: &str, pull_ref: &str) -> bool {
+        let models = match runtime_id {
+            "runtime.lm-studio" => &self.lm_studio_models,
+            _ => &self.ollama_models,
+        };
+        models
             .iter()
             .any(|model| inventory_entry_has_model(model, pull_ref))
     }
@@ -387,8 +416,7 @@ fn role_value(role: SetupRecommendationRole) -> &'static str {
 
 fn runtime_install_mode(runtime_id: &str) -> &'static str {
     match runtime_id {
-        "runtime.lm-studio" => "external_guided",
-        "runtime.mlx-lm" => "python_environment",
+        "runtime.lm-studio" | "runtime.mlx-lm" => "automatic",
         _ => "automatic",
     }
 }

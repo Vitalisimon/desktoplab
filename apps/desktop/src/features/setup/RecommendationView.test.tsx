@@ -111,7 +111,7 @@ test("labels python environment runtimes without presenting them as one click in
   expect(screen.queryAllByText("One-click setup")).toHaveLength(1);
 });
 
-test("keeps uncertified runtimes visible as non-selectable preview or planned routes", () => {
+test("keeps managed Preview runtimes selectable without presenting them as certified", () => {
   renderRecommendationView(
     preview([], undefined, [
       {
@@ -127,25 +127,24 @@ test("keeps uncertified runtimes visible as non-selectable preview or planned ro
         displayName: "LM Studio",
         channel: "experimental",
         role: "alternative",
-        installMode: "external_guided",
-        runtimeCapability: capability("planned", "external_only"),
+        installMode: "automatic",
+        runtimeCapability: capability("experimental", "managed"),
       },
       {
         manifestId: "runtime.mlx-lm",
         displayName: "MLX-LM Server",
         channel: "experimental",
         role: "alternative",
-        installMode: "python_environment",
-        runtimeCapability: capability("experimental", "none"),
+        installMode: "automatic",
+        runtimeCapability: capability("experimental", "managed"),
       },
     ]),
   );
 
   expect(screen.getByText("Ready and supported")).toBeInTheDocument();
-  expect(screen.getAllByText("Planned runtime").length).toBeGreaterThan(0);
-  expect(screen.getAllByText("Preview · not certified").length).toBeGreaterThan(0);
-  expect(screen.queryByRole("button", { name: "Select LM Studio" })).not.toBeInTheDocument();
-  expect(screen.queryByRole("button", { name: "Select MLX-LM Server" })).not.toBeInTheDocument();
+  expect(screen.getAllByText("Preview · not certified").length).toBeGreaterThanOrEqual(2);
+  expect(screen.getByRole("button", { name: "Select LM Studio" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Select MLX-LM Server" })).toBeInTheDocument();
 });
 
 test("uses user-readable setup choice copy for existing local installs", () => {
@@ -222,6 +221,8 @@ function renderRecommendationView(previewData: SetupPlanPreview) {
       modelSetupChoice="use_existing"
       onRuntimeSetupChoiceChange={vi.fn()}
       onModelSetupChoiceChange={vi.fn()}
+      runtimeConsentAccepted={false}
+      onRuntimeConsentChange={vi.fn()}
     />,
   );
 }

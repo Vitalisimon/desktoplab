@@ -1,42 +1,6 @@
 use desktoplab_runtime::{OllamaRuntime, ProcessCommand, ProcessOutput, ProcessRunner, RuntimeId};
 
-use crate::ModelDownloadPlan;
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct ModelDownloadCapacity {
-    disk_available_mb: u64,
-    network_available: bool,
-}
-
-impl ModelDownloadCapacity {
-    #[must_use]
-    pub fn new(disk_available_mb: u64) -> Self {
-        Self {
-            disk_available_mb,
-            network_available: true,
-        }
-    }
-
-    #[must_use]
-    pub fn with_network_available(mut self, network_available: bool) -> Self {
-        self.network_available = network_available;
-        self
-    }
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct ModelDownloadExecutionPolicy {
-    resume_supported: bool,
-}
-
-impl ModelDownloadExecutionPolicy {
-    #[must_use]
-    pub fn resumable() -> Self {
-        Self {
-            resume_supported: true,
-        }
-    }
-}
+use crate::{ModelDownloadCapacity, ModelDownloadExecutionPolicy, ModelDownloadPlan};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ModelDownloadError {
@@ -58,6 +22,7 @@ pub enum ModelDownloadState {
 pub struct RuntimeModelDownloadCommand {
     program: String,
     args: Vec<String>,
+    managed_runtime_reason: Option<String>,
 }
 
 impl RuntimeModelDownloadCommand {
@@ -66,6 +31,16 @@ impl RuntimeModelDownloadCommand {
         Self {
             program: program.into(),
             args: args.iter().map(|arg| (*arg).to_string()).collect(),
+            managed_runtime_reason: None,
+        }
+    }
+
+    fn managed(runtime_id: &str, model_id: &str) -> Self {
+        let reason = format!("{runtime_id}:model_acquisition_owned_by_managed_setup");
+        Self {
+            program: "managed runtime model acquisition".into(),
+            args: vec![runtime_id.to_string(), model_id.to_string()],
+            managed_runtime_reason: Some(reason),
         }
     }
 
@@ -261,6 +236,9 @@ impl ModelDownloadExecutor {
         R: ProcessRunner,
     {
         let job = self.start(plan, policy)?;
+        if let Some(reason) = job.command.managed_runtime_reason.as_ref() {
+            return Err(ModelDownloadError::UnsupportedRuntime(reason.clone()));
+        }
         let output = runner.run(job.command().to_process_command());
         Ok(ModelDownloadProcessResult::from_output(output))
     }
@@ -301,8 +279,9 @@ fn command_for_runtime(
                 &["pull", pull_ref.as_str()],
             ))
         }
-        "runtime.mlx-lm" => Err(ModelDownloadError::UnsupportedRuntime(
-            "runtime.mlx-lm:model_acquisition_owned_by_managed_setup".to_string(),
+        "runtime.lm-studio" | "runtime.mlx-lm" => Ok(RuntimeModelDownloadCommand::managed(
+            runtime_id.as_str(),
+            model_id,
         )),
         other => Err(ModelDownloadError::UnsupportedRuntime(other.to_string())),
     }

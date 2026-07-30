@@ -29,7 +29,11 @@ test("maps productization account runtime model and agent methods to local api p
   await client.updateRouteSelection({ routeId: "route.local.qwen-coder-7b" });
   await client.listRuntimes();
   await client.runtimeInspect();
-  const runtimeInstall = await client.startRuntimeInstall({ runtimeId: "runtime.ollama" });
+  const runtimeInstall = await client.startRuntimeInstall({
+    runtimeId: "runtime.lm-studio",
+    setupChoice: "install",
+    vendorTermsAccepted: true,
+  });
   await client.listModels();
   const modelDownload = await client.startModelDownload({ modelId: "model.qwen3-coder", runtimeId: "runtime.ollama" });
   await client.catalogRefreshStatus();
@@ -55,7 +59,7 @@ test("maps productization account runtime model and agent methods to local api p
     "POST /v1/routing/options/selection",
     "GET /v1/runtimes",
     "GET /v1/runtime/inspect",
-    "POST /v1/runtimes/runtime.ollama/install",
+    "POST /v1/runtimes/runtime.lm-studio/install",
     "GET /v1/models",
     "POST /v1/models/model.qwen3-coder/download",
     "GET /v1/setup/catalog-refresh",
@@ -83,12 +87,16 @@ test("maps productization account runtime model and agent methods to local api p
   expect(requests[11].body).toEqual({ routeId: "route.local.qwen-coder-7b" });
   expect(runtimeInstall).toEqual({
     jobId: "job.runtime.install",
-    runtimeId: "runtime.ollama",
+    runtimeId: "runtime.lm-studio",
     state: "downloading",
     verificationState: "pending",
     retryClass: "retryable",
   });
-  expect(requests[16].body).toEqual({ runtimeId: "runtime.ollama" });
+  expect(requests[14].body).toEqual({
+    setupChoice: "install",
+    vendorTermsAccepted: true,
+    modelLicenseAccepted: undefined,
+  });
   expect(modelDownload).toEqual({
     jobId: "job.model.download",
     modelId: "model.qwen3-coder",
@@ -124,7 +132,7 @@ function responseFor(path: string) {
   if (path === "/v1/routing/options" || path === "/v1/routing/options/selection") return { selectedRouteId: "route.local.qwen-coder-7b", options: [] };
   if (path === "/v1/runtimes") return { runtimes: [] };
   if (path === "/v1/runtime/inspect") return { source: "service_backed", inspectState: "ready", active: { selectedRouteId: "route.local.qwen-coder-7b", backendId: "backend.ollama", accountMode: "local_runtime", egress: "local_or_approval_gated", toolCapability: "filesystem_write_requires_approval" }, evidence: { coldManifest: { source: "route_selection" }, liveRuntime: { state: "verified" } } };
-  if (path.endsWith("/install")) return { jobId: "job.runtime.install", runtimeId: "runtime.ollama", state: "downloading", verificationState: "pending", retryClass: "retryable" };
+  if (path.endsWith("/install")) return { jobId: "job.runtime.install", runtimeId: decodeURIComponent(path.split("/")[3]), state: "downloading", verificationState: "pending", retryClass: "retryable" };
   if (path === "/v1/models") return { models: [] };
   if (path.endsWith("/download")) {
     return {

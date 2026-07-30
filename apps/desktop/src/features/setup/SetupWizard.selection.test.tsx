@@ -113,6 +113,127 @@ test("lets users replace existing local installs and sends replace to setup rout
   });
 });
 
+test("requires explicit consent before starting a managed LM Studio Preview", async () => {
+  const base = preview();
+  const api = client({
+    preview: {
+      ...base,
+      runtimeRecommendations: base.runtimeRecommendations.map((runtime) =>
+        runtime.manifestId === "runtime.lm-studio"
+          ? {
+              ...runtime,
+              channel: "experimental",
+              role: "alternative",
+              installMode: "automatic",
+              runtimeCapability: {
+                availability: "experimental",
+                setupMode: "managed",
+                verification: "not_applicable",
+                certifiedPlatforms: [],
+                evidenceScope: "managed_preview_exact_candidate_required",
+              },
+            }
+          : runtime,
+      ),
+      modelRecommendations: [
+        ...base.modelRecommendations,
+        {
+          manifestId: "model.gpt-oss-20b-lm-studio",
+          displayName: "GPT OSS medium",
+          familyName: "GPT OSS",
+          channel: "experimental",
+          role: "alternative",
+          runtimeId: "runtime.lm-studio",
+        },
+      ],
+    },
+    acceptance: { startedJobIds: [], jobs: [] },
+  });
+  renderSetup(api);
+
+  fireEvent.click(await screen.findByRole("button", { name: "Select LM Studio" }));
+  fireEvent.click(screen.getByRole("button", { name: "Select GPT OSS medium" }));
+  const start = screen.getByRole("button", { name: /start setup/i });
+  expect(start).toBeDisabled();
+
+  fireEvent.click(screen.getByRole("checkbox", { name: /accept the LM Studio vendor terms/i }));
+  expect(start).toBeEnabled();
+  fireEvent.click(start);
+
+  await waitFor(() =>
+    expect(api.startRuntimeInstall).toHaveBeenCalledWith({
+      runtimeId: "runtime.lm-studio",
+      vendorTermsAccepted: true,
+    }),
+  );
+  expect(api.startModelDownload).toHaveBeenCalledWith({
+    modelId: "model.gpt-oss-20b-lm-studio",
+    runtimeId: "runtime.lm-studio",
+  });
+});
+
+test("uses an existing LM Studio install without accepting managed-install terms", async () => {
+  const base = preview();
+  const api = client({
+    preview: {
+      ...base,
+      runtimeRecommendations: base.runtimeRecommendations.map((runtime) =>
+        runtime.manifestId === "runtime.lm-studio"
+          ? {
+              ...runtime,
+              channel: "experimental",
+              role: "alternative",
+              hostInstallState: "installed",
+              defaultSetupChoice: "use_existing",
+              setupChoiceRequired: true,
+              installMode: "automatic",
+              runtimeCapability: {
+                availability: "experimental",
+                setupMode: "managed",
+                verification: "not_applicable",
+                certifiedPlatforms: [],
+                evidenceScope: "managed_preview_exact_candidate_required",
+              },
+            }
+          : runtime,
+      ),
+      modelRecommendations: [
+        ...base.modelRecommendations,
+        {
+          manifestId: "model.gpt-oss-20b-lm-studio",
+          displayName: "GPT OSS medium",
+          familyName: "GPT OSS",
+          channel: "experimental",
+          role: "alternative",
+          runtimeId: "runtime.lm-studio",
+          hostInstallState: "installed",
+          defaultSetupChoice: "use_existing",
+          setupChoiceRequired: true,
+        },
+      ],
+    },
+    acceptance: { startedJobIds: [], jobs: [] },
+  });
+  renderSetup(api);
+
+  fireEvent.click(await screen.findByRole("button", { name: "Select LM Studio" }));
+  fireEvent.click(screen.getByRole("button", { name: "Select GPT OSS medium" }));
+  expect(screen.queryByRole("checkbox", { name: /accept the LM Studio vendor terms/i })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: /start setup/i }));
+
+  await waitFor(() =>
+    expect(api.startRuntimeInstall).toHaveBeenCalledWith({
+      runtimeId: "runtime.lm-studio",
+      setupChoice: "use_existing",
+    }),
+  );
+  expect(api.startModelDownload).toHaveBeenCalledWith({
+    modelId: "model.gpt-oss-20b-lm-studio",
+    runtimeId: "runtime.lm-studio",
+    setupChoice: "use_existing",
+  });
+});
+
 test("does not start a local model download for provider or cloud-only catalog entries", async () => {
   const api = client({
     preview: {

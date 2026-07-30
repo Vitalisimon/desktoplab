@@ -11,14 +11,14 @@ fn setup_preview_separates_certified_preview_and_planned_runtimes() {
         .expect("runtime recommendations");
 
     assert_capability(runtimes, "runtime.ollama", "certified", "managed");
-    assert_capability(runtimes, "runtime.lm-studio", "planned", "external_only");
+    assert_capability(runtimes, "runtime.lm-studio", "experimental", "managed");
     if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
-        assert_capability(runtimes, "runtime.mlx-lm", "experimental", "none");
+        assert_capability(runtimes, "runtime.mlx-lm", "experimental", "managed");
     }
 }
 
 #[test]
-fn runtime_inventory_disables_uncertified_install_routes() {
+fn runtime_inventory_exposes_managed_preview_routes_without_claiming_certification() {
     let mut router = LocalApiRouter::default();
     let inventory = route_json(&mut router, "GET", "/v1/runtimes", "");
     let runtimes = inventory["runtimes"].as_array().expect("runtime inventory");
@@ -27,14 +27,21 @@ fn runtime_inventory_disables_uncertified_install_routes() {
     assert_eq!(ollama["runtimeCapability"]["availability"], "certified");
     assert_eq!(ollama["install"]["supported"], true);
 
-    for runtime_id in ["runtime.lm-studio", "runtime.mlx-lm"] {
-        let item = runtime(runtimes, runtime_id);
-        assert_eq!(item["install"]["supported"], false);
-    }
+    let lm_studio = runtime(runtimes, "runtime.lm-studio");
+    assert_eq!(
+        lm_studio["runtimeCapability"]["availability"],
+        "experimental"
+    );
+    assert_eq!(lm_studio["install"]["supported"], true);
+    let mlx_lm = runtime(runtimes, "runtime.mlx-lm");
+    assert_eq!(
+        mlx_lm["install"]["supported"],
+        cfg!(all(target_os = "macos", target_arch = "aarch64"))
+    );
 }
 
 #[test]
-fn direct_uncertified_runtime_install_fails_closed_before_execution() {
+fn managed_preview_runtime_requires_explicit_license_consent() {
     let mut router = LocalApiRouter::default();
     let blocked = route_json(
         &mut router,
@@ -44,8 +51,14 @@ fn direct_uncertified_runtime_install_fails_closed_before_execution() {
     );
 
     assert_eq!(blocked["state"], "blocked");
-    assert_eq!(blocked["blockedReason"], "runtime setup is not available");
-    assert_eq!(blocked["retryClass"], "non_retryable");
+    if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
+        assert_eq!(
+            blocked["blockedReason"],
+            "Accept the Apache-2.0 model license and use the exact Apple Silicon plan."
+        );
+    } else {
+        assert_eq!(blocked["blockedReason"], "runtime setup is not available");
+    }
 }
 
 #[test]

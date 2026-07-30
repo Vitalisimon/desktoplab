@@ -86,7 +86,7 @@ test("ready setup becomes local configuration without rerunning start setup", as
   expect(screen.getByText("Apple M4 Pro")).toBeVisible();
 });
 
-test("ready setup keeps uncertified runner changes non-executable", async () => {
+test("ready setup keeps managed Preview runner changes consent gated", async () => {
   const startModelDownload = vi.fn().mockResolvedValue({
     jobId: "model.download.deepseek",
     modelId: "model.deepseek-coder",
@@ -138,10 +138,20 @@ test("ready setup keeps uncertified runner changes non-executable", async () => 
     }),
   );
 
-  expect(screen.queryByRole("combobox", { name: "Choose a ready runner to configure" })).not.toBeInTheDocument();
-  expect(screen.getByText("Planned and preview runtimes")).toBeInTheDocument();
+  expect(screen.getByRole("combobox", { name: "Choose a ready runner to configure" })).toBeInTheDocument();
   expect(screen.getByText("Preview · not certified")).toBeInTheDocument();
-  expect(startRuntimeInstall).not.toHaveBeenCalled();
+  const setupPreview = screen.getByRole("button", { name: "Set up MLX-LM Server Preview" });
+  expect(setupPreview).toBeDisabled();
+  fireEvent.click(screen.getByRole("checkbox", { name: /accept the Apache-2.0 model license/i }));
+  expect(setupPreview).toBeEnabled();
+  fireEvent.click(setupPreview);
+  await waitFor(() =>
+    expect(startRuntimeInstall).toHaveBeenCalledWith({
+      runtimeId: "runtime.mlx-lm",
+      setupChoice: "install",
+      modelLicenseAccepted: true,
+    }),
+  );
 });
 
 test("ready setup hides stale pipeline progress from previous setup work", async () => {
@@ -465,13 +475,13 @@ function runtimesWithMlx(): RuntimesListResponse {
         status: "not_installed",
         ownership: "desktoplab_managed",
         capabilities: ["Local chat"],
-        install: { supported: false, blockedReason: "Preview; not certified" },
+        install: { supported: true },
         runtimeCapability: {
           availability: "experimental",
-          setupMode: "none",
+          setupMode: "managed",
           verification: "not_applicable",
           certifiedPlatforms: [],
-          evidenceScope: "no_certification_evidence",
+          evidenceScope: "managed_preview_exact_candidate_required",
         },
         repairActions: [],
       },
