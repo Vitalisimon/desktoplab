@@ -22,6 +22,12 @@ const contract = (overrides = {}) => ({
   modelId: "qwen2.5-coder:7b",
   quantization: "Q4_K_M",
   host: "test-host",
+  installation: {
+    uiDriver: {
+      sha256: `sha256:${"c".repeat(64)}`,
+      bundleSha256: `sha256:${"d".repeat(64)}`,
+    },
+  },
   ...overrides,
 });
 const verifiedRecording = (cases, metrics = { localModelRequestCount: 7, realToolExecutionCount: 6, testControlRequests: 0 }) => ({
@@ -109,6 +115,8 @@ test("only current installed UI evidence with real model and tools passes", () =
   assert.equal(report.status, "pass");
   assert.equal(report.schemaVersion, 3);
   assert.equal(report.liveClaim, true);
+  assert.equal(report.provenance.uiDriverSha256, contract().installation.uiDriver.sha256);
+  assert.equal(report.provenance.uiDriverBundleSha256, contract().installation.uiDriver.bundleSha256);
 });
 
 test("legacy claimed outputs cannot certify an installed agent", () => {

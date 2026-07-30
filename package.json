@@ -103,7 +103,7 @@
     "product:public-export:audit": "node scripts/product/public-export-audit.mjs",
     "release:safe-signing-regression": "node scripts/release/safe-signing-regression-gate.mjs",
     "release:safe-signing-recovery": "node scripts/release/safe-signing-recovery.mjs",
-    "release:safe-signing-regression:test": "node --test scripts/release/safe-signing-regression-gate.test.mjs scripts/release/safe-signing-recovery-core.test.mjs",
+    "release:safe-signing-regression:test": "node --test scripts/release/safe-signing-agent-evidence-core.test.mjs scripts/release/safe-signing-regression-gate.test.mjs scripts/release/safe-signing-recovery-core.test.mjs",
     "release:verify-public-source": "node scripts/release/public-release-source.mjs",
     "release:candidate": "node scripts/release/candidate-admission.mjs",
     "release:verify-tag": "node scripts/release/release-tag-policy.mjs",

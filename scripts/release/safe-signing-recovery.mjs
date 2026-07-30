@@ -14,6 +14,13 @@ if (!args.recoverFrom) throw new Error("safe-signing recovery requires --recover
 if (!args.runRoot) throw new Error("safe-signing recovery requires the original --run-root");
 const reportPath = resolve(args.report ?? "dist/release/candidate/safe-signing-recovery.json");
 if (resolve(args.recoverFrom) === reportPath) throw new Error("recovery output must not overwrite its source report");
+if (!["fresh-recording", "verified-reuse"].includes(args.agentEvidenceMode)) {
+  throw new Error("safe-signing recovery requires --agent-evidence-mode fresh-recording|verified-reuse");
+}
+if (args.agentEvidenceMode === "verified-reuse"
+  && (!args.reuseAgentCertification || !args.reuseAgentCampaign)) {
+  throw new Error("safe-signing verified reuse requires both agent certification and campaign evidence");
+}
 const started = new Date();
 const runId = `${started.toISOString()}-${process.pid}-recovery`;
 const inputs = candidateInputs(args, runId);
@@ -75,6 +82,8 @@ function parseArgs(argv) {
     ["--certification", "certification"], ["--runtime", "runtime"], ["--campaign", "campaign"],
     ["--agent-gates", "agentGates"], ["--run-root", "runRoot"], ["--reliability-root", "reliabilityRoot"],
     ["--reliability-manifest", "reliabilityManifest"], ["--reliability-catalog", "reliabilityCatalog"],
+    ["--reuse-agent-certification", "reuseAgentCertification"], ["--reuse-agent-campaign", "reuseAgentCampaign"],
+    ["--agent-evidence-mode", "agentEvidenceMode"],
   ]);
   for (let index = 0; index < argv.length; index += 1) {
     const name = names.get(argv[index]);

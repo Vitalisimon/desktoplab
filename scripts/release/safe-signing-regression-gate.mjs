@@ -8,6 +8,17 @@ import { aggregateRun, appendRun, runCommand } from "./regression-gate-core.mjs"
 import { candidateInputs, requiredSafeSigningSteps } from "./safe-signing-regression-plan.mjs";
 
 const args = parseArgs(process.argv.slice(2));
+if (!["fresh-recording", "verified-reuse"].includes(args.agentEvidenceMode)) {
+  throw new Error("safe-signing requires --agent-evidence-mode fresh-recording|verified-reuse");
+}
+if (args.agentEvidenceMode === "verified-reuse"
+  && (!args.reuseAgentCertification || !args.reuseAgentCampaign)) {
+  throw new Error("safe-signing verified reuse requires both agent certification and campaign evidence");
+}
+if (args.agentEvidenceMode === "fresh-recording"
+  && (args.reuseAgentCertification || args.reuseAgentCampaign)) {
+  throw new Error("safe-signing fresh recording cannot accept reused agent evidence");
+}
 const startedAt = new Date();
 const runId = `${startedAt.toISOString()}-${process.pid}`;
 const inputs = candidateInputs(args, runId);
@@ -52,7 +63,7 @@ function gitValue(commandArgs) {
 }
 
 function parseArgs(argv) {
-  const parsed = { report: null, dryRun: false, candidate: null, app: null, workspace: null, evidence: null, certification: null, runtime: null, campaign: null, agentGates: null };
+  const parsed = { report: null, dryRun: false, candidate: null, app: null, workspace: null, evidence: null, certification: null, runtime: null, campaign: null, agentGates: null, agentEvidenceMode: null, reuseAgentCertification: null, reuseAgentCampaign: null };
   for (let index = 0; index < argv.length; index += 1) {
     if (argv[index] === "--report") parsed.report = argv[++index];
     else if (argv[index] === "--dry-run") parsed.dryRun = true;
@@ -68,6 +79,10 @@ function parseArgs(argv) {
     else if (argv[index] === "--reliability-root") parsed.reliabilityRoot = argv[++index];
     else if (argv[index] === "--reliability-manifest") parsed.reliabilityManifest = argv[++index];
     else if (argv[index] === "--reliability-catalog") parsed.reliabilityCatalog = argv[++index];
+    else if (argv[index] === "--reuse-agent-certification") parsed.reuseAgentCertification = argv[++index];
+    else if (argv[index] === "--reuse-agent-campaign") parsed.reuseAgentCampaign = argv[++index];
+    else if (argv[index] === "--agent-evidence-mode") parsed.agentEvidenceMode = argv[++index];
+    else throw new Error(`unknown or incomplete argument ${argv[index]}`);
   }
   return parsed;
 }
