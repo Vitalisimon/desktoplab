@@ -44,6 +44,6 @@ export default defineConfig({
     maxWorkers: 1,
     minWorkers: 1,
     fileParallelism: false,
-    exclude: ["tests/**", "node_modules/**", "dist/**"],
+    exclude: ["tests/**", "test-artifacts/**", "node_modules/**", "dist/**"],
   },
 });

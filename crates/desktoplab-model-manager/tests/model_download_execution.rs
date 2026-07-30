@@ -129,18 +129,16 @@ fn mlx_lm_variant_requires_atomic_managed_runtime_setup() {
     );
 
     let executor = ModelDownloadExecutor::new(ModelDownloadCapacity::new(100_000));
-    let error = executor
+    let job = executor
         .start(
             ModelDownloadPlan::from_variant(&mlx_variant, true),
             ModelDownloadExecutionPolicy::resumable(),
         )
-        .expect_err("MLX model acquisition must stay inside managed runtime setup");
+        .expect("managed runtime acquisition should remain visible to setup");
 
     assert_eq!(
-        error,
-        ModelDownloadError::UnsupportedRuntime(
-            "runtime.mlx-lm:model_acquisition_owned_by_managed_setup".to_string()
-        )
+        job.command().evidence(),
+        "managed runtime model acquisition runtime.mlx-lm mlx-community/Qwen-3.5-4B-8bit"
     );
 }
 

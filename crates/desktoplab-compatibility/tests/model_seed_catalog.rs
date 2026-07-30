@@ -13,6 +13,8 @@ fn seed_catalog_contains_curated_downloadable_agent_models() {
             "model.qwen3.5-9b-q4",
             "model.gemma4-12b-q4",
             "model.gpt-oss-20b-mxfp4",
+            "model.gpt-oss-20b-lm-studio",
+            "model.smollm3-3b-4bit-mlx",
             "model.qwen3-coder-30b-q4",
             "model.qwen3.6-27b-q4",
             "model.devstral-small-2-24b-q4",
@@ -141,7 +143,10 @@ fn downloadable_catalog_entries_all_use_implemented_runtime_pull_refs() {
         .filter(|entry| entry.is_downloadable_now())
     {
         assert!(
-            matches!(entry.runtime_id(), "runtime.ollama" | "runtime.mlx-lm"),
+            matches!(
+                entry.runtime_id(),
+                "runtime.ollama" | "runtime.lm-studio" | "runtime.mlx-lm"
+            ),
             "{}",
             entry.model_id()
         );

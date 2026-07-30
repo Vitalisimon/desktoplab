@@ -9,6 +9,7 @@ import {
   selectedRecommendation,
 } from "./RecommendationDetails";
 import { isHardwareHiddenReason } from "./recommendationLabels";
+import { RuntimeConsentControl } from "./RuntimeConsentControl";
 
 type RecommendationViewProps = {
   preview: SetupPlanPreview;
@@ -20,6 +21,8 @@ type RecommendationViewProps = {
   modelSetupChoice: SetupChoice;
   onRuntimeSetupChoiceChange: (choice: SetupChoice) => void;
   onModelSetupChoiceChange: (choice: SetupChoice) => void;
+  runtimeConsentAccepted: boolean;
+  onRuntimeConsentChange: (accepted: boolean) => void;
 };
 
 export function RecommendationView({
@@ -32,6 +35,8 @@ export function RecommendationView({
   modelSetupChoice,
   onRuntimeSetupChoiceChange,
   onModelSetupChoiceChange,
+  runtimeConsentAccepted,
+  onRuntimeConsentChange,
 }: RecommendationViewProps) {
   const runtime = selectedRecommendation(preview.runtimeRecommendations, selectedRuntimeId);
   const model = selectedRecommendation(preview.modelRecommendations, selectedModelId);
@@ -66,6 +71,13 @@ export function RecommendationView({
         modelSetupChoice={modelSetupChoice}
         onRuntimeSetupChoiceChange={onRuntimeSetupChoiceChange}
         onModelSetupChoiceChange={onModelSetupChoiceChange}
+      />
+
+      <RuntimeConsentControl
+        runtimeId={runtime?.manifestId}
+        setupChoice={runtime?.setupChoiceRequired ? runtimeSetupChoice : undefined}
+        accepted={runtimeConsentAccepted}
+        onChange={onRuntimeConsentChange}
       />
 
       {alternativeRuntimes.length > 0 ? (

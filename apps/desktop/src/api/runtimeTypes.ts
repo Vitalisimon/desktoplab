@@ -55,6 +55,8 @@ export type RuntimesListResponse = {
 export type RuntimeInstallRequest = {
   runtimeId: string;
   setupChoice?: "use_existing" | "install" | "replace";
+  vendorTermsAccepted?: boolean;
+  modelLicenseAccepted?: boolean;
 };
 
 export type RuntimeInstallResponse = {

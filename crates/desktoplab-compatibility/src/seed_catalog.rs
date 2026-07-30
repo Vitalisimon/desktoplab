@@ -166,7 +166,7 @@ impl ProductModelSeedEntry {
     pub fn is_downloadable_now(&self) -> bool {
         matches!(
             self.runtime_id.as_str(),
-            "runtime.ollama" | "runtime.mlx-lm"
+            "runtime.ollama" | "runtime.lm-studio" | "runtime.mlx-lm"
         ) && self.is_recommendable()
     }
 
@@ -283,6 +283,8 @@ const INITIAL_CODING_MODELS: &[SeedModelRow] = &[
     seed("family.qwen3.5", "Qwen 3.5", "model.qwen3.5-9b-q4", "small", 9, "Q4", 256_000, 16, 6_600, "runtime.ollama", "qwen3.5:9b", Channel::Beta, AGENT_CANDIDATE),
     seed("family.gemma4", "Gemma 4", "model.gemma4-12b-q4", "small", 12, "Q4", 256_000, 16, 7_600, "runtime.ollama", "gemma4:12b", Channel::Beta, AGENT_CANDIDATE),
     seed("family.gpt-oss", "GPT OSS", "model.gpt-oss-20b-mxfp4", "medium", 20, "MXFP4", 128_000, 24, 14_000, "runtime.ollama", "gpt-oss:20b", Channel::Beta, AGENT_CANDIDATE),
+    seed("family.gpt-oss", "GPT OSS", "model.gpt-oss-20b-lm-studio", "medium", 20, "MXFP4", 32_768, 24, 14_000, "runtime.lm-studio", "desktoplab-gpt-oss-20b", Channel::Experimental, MANAGED_PREVIEW),
+    seed("family.smollm3", "SmolLM3", "model.smollm3-3b-4bit-mlx", "small", 3, "4bit", 32_768, 8, 1_707, "runtime.mlx-lm", "mlx-community/SmolLM3-3B-4bit", Channel::Experimental, MANAGED_PREVIEW),
     seed("family.qwen3-coder", "Qwen 3 Coder", "model.qwen3-coder-30b-q4", "medium", 30, "Q4", 256_000, 32, 19_000, "runtime.ollama", "qwen3-coder:30b", Channel::Beta, AGENT_CANDIDATE),
     seed("family.qwen3.6", "Qwen 3.6", "model.qwen3.6-27b-q4", "medium", 27, "Q4", 256_000, 32, 17_000, "runtime.ollama", "qwen3.6:27b", Channel::Beta, AGENT_CANDIDATE),
     seed("family.devstral-small-2", "Devstral Small 2", "model.devstral-small-2-24b-q4", "medium", 24, "Q4", 384_000, 32, 15_000, "runtime.ollama", "devstral-small-2:24b", Channel::Beta, AGENT_CANDIDATE),
@@ -301,6 +303,7 @@ const INITIAL_CODING_MODELS: &[SeedModelRow] = &[
 ];
 
 const AGENT_CANDIDATE: &[&str] = &["coding", "tool_use", "agent_candidate", "official_ollama"];
+const MANAGED_PREVIEW: &[&str] = &["coding", "tool_use", "agent_candidate", "managed_preview"];
 
 #[allow(clippy::too_many_arguments)]
 const fn seed(

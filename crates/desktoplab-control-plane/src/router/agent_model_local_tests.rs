@@ -66,6 +66,30 @@ fn lm_studio_execution_fails_when_bound_model_is_not_loaded() {
 }
 
 #[test]
+fn managed_lm_studio_execution_uses_the_pinned_api_model_identifier() {
+    let mut router = LocalApiRouter::default();
+    router.selected_route_id =
+        crate::execution_routes::local_route_id("model.gpt-oss-20b-lm-studio");
+    let binding = AgentExecutionBinding::capture(&router, "backend.lm-studio");
+
+    let execution = router.prepare_lm_studio_model_execution_with_inventory(
+        &binding,
+        vec![BackendMessage::user("test")],
+        "http://127.0.0.1:12345",
+        &["desktoplab-gpt-oss-20b".to_string()],
+    );
+
+    let PreparedAgentModelExecution::LmStudio { backend, prompt } = execution else {
+        panic!("managed LM Studio execution should be prepared");
+    };
+    assert_eq!(prompt.model(), "desktoplab-gpt-oss-20b");
+    assert_eq!(
+        backend.chat_completions_url(),
+        "http://127.0.0.1:12345/v1/chat/completions"
+    );
+}
+
+#[test]
 fn ollama_execution_fails_if_readiness_moved_to_another_model() {
     let mut router = LocalApiRouter::default();
     router.selected_route_id = crate::execution_routes::local_route_id("model.gemma4-12b-q4");

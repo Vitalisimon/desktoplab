@@ -11,6 +11,10 @@ pub(crate) mod mlx_lm_managed;
 mod setup_choice;
 
 pub use inventory::runtimes_response;
+pub(crate) use lm_studio_managed::{
+    connection as managed_lm_studio_connection, models as managed_lm_studio_models,
+};
+pub(crate) use mlx_lm_managed::models as managed_mlx_lm_models;
 pub use setup_choice::{RuntimeSetupChoice, runtime_setup_choice};
 
 use helpers::{
@@ -52,17 +56,25 @@ pub fn execute_runtime_install(
     body: &str,
 ) -> desktoplab_runtime::RuntimeInstallExecutionResult {
     if runtime_id == "runtime.lm-studio" {
-        return lm_studio_managed::execute(body);
+        return if setup_choice == RuntimeSetupChoice::UseExisting {
+            lm_studio_managed::verify_existing()
+        } else {
+            lm_studio_managed::execute(body)
+        };
     }
     if runtime_id == "runtime.mlx-lm" {
-        return mlx_lm_managed::execute(body);
+        return if setup_choice == RuntimeSetupChoice::UseExisting {
+            mlx_lm_managed::verify()
+        } else {
+            mlx_lm_managed::execute(body)
+        };
     }
     let executor = RuntimeInstallExecutor::new(SystemProcessRunner);
     let plan = OllamaRuntime::new().platform_install_plan(host_target());
-    if setup_choice == RuntimeSetupChoice::Replace {
-        executor.execute_install(&plan)
-    } else {
-        executor.execute_existing_or_install(&plan)
+    match setup_choice {
+        RuntimeSetupChoice::Install => executor.execute_existing_or_install(&plan),
+        RuntimeSetupChoice::UseExisting => executor.verify_existing(runtime_id),
+        RuntimeSetupChoice::Replace => executor.execute_install(&plan),
     }
 }
 

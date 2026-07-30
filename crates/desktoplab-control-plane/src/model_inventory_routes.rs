@@ -156,6 +156,7 @@ fn model_state_copy(
 
 fn runtime_found_copy(runtime_id: &str) -> &'static str {
     match runtime_id {
+        "runtime.lm-studio" => "Found in LM Studio",
         "runtime.mlx-lm" => "Found in MLX-LM",
         _ => "Found in Ollama",
     }
@@ -172,6 +173,11 @@ fn inventory_entry_has_model(entry: &str, pull_ref: &str) -> bool {
 
 fn runtime_supported_on_host(runtime_id: &str) -> bool {
     runtime_id == "runtime.ollama"
+        || (runtime_id == "runtime.lm-studio"
+            && matches!(
+                (std::env::consts::OS, std::env::consts::ARCH),
+                ("macos", "aarch64") | ("linux", "x86_64" | "aarch64")
+            ))
         || (runtime_id == "runtime.mlx-lm"
             && cfg!(all(target_os = "macos", target_arch = "aarch64")))
 }

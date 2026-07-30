@@ -62,7 +62,8 @@
     { "path": "crates/desktoplab-model-manager/src/context_window.rs", "sha256": "sha256:64494d1a59f7876afbd3ebc5cf488fcd6658b37aa427ccab2c928d2c82fb4ade" },
     { "path": "crates/desktoplab-model-manager/src/request_timeout.rs", "sha256": "sha256:9b8968a66ba3219f3478e338b8014814d29e6add978b76e0ae55bd8aa3205844" },
     { "path": "crates/desktoplab-control-plane/src/model_routes.rs", "sha256": "sha256:1caae52235c6209373cc5dc3b29349b832b1f1270766b260597435aadd9d8c12" },
-    { "path": "crates/desktoplab-control-plane/src/router/agent_model_local.rs", "sha256": "sha256:44505fb81738c2ac1499406fc22329008c58194d42cb426806fed674d5785f0b" },
-    { "path": "crates/desktoplab-compatibility/src/seed_catalog.rs", "sha256": "sha256:7a636cb90b0b04226111f91fea1189232850b8f1e5b419ebda4b25f3b170a6b1" }
+    { "path": "crates/desktoplab-control-plane/src/router/agent_model_local.rs", "sha256": "sha256:4698439b81bd5dd9d8a77880c40dc2bcedd01be8043ac810ffeb5977693be6f7" },
+    { "path": "crates/desktoplab-control-plane/src/router/agent_model_lm_studio.rs", "sha256": "sha256:5dab43c1defd1af6936b87a349285567bc3513cc749e50a1abc02b3177fbd2fd" },
+    { "path": "crates/desktoplab-compatibility/src/seed_catalog.rs", "sha256": "sha256:95c469917aa716e828f36ce503b2458e638502bd03ed9fbe517c7779dd1f35a0" }
   ]
 }

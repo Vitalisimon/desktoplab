@@ -160,6 +160,8 @@ export class DesktopLabApiClient {
   startRuntimeInstall(request: RuntimeInstallRequest): Promise<RuntimeInstallResponse> {
     return this.request("POST", `/v1/runtimes/${encodeURIComponent(request.runtimeId)}/install`, {
       setupChoice: request.setupChoice,
+      vendorTermsAccepted: request.vendorTermsAccepted,
+      modelLicenseAccepted: request.modelLicenseAccepted,
     });
   }
 

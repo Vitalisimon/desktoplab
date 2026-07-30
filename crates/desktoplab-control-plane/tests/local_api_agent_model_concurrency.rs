@@ -194,6 +194,11 @@ fn model_concurrency_test_stays_focused() {
             180,
         ),
         (
+            "crates/desktoplab-control-plane/src/router/agent_model_lm_studio.rs",
+            include_str!("../src/router/agent_model_lm_studio.rs"),
+            180,
+        ),
+        (
             "crates/desktoplab-control-plane/src/router/agent_iterative_resume.rs",
             include_str!("../src/router/agent_iterative_resume.rs"),
             220,

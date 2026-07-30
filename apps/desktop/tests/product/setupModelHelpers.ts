@@ -32,12 +32,20 @@ export async function markSetupReady(request: APIRequestContext) {
 }
 
 export async function recommendedSetupModel(request: APIRequestContext): Promise<SetupModelSelection> {
-  const preview = await localApi(request, "GET", "/v1/setup/preview");
+  const [preview, inventory] = await Promise.all([
+    localApi(request, "GET", "/v1/setup/preview"),
+    localApi(request, "GET", "/v1/models"),
+  ]);
   const candidates = preview.modelRecommendations.filter(
     (model: { runtimeId?: string }) => model.runtimeId === "runtime.ollama",
   );
+  const installedModelIds = new Set(
+    inventory.models
+      .filter((model: { installState?: string }) => model.installState === "installed")
+      .map((model: { modelId: string }) => model.modelId),
+  );
   const selected = candidates.find(
-    (model: { hostInstallState?: string }) => model.hostInstallState === "installed",
+    (model: { manifestId: string }) => installedModelIds.has(model.manifestId),
   ) ?? candidates.find(
     (model: { role?: string }) => model.role === "recommended",
   ) ?? candidates[0];

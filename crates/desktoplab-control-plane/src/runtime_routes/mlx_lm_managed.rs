@@ -53,6 +53,13 @@ pub(crate) fn status() -> Option<desktoplab_runtime::MlxLmManagedStatus> {
     )
 }
 
+pub(crate) fn models() -> Vec<String> {
+    status()
+        .filter(desktoplab_runtime::MlxLmManagedStatus::ready)
+        .map(|status| status.models().to_vec())
+        .unwrap_or_default()
+}
+
 pub(super) fn managed_plan(
     body: &str,
 ) -> Result<desktoplab_runtime::MlxLmManagedPlan, desktoplab_runtime::MlxLmManagedPlanError> {

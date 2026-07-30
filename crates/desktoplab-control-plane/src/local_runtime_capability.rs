@@ -4,14 +4,12 @@ use serde_json::{Value, json};
 pub(crate) enum RuntimeAvailability {
     Certified,
     Experimental,
-    Planned,
     Unsupported,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum RuntimeSetupMode {
     Managed,
-    ExternalOnly,
     None,
 }
 
@@ -28,17 +26,17 @@ impl LocalRuntimeCapability {
     pub(crate) fn for_runtime(runtime_id: &str) -> Self {
         match runtime_id {
             "runtime.ollama" => ollama_capability(),
-            "runtime.lm-studio" => Self {
-                availability: RuntimeAvailability::Planned,
-                setup_mode: RuntimeSetupMode::ExternalOnly,
+            "runtime.lm-studio" if host_supports_lm_studio() => Self {
+                availability: RuntimeAvailability::Experimental,
+                setup_mode: RuntimeSetupMode::Managed,
                 certified_platforms: &[],
-                evidence_scope: "no_certification_evidence",
+                evidence_scope: "managed_preview_exact_candidate_required",
             },
             "runtime.mlx-lm" if host_supports_mlx_lm() => Self {
                 availability: RuntimeAvailability::Experimental,
-                setup_mode: RuntimeSetupMode::None,
+                setup_mode: RuntimeSetupMode::Managed,
                 certified_platforms: &[],
-                evidence_scope: "no_certification_evidence",
+                evidence_scope: "managed_preview_exact_candidate_required",
             },
             _ => Self {
                 availability: RuntimeAvailability::Unsupported,
@@ -51,8 +49,10 @@ impl LocalRuntimeCapability {
 
     #[must_use]
     pub(crate) fn allows_setup(self) -> bool {
-        self.availability == RuntimeAvailability::Certified
-            && self.setup_mode == RuntimeSetupMode::Managed
+        matches!(
+            self.availability,
+            RuntimeAvailability::Certified | RuntimeAvailability::Experimental
+        ) && self.setup_mode == RuntimeSetupMode::Managed
     }
 
     #[must_use]
@@ -60,7 +60,6 @@ impl LocalRuntimeCapability {
         match self.availability {
             RuntimeAvailability::Certified => "runtime setup is available",
             RuntimeAvailability::Experimental => "Preview; not certified",
-            RuntimeAvailability::Planned => "Planned runtime",
             RuntimeAvailability::Unsupported => "Not available on this computer",
         }
     }
@@ -103,7 +102,6 @@ fn availability_value(availability: RuntimeAvailability) -> &'static str {
     match availability {
         RuntimeAvailability::Certified => "certified",
         RuntimeAvailability::Experimental => "experimental",
-        RuntimeAvailability::Planned => "planned",
         RuntimeAvailability::Unsupported => "unsupported",
     }
 }
@@ -111,7 +109,6 @@ fn availability_value(availability: RuntimeAvailability) -> &'static str {
 fn setup_mode_value(mode: RuntimeSetupMode) -> &'static str {
     match mode {
         RuntimeSetupMode::Managed => "managed",
-        RuntimeSetupMode::ExternalOnly => "external_only",
         RuntimeSetupMode::None => "none",
     }
 }
@@ -120,9 +117,17 @@ fn current_platform() -> &'static str {
     match (std::env::consts::OS, std::env::consts::ARCH) {
         ("macos", "aarch64") => "macos-aarch64",
         ("linux", "x86_64") => "linux-x64",
+        ("linux", "aarch64") => "linux-aarch64",
         ("windows", "x86_64") => "windows-x64",
         _ => "unsupported",
     }
+}
+
+fn host_supports_lm_studio() -> bool {
+    matches!(
+        (std::env::consts::OS, std::env::consts::ARCH),
+        ("macos", "aarch64") | ("linux", "x86_64" | "aarch64")
+    )
 }
 
 fn host_supports_mlx_lm() -> bool {

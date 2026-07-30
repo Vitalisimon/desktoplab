@@ -3,7 +3,7 @@ use serde_json::Value;
 use xtask::check_logical_line_limit;
 
 #[test]
-fn runtime_inventory_lists_mlx_lm_as_unavailable_preview_runtime() {
+fn runtime_inventory_lists_mlx_lm_as_managed_preview_on_apple_silicon() {
     let mut router = LocalApiRouter::default();
     let inventory = route_json(&mut router, "GET", "/v1/runtimes", "");
 
@@ -19,11 +19,12 @@ fn runtime_inventory_lists_mlx_lm_as_unavailable_preview_runtime() {
     assert_eq!(mlx_lm["provenance"]["runtimeId"], "runtime.mlx-lm");
     assert_eq!(mlx_lm["provenance"]["installSource"], "python_environment");
     assert_eq!(mlx_lm["provenance"]["integrity"]["state"], "unavailable");
-    assert_eq!(mlx_lm["install"]["supported"], false);
     if host_supports_mlx_lm() {
         assert_eq!(mlx_lm["runtimeCapability"]["availability"], "experimental");
-        assert_eq!(mlx_lm["install"]["blockedReason"], "Preview; not certified");
+        assert_eq!(mlx_lm["runtimeCapability"]["setupMode"], "managed");
+        assert_eq!(mlx_lm["install"]["supported"], true);
     } else {
+        assert_eq!(mlx_lm["install"]["supported"], false);
         assert_eq!(
             mlx_lm["install"]["blockedReason"],
             "Not available on this computer"
@@ -32,7 +33,7 @@ fn runtime_inventory_lists_mlx_lm_as_unavailable_preview_runtime() {
 }
 
 #[test]
-fn mlx_lm_runtime_install_route_is_blocked_until_isolation_is_certified() {
+fn mlx_lm_runtime_install_route_requires_explicit_license_consent() {
     let mut router = LocalApiRouter::default();
     let install = route_json(
         &mut router,
@@ -44,8 +45,16 @@ fn mlx_lm_runtime_install_route_is_blocked_until_isolation_is_certified() {
     assert_eq!(install["source"], "service_backed");
     assert_eq!(install["runtimeId"], "runtime.mlx-lm");
     assert_eq!(install["state"], "blocked");
-    assert_eq!(install["verificationState"], "pending");
-    assert_eq!(install["blockedReason"], "runtime setup is not available");
+    if host_supports_mlx_lm() {
+        assert_eq!(install["verificationState"], "managed_plan_rejected");
+        assert_eq!(
+            install["blockedReason"],
+            "Accept the Apache-2.0 model license and use the exact Apple Silicon plan."
+        );
+    } else {
+        assert_eq!(install["verificationState"], "pending");
+        assert_eq!(install["blockedReason"], "runtime setup is not available");
+    }
 }
 
 #[test]

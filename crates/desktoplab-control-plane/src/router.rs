@@ -30,6 +30,7 @@ mod agent_memory;
 mod agent_model_constrained;
 mod agent_model_execution;
 mod agent_model_jobs;
+mod agent_model_lm_studio;
 mod agent_model_local;
 mod agent_model_tools;
 mod agent_observation_display;

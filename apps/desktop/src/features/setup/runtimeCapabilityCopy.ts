@@ -17,8 +17,11 @@ export function runtimeCapabilityDetail(capability?: RuntimeSetupCapability): st
   if (capability.availability === "certified" && capability.setupMode === "connect_existing") {
     return "DesktopLab can verify and use an existing installation.";
   }
+  if (capability.availability === "experimental" && capability.setupMode === "managed") {
+    return "DesktopLab can run this managed Preview setup. Exact installed-app certification is still pending.";
+  }
   if (capability.availability === "experimental") {
-    return "Implementation is in progress. This route is not available in the current beta.";
+    return "This Preview route is visible but cannot be configured on this computer.";
   }
   if (capability.availability === "planned") {
     return "This runtime is planned and cannot be configured in the current beta.";
@@ -29,7 +32,7 @@ export function runtimeCapabilityDetail(capability?: RuntimeSetupCapability): st
 export function runtimeRecommendationSelectable(recommendation?: SetupRecommendation): boolean {
   const capability = recommendation?.runtimeCapability;
   return Boolean(
-    capability?.availability === "certified"
+    (capability?.availability === "certified" || capability?.availability === "experimental")
       && (capability.setupMode === "managed" || capability.setupMode === "connect_existing"),
   );
 }
@@ -38,7 +41,7 @@ export function runtimeInventoryConfigurable(runtime: RuntimeInventoryItem): boo
   const capability = runtime.runtimeCapability;
   return Boolean(
     runtime.install.supported
-      && capability?.availability === "certified"
+      && (capability?.availability === "certified" || capability?.availability === "experimental")
       && (capability.setupMode === "managed" || capability.setupMode === "connect_existing"),
   );
 }
@@ -46,6 +49,9 @@ export function runtimeInventoryConfigurable(runtime: RuntimeInventoryItem): boo
 export function runtimeSetupAction(runtime: RuntimeInventoryItem): string {
   if (runtime.runtimeCapability?.setupMode === "connect_existing") {
     return `Connect existing ${runtime.displayName}`;
+  }
+  if (runtime.runtimeCapability?.availability === "experimental") {
+    return `Set up ${runtime.displayName} Preview`;
   }
   return `Install and verify ${runtime.displayName}`;
 }

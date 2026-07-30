@@ -150,7 +150,7 @@ fn runtime_install_blocks_unknown_setup_choice_before_execution() {
 }
 
 #[test]
-fn lm_studio_install_is_blocked_until_an_executable_route_is_certified() {
+fn lm_studio_managed_install_requires_explicit_vendor_terms() {
     let mut router = LocalApiRouter::default();
     let install = route_json(
         &mut router,
@@ -160,8 +160,13 @@ fn lm_studio_install_is_blocked_until_an_executable_route_is_certified() {
     );
 
     assert_eq!(install["state"], "blocked");
-    assert_eq!(install["verificationState"], "pending");
-    assert_eq!(install["blockedReason"], "runtime setup is not available");
+    assert_eq!(install["verificationState"], "managed_plan_rejected");
+    assert_eq!(install["setupChoice"], "install");
+    assert!(
+        install["remediation"]
+            .as_str()
+            .is_some_and(|copy| copy.contains("vendor terms"))
+    );
 
     let state = route_json(&mut router, "GET", "/v1/app/state", "");
     assert_eq!(

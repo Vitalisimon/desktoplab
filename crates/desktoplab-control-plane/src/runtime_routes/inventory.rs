@@ -156,15 +156,15 @@ fn runtime_install_metadata(
 }
 
 fn runtime_update_lifecycle(runtime_id: &str) -> Value {
-    if runtime_id == "runtime.lm-studio" {
-        return json!({"state":"blocked","label":"External app","reason":"Managed outside DesktopLab."});
+    if matches!(runtime_id, "runtime.lm-studio" | "runtime.mlx-lm") {
+        return json!({"state":"blocked","label":"Not available in Preview","reason":"DesktopLab does not update this Preview runtime yet. Existing user-owned installations remain unchanged."});
     }
     json!({"state":"packaging_managed","label":"Installer managed","reason":"Updates are handled by the DesktopLab installer."})
 }
 
 fn runtime_uninstall_lifecycle(runtime_id: &str) -> Value {
-    if runtime_id == "runtime.lm-studio" {
-        return json!({"state":"blocked","label":"External app","reason":"Remove LM Studio from its own app."});
+    if matches!(runtime_id, "runtime.lm-studio" | "runtime.mlx-lm") {
+        return json!({"state":"blocked","label":"Not available in Preview","reason":"DesktopLab does not remove this Preview runtime yet. Existing user-owned installations remain unchanged."});
     }
     json!({"state":"packaging_managed","label":"Installer managed","reason":"Runtime removal is handled by the DesktopLab installer."})
 }
