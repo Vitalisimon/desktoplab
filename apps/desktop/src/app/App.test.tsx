@@ -65,6 +65,8 @@ test("renders the base desktop frame with stable navigation chrome", async () =>
   renderApp();
 
   expect(screen.getByText("DesktopLab")).toBeInTheDocument();
+  expect(screen.getByRole("img", { name: "DesktopLab" })).toBeInTheDocument();
+  expect(screen.queryByText("DL")).not.toBeInTheDocument();
   expect(screen.getByText("Local coding agents")).toBeInTheDocument();
   expect(screen.getByText("New chat")).toBeInTheDocument();
   expect(screen.queryByText("Search")).not.toBeInTheDocument();

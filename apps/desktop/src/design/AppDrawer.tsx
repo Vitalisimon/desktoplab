@@ -11,6 +11,7 @@ import type { AgentSessionSnapshot, WorkspaceSnapshot } from "../api/types";
 import { PinnedItems, ProjectTree } from "./AppDrawerProjects";
 import type { DrawerThreadsStatus } from "./useDrawerProjectThreads";
 import { ControlCenter, DrawerSection, NavItem, isSupportRoute } from "./AppDrawerNavigation";
+import desktopLabIcon from "../../src-tauri/icons/icon.png";
 
 type AppDrawerProps = {
   title: string;
@@ -151,8 +152,10 @@ function DrawerHeader({ title, open }: { title: string; open: boolean }) {
 
 function LogoMark() {
   return (
-    <div className="grid h-8 w-8 shrink-0 place-items-center rounded-desktop bg-[linear-gradient(135deg,rgb(var(--dl-color-accent)),rgb(123_109_240))] text-[13px] font-semibold text-white shadow-[var(--dl-accent-glow)]">
-      DL
-    </div>
+    <img
+      alt="DesktopLab"
+      className="h-8 w-8 shrink-0 rounded-desktop object-cover shadow-[var(--dl-accent-glow)]"
+      src={desktopLabIcon}
+    />
   );
 }
