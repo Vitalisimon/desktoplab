@@ -53,6 +53,11 @@ fn tool_schema_registry_files_stay_small() {
             include_str!("tool_schema_provider_contract.rs"),
             140,
         ),
+        (
+            "crates/desktoplab-agent-engine/tests/tool_schema_completion_contract.rs",
+            include_str!("tool_schema_completion_contract.rs"),
+            80,
+        ),
     ] {
         check_logical_line_limit(path, source, max_lines)
             .expect("tool schema registry files should stay focused");
