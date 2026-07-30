@@ -98,7 +98,9 @@ local workspace with no personal data. See the
 DesktopLab does not bundle large runtime installers or model weights. Compatible
 runtimes and models are selected through the setup flow based on host
 capabilities. See [runtime and provider support](docs-public/runtime-and-provider-support.md)
-for the currently verified boundary.
+for the currently verified boundary. In the published beta.10, Ollama is the
+only certified automatic local-runtime route; LM Studio and MLX-LM work in
+current source remains Preview until exact installed-app certification passes.
 
 ## Public beta availability
 
@@ -143,6 +145,14 @@ Created and maintained by [Simone Vitali](https://github.com/Vitalisimon).
 DesktopLab began as an attempt to make long-running AI development work
 inspectable, persistent and portable across local and optional cloud execution
 backends.
+
+## Community and updates
+
+- [Reddit](https://www.reddit.com/user/DesktopLabHQ/) for technical discussions.
+- [X](https://x.com/DesktopLabHQ) for short project updates.
+- [YouTube](https://www.youtube.com/@DesktopLabHQ) for product videos.
+- [Instagram](https://www.instagram.com/desktoplabhq/) for visual updates.
+- [Facebook](https://www.facebook.com/profile.php?id=61592298009794) for community posts.
 
 ## Contributing and support
 

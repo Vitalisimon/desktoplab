@@ -5,7 +5,7 @@ use desktoplab_runtime::{DeterministicProcessRunner, RuntimeId};
 use xtask::check_logical_line_limit;
 
 #[test]
-fn mlx_lm_adapter_downloads_models_through_generate_entrypoint() {
+fn mlx_lm_adapter_delegates_model_acquisition_to_managed_setup() {
     let adapter = MlxLmModelRuntimeAdapter::new(DeterministicProcessRunner::succeeds("ready", ""));
 
     let result = adapter.pull(RuntimeModelPullRequest::new(
@@ -13,15 +13,16 @@ fn mlx_lm_adapter_downloads_models_through_generate_entrypoint() {
         "mlx-community/Qwen-3.5-4B-8bit",
     ));
 
-    assert_eq!(result.state(), "completed");
+    assert_eq!(result.state(), "blocked");
     assert_eq!(
         result.command_evidence(),
-        "mlx_lm.generate --model mlx-community/Qwen-3.5-4B-8bit --prompt DesktopLab model readiness check. --max-tokens 1"
+        "managed MLX-LM setup owns exact model acquisition"
     );
+    assert_eq!(result.reason(), Some("managed_runtime_setup_required"));
 }
 
 #[test]
-fn mlx_lm_adapter_verifies_readiness_by_loading_the_model() {
+fn mlx_lm_adapter_requires_managed_inventory_for_readiness() {
     let adapter = MlxLmModelRuntimeAdapter::new(DeterministicProcessRunner::succeeds("ok", ""));
 
     let ready = adapter.verify(ModelRuntimeReadiness::new(
@@ -29,7 +30,8 @@ fn mlx_lm_adapter_verifies_readiness_by_loading_the_model() {
         "mlx-community/Qwen-3.5-4B-8bit",
     ));
 
-    assert!(ready.is_ready());
+    assert!(!ready.is_ready());
+    assert_eq!(ready.reason(), Some("managed_runtime_inventory_required"));
 }
 
 #[test]

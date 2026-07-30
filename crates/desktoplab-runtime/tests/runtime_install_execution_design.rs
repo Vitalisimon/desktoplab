@@ -11,11 +11,16 @@ fn runtime_install_execution_design_names_all_required_phases() {
         design.phases(),
         &[
             RuntimeInstallPhase::Detect,
-            RuntimeInstallPhase::Download,
-            RuntimeInstallPhase::VerifyInstaller,
-            RuntimeInstallPhase::Install,
+            RuntimeInstallPhase::Plan,
+            RuntimeInstallPhase::Accept,
+            RuntimeInstallPhase::Acquire,
+            RuntimeInstallPhase::Verify,
+            RuntimeInstallPhase::InstallOrConnect,
             RuntimeInstallPhase::Start,
             RuntimeInstallPhase::Health,
+            RuntimeInstallPhase::ModelReady,
+            RuntimeInstallPhase::ProtocolCanary,
+            RuntimeInstallPhase::Available,
         ]
     );
     assert_eq!(design.runtime_id(), "runtime.ollama");

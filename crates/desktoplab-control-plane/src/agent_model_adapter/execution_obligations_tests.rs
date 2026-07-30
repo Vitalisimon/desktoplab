@@ -4,7 +4,7 @@ use desktoplab_agent_engine::{
 };
 use serde_json::json;
 
-use super::{completion_decision, BackendDecisionAdapter};
+use super::{BackendDecisionAdapter, completion_decision};
 
 struct StaticExecutor(serde_json::Value);
 

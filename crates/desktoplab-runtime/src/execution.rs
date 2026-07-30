@@ -6,11 +6,16 @@ use crate::{
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum RuntimeInstallPhase {
     Detect,
-    Download,
-    VerifyInstaller,
-    Install,
+    Plan,
+    Accept,
+    Acquire,
+    Verify,
+    InstallOrConnect,
     Start,
     Health,
+    ModelReady,
+    ProtocolCanary,
+    Available,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -26,11 +31,16 @@ impl RuntimeInstallExecutionDesign {
             runtime_id: plan.runtime_id().as_str().to_string(),
             phases: vec![
                 RuntimeInstallPhase::Detect,
-                RuntimeInstallPhase::Download,
-                RuntimeInstallPhase::VerifyInstaller,
-                RuntimeInstallPhase::Install,
+                RuntimeInstallPhase::Plan,
+                RuntimeInstallPhase::Accept,
+                RuntimeInstallPhase::Acquire,
+                RuntimeInstallPhase::Verify,
+                RuntimeInstallPhase::InstallOrConnect,
                 RuntimeInstallPhase::Start,
                 RuntimeInstallPhase::Health,
+                RuntimeInstallPhase::ModelReady,
+                RuntimeInstallPhase::ProtocolCanary,
+                RuntimeInstallPhase::Available,
             ],
         }
     }
@@ -64,7 +74,6 @@ where
     pub fn execute_existing_or_install(&self, plan: &InstallPlan) -> RuntimeInstallExecutionResult {
         match plan.runtime_id().as_str() {
             "runtime.ollama" => self.verify_or_install_ollama(plan),
-            "runtime.mlx-lm" => crate::mlx_lm_execution::verify_or_install(&self.runner),
             _ => RuntimeInstallExecutionResult::blocked(
                 "unsupported runtime install adapter",
                 "No executable adapter is registered for this runtime.",
@@ -76,7 +85,6 @@ where
     pub fn execute_install(&self, plan: &InstallPlan) -> RuntimeInstallExecutionResult {
         match plan.runtime_id().as_str() {
             "runtime.ollama" => self.install_ollama(plan, "replace requested"),
-            "runtime.mlx-lm" => crate::mlx_lm_execution::install(&self.runner, "replace requested"),
             _ => RuntimeInstallExecutionResult::blocked(
                 "unsupported runtime install adapter",
                 "No executable adapter is registered for this runtime.",
@@ -88,7 +96,6 @@ where
     pub fn verify_existing(&self, runtime_id: &str) -> RuntimeInstallExecutionResult {
         match runtime_id {
             "runtime.ollama" => self.verify_existing_ollama(),
-            "runtime.mlx-lm" => crate::mlx_lm_execution::verify_existing(&self.runner),
             _ => RuntimeInstallExecutionResult::blocked(
                 "unsupported runtime verification adapter",
                 "No executable verification adapter is registered for this runtime.",

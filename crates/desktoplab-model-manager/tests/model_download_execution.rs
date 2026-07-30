@@ -116,7 +116,7 @@ fn model_variant_selects_runtime_download_capability_before_execution() {
 }
 
 #[test]
-fn mlx_lm_variant_selects_python_generate_download_capability() {
+fn mlx_lm_variant_requires_atomic_managed_runtime_setup() {
     let mlx_variant = ModelVariant::new(
         "family.test-mlx",
         "Test MLX",
@@ -129,25 +129,17 @@ fn mlx_lm_variant_selects_python_generate_download_capability() {
     );
 
     let executor = ModelDownloadExecutor::new(ModelDownloadCapacity::new(100_000));
-    let job = executor
+    let error = executor
         .start(
             ModelDownloadPlan::from_variant(&mlx_variant, true),
             ModelDownloadExecutionPolicy::resumable(),
         )
-        .expect("MLX-LM-compatible variant should select the Python download adapter");
+        .expect_err("MLX model acquisition must stay inside managed runtime setup");
 
     assert_eq!(
-        job.command(),
-        &RuntimeModelDownloadCommand::new(
-            "mlx_lm.generate",
-            &[
-                "--model",
-                "mlx-community/Qwen-3.5-4B-8bit",
-                "--prompt",
-                "DesktopLab model readiness check.",
-                "--max-tokens",
-                "1",
-            ],
+        error,
+        ModelDownloadError::UnsupportedRuntime(
+            "runtime.mlx-lm:model_acquisition_owned_by_managed_setup".to_string()
         )
     );
 }

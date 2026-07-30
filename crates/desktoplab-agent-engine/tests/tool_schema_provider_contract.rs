@@ -66,10 +66,19 @@ fn provider_schemas_keep_parameter_names_stable() {
     let outcome = property(&complete, "outcome")["description"]
         .as_str()
         .expect("completion outcome should define its evidence semantics");
-    assert!(outcome.contains("answered for read-only findings"), "{outcome}");
-    assert!(outcome.contains("reports about existing Git changes"), "{outcome}");
+    assert!(
+        outcome.contains("answered for read-only findings"),
+        "{outcome}"
+    );
+    assert!(
+        outcome.contains("reports about existing Git changes"),
+        "{outcome}"
+    );
     assert!(outcome.contains("agent applied a mutation"), "{outcome}");
-    assert!(outcome.contains("verified only with passing test evidence"), "{outcome}");
+    assert!(
+        outcome.contains("verified only with passing test evidence"),
+        "{outcome}"
+    );
     assert_eq!(
         complete["function"]["parameters"]["required"],
         serde_json::json!(["message", "outcome", "evidenceCallIds"])

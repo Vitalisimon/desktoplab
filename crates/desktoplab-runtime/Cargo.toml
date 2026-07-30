@@ -10,6 +10,7 @@ description = "DesktopLab runtime manager contracts and setup planning."
 serde_json = "1"
 
 [dev-dependencies]
+tempfile = "3"
 xtask = { path = "../../xtask" }
 
 [lib]

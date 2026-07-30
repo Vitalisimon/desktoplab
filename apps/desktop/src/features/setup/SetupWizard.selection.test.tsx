@@ -208,8 +208,32 @@ function preview(): SetupPlanPreview {
       storageAvailableGb: { label: "Storage", value: 900, confidence: "confirmed" },
     },
     runtimeRecommendations: [
-      { manifestId: "runtime.ollama", displayName: "Ollama", channel: "stable", role: "recommended" },
-      { manifestId: "runtime.lm-studio", displayName: "LM Studio", channel: "stable", role: "alternative" },
+      {
+        manifestId: "runtime.ollama",
+        displayName: "Ollama",
+        channel: "stable",
+        role: "recommended",
+        runtimeCapability: {
+          availability: "certified",
+          setupMode: "managed",
+          verification: "unverified",
+          certifiedPlatforms: ["macos-aarch64", "linux-x64"],
+          evidenceScope: "exact_candidate_required",
+        },
+      },
+      {
+        manifestId: "runtime.lm-studio",
+        displayName: "LM Studio",
+        channel: "experimental",
+        role: "alternative",
+        runtimeCapability: {
+          availability: "planned",
+          setupMode: "external_only",
+          verification: "not_applicable",
+          certifiedPlatforms: [],
+          evidenceScope: "no_certification_evidence",
+        },
+      },
     ],
     modelRecommendations: [
       { manifestId: "model.qwen-coder-7b-q4", displayName: "Qwen Coder", channel: "stable", role: "recommended" },

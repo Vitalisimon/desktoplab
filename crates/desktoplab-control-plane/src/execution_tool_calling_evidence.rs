@@ -13,7 +13,10 @@ pub(crate) fn tool_calling_evidence(
     let class = model_tool_protocol_class(backend_id, capabilities);
     let endpoint = match backend_id {
         "backend.ollama" => json!("http://127.0.0.1:11434/api/chat"),
-        "backend.lm-studio" => json!("http://127.0.0.1:1234/v1/chat/completions"),
+        "backend.lm-studio" => desktoplab_runtime::discover_system_lm_studio()
+            .endpoint()
+            .map(|endpoint| json!(format!("{endpoint}/v1/chat/completions")))
+            .unwrap_or(Value::Null),
         _ => Value::Null,
     };
     json!({

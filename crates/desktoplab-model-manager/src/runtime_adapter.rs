@@ -242,22 +242,16 @@ where
         if request.runtime_id.as_str() != "runtime.mlx-lm" {
             return blocked_result("unsupported runtime", "unsupported runtime");
         }
-        let Some(command) = MlxLmRuntime::new().download_command(request.pull_ref) else {
+        if MlxLmRuntime::new()
+            .validate_model_ref(&request.pull_ref)
+            .is_err()
+        {
             return blocked_result("unsafe model reference", "unsafe model reference");
-        };
-        let output = self.runner.run(command);
-        ModelRuntimePullResult {
-            state: if output.succeeded() {
-                "completed"
-            } else {
-                "blocked"
-            }
-            .to_string(),
-            command_evidence: output.evidence().evidence(),
-            stdout: output.stdout().to_string(),
-            stderr: output.stderr().to_string(),
-            reason: (!output.succeeded()).then(|| "runtime pull failed".to_string()),
         }
+        blocked_result(
+            "managed MLX-LM setup owns exact model acquisition",
+            "managed_runtime_setup_required",
+        )
     }
 
     fn list(&self, _runtime_id: RuntimeId) -> Vec<String> {
@@ -268,14 +262,13 @@ where
         if readiness.runtime_id.as_str() != "runtime.mlx-lm" {
             return ModelRuntimeReadinessResult::blocked("unsupported runtime");
         }
-        let Some(command) = MlxLmRuntime::new().download_command(readiness.model_ref) else {
+        if MlxLmRuntime::new()
+            .validate_model_ref(readiness.model_ref)
+            .is_err()
+        {
             return ModelRuntimeReadinessResult::blocked("unsafe model reference");
-        };
-        if self.runner.run(command).succeeded() {
-            ModelRuntimeReadinessResult::ready()
-        } else {
-            ModelRuntimeReadinessResult::blocked("model_not_loadable_by_mlx_lm")
         }
+        ModelRuntimeReadinessResult::blocked("managed_runtime_inventory_required")
     }
 
     fn cancel(&self, runtime_id: RuntimeId, model_ref: &str) -> ModelRuntimePullResult {
@@ -283,7 +276,7 @@ where
             return blocked_result("unsupported runtime", "unsupported runtime");
         }
         blocked_result(
-            format!("mlx_lm.generate --model {model_ref}"),
+            format!("managed MLX-LM model {model_ref}"),
             "runtime_cancel_not_supported",
         )
     }

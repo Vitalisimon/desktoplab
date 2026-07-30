@@ -10,6 +10,8 @@ import {
   registryLabel,
 } from "./recommendationLabels";
 import { visibleExpectedLimitations } from "./expectedLimitationCopy";
+import { runtimeCapabilityLabel, runtimeRecommendationSelectable } from "./runtimeCapabilityCopy";
+import { RuntimeCapabilityStatus } from "./RuntimeCapabilityStatus";
 
 export function SelectableAlternatives({
   title,
@@ -38,7 +40,11 @@ export function SelectableAlternatives({
                   <div className="flex items-start justify-between gap-3">
                     <span className="min-w-0">
                       <span className="block truncate font-medium text-ink">{alternative.displayName}</span>
-                      {alternative.installMode ? <span className="mt-0.5 block text-xs text-muted">{friendlyInstallMode(alternative.installMode)}</span> : null}
+                      {alternative.runtimeCapability ? (
+                        <RuntimeCapabilityStatus capability={alternative.runtimeCapability} />
+                      ) : alternative.installMode ? (
+                        <span className="mt-0.5 block text-xs text-muted">{friendlyInstallMode(alternative.installMode)}</span>
+                      ) : null}
                       <ModelMetadataLine recommendation={alternative} />
                       <ModelOutcomeCopy recommendation={alternative} />
                     </span>
@@ -48,7 +54,9 @@ export function SelectableAlternatives({
                       </button>
                     ) : (
                       <span className="rounded bg-panel px-2 py-1 text-xs font-semibold text-muted">
-                        {alternative.parameterClass === "cloud" ? "Connect provider" : "Guided setup"}
+                        {alternative.parameterClass === "cloud"
+                          ? "Connect provider"
+                          : runtimeCapabilityLabel(alternative.runtimeCapability)}
                       </span>
                     )}
                   </div>
@@ -95,7 +103,11 @@ export function RecommendationCard({
       {recommendation?.compatibilityReason ? (
         <div className="mt-2 text-xs font-medium text-muted">{friendlyCompatibilityReason(recommendation.compatibilityReason)}</div>
       ) : null}
-      {recommendation?.installMode ? <div className="mt-2 text-xs font-medium text-muted">{friendlyInstallMode(recommendation.installMode)}</div> : null}
+      {recommendation?.runtimeCapability ? (
+        <div className="mt-2 text-xs font-semibold text-muted">{runtimeCapabilityLabel(recommendation.runtimeCapability)}</div>
+      ) : recommendation?.installMode ? (
+        <div className="mt-2 text-xs font-medium text-muted">{friendlyInstallMode(recommendation.installMode)}</div>
+      ) : null}
       {recommendation ? <ModelOutcomeCopy recommendation={recommendation} /> : null}
       {recommendation ? <ModelMetadata recommendation={recommendation} /> : null}
       {recommendation ? <RawModelDetails recommendation={recommendation} /> : null}
@@ -161,6 +173,7 @@ export function isSelectableForLocalSetup(item?: SetupRecommendation) {
   if (!item) return false;
   if (item.parameterClass === "cloud") return false;
   if (item.runtimeId && item.runtimeId.includes("cloud")) return false;
+  if (item.manifestId.startsWith("runtime.")) return runtimeRecommendationSelectable(item);
   if (item.installMode === "external_guided") return false;
   return true;
 }

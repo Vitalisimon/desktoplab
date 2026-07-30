@@ -86,7 +86,7 @@ test("ready setup becomes local configuration without rerunning start setup", as
   expect(screen.getByText("Apple M4 Pro")).toBeVisible();
 });
 
-test("ready setup owns local model and runner changes instead of settings", async () => {
+test("ready setup keeps uncertified runner changes non-executable", async () => {
   const startModelDownload = vi.fn().mockResolvedValue({
     jobId: "model.download.deepseek",
     modelId: "model.deepseek-coder",
@@ -138,11 +138,10 @@ test("ready setup owns local model and runner changes instead of settings", asyn
     }),
   );
 
-  fireEvent.change(screen.getByRole("combobox", { name: "Choose a runner to configure" }), {
-    target: { value: "runtime.mlx-lm" },
-  });
-  fireEvent.click(screen.getByRole("button", { name: "Configure selected runner" }));
-  await waitFor(() => expect(startRuntimeInstall).toHaveBeenCalledWith({ runtimeId: "runtime.mlx-lm", setupChoice: "install" }));
+  expect(screen.queryByRole("combobox", { name: "Choose a ready runner to configure" })).not.toBeInTheDocument();
+  expect(screen.getByText("Planned and preview runtimes")).toBeInTheDocument();
+  expect(screen.getByText("Preview · not certified")).toBeInTheDocument();
+  expect(startRuntimeInstall).not.toHaveBeenCalled();
 });
 
 test("ready setup hides stale pipeline progress from previous setup work", async () => {
@@ -466,7 +465,14 @@ function runtimesWithMlx(): RuntimesListResponse {
         status: "not_installed",
         ownership: "desktoplab_managed",
         capabilities: ["Local chat"],
-        install: { supported: true },
+        install: { supported: false, blockedReason: "Preview; not certified" },
+        runtimeCapability: {
+          availability: "experimental",
+          setupMode: "none",
+          verification: "not_applicable",
+          certifiedPlatforms: [],
+          evidenceScope: "no_certification_evidence",
+        },
         repairActions: [],
       },
     ],
@@ -495,7 +501,20 @@ function preview(registryState: SetupPlanPreview["registryState"]): SetupPlanPre
       architecture: { label: "Architecture", value: "arm64", confidence: "confirmed" },
       storageAvailableGb: { label: "Storage", value: 900, confidence: "confirmed" },
     },
-    runtimeRecommendations: [{ manifestId: "runtime.ollama", displayName: "Ollama", channel: "stable" }],
+    runtimeRecommendations: [
+      {
+        manifestId: "runtime.ollama",
+        displayName: "Ollama",
+        channel: "stable",
+        runtimeCapability: {
+          availability: "certified",
+          setupMode: "managed",
+          verification: "unverified",
+          certifiedPlatforms: ["macos-aarch64", "linux-x64"],
+          evidenceScope: "exact_candidate_required",
+        },
+      },
+    ],
     modelRecommendations: [{ manifestId: "model.qwen-coder", displayName: "Qwen Coder", channel: "stable" }],
     warnings: [],
     expectedLimitations: registryState === "degraded" ? ["compatibility catalog refresh unavailable"] : [],

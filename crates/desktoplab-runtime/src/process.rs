@@ -4,6 +4,7 @@ use std::{path::PathBuf, process::Command};
 pub struct ProcessCommand {
     program: String,
     args: Vec<String>,
+    env: Vec<(String, String)>,
 }
 
 impl ProcessCommand {
@@ -12,12 +13,19 @@ impl ProcessCommand {
         Self {
             program: program.into(),
             args: Vec::new(),
+            env: Vec::new(),
         }
     }
 
     #[must_use]
     pub fn arg(mut self, arg: impl Into<String>) -> Self {
         self.args.push(arg.into());
+        self
+    }
+
+    #[must_use]
+    pub fn with_env(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+        self.env.push((key.into(), value.into()));
         self
     }
 
@@ -29,6 +37,18 @@ impl ProcessCommand {
     #[must_use]
     pub fn args(&self) -> &[String] {
         &self.args
+    }
+
+    #[must_use]
+    pub fn env_value(&self, key: &str) -> Option<&str> {
+        self.env
+            .iter()
+            .find(|(candidate, _)| candidate == key)
+            .map(|(_, value)| value.as_str())
+    }
+
+    pub(crate) fn environment(&self) -> &[(String, String)] {
+        &self.env
     }
 
     #[must_use]
@@ -56,6 +76,30 @@ impl ProcessCommand {
                         .join("Programs")
                         .join("Ollama")
                         .join("ollama.exe")
+                        .to_string_lossy()
+                        .to_string(),
+                );
+            }
+            return candidates;
+        }
+        if self.program == "lms" {
+            let mut candidates = vec![self.program.clone()];
+            if let Some(home) = std::env::var_os("HOME") {
+                candidates.push(
+                    PathBuf::from(home)
+                        .join(".lmstudio")
+                        .join("bin")
+                        .join("lms")
+                        .to_string_lossy()
+                        .to_string(),
+                );
+            }
+            if let Some(user_profile) = std::env::var_os("USERPROFILE") {
+                candidates.push(
+                    PathBuf::from(user_profile)
+                        .join(".lmstudio")
+                        .join("bin")
+                        .join("lms.exe")
                         .to_string_lossy()
                         .to_string(),
                 );
@@ -127,7 +171,11 @@ impl ProcessRunner for SystemProcessRunner {
     fn run(&self, command: ProcessCommand) -> ProcessOutput {
         let mut last_error = None;
         for program in command.program_candidates() {
-            match Command::new(&program).args(command.args()).output() {
+            match Command::new(&program)
+                .args(command.args())
+                .envs(command.env.iter().map(|(key, value)| (key, value)))
+                .output()
+            {
                 Ok(output) => {
                     return ProcessOutput::new(
                         output.status.code(),

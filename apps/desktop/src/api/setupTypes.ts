@@ -33,6 +33,21 @@ export type SetupRecommendation = {
   endpoint?: string;
   defaultSetupChoice?: "use_existing" | "install" | "replace";
   setupChoiceRequired?: boolean;
+  runtimeCapability?: RuntimeSetupCapability;
+};
+
+export type RuntimeAvailability = "certified" | "experimental" | "planned" | "blocked" | "unsupported";
+
+export type RuntimeSetupMode = "managed" | "connect_existing" | "external_only" | "none";
+
+export type RuntimeVerificationState = "verified" | "unverified" | "stale" | "failed" | "not_applicable";
+
+export type RuntimeSetupCapability = {
+  availability: RuntimeAvailability;
+  setupMode: RuntimeSetupMode;
+  verification: RuntimeVerificationState;
+  certifiedPlatforms: string[];
+  evidenceScope: string;
 };
 
 export type SetupChoice = "use_existing" | "install" | "replace";

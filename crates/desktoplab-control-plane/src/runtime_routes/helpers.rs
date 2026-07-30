@@ -6,8 +6,10 @@ use desktoplab_runtime::{
 mod body_fields;
 mod host_target;
 
-pub(super) use body_fields::{bool_body_field, number_body_field, segment, string_body_field};
-pub(super) use host_target::{host_supports_mlx_lm, host_target};
+pub(super) use body_fields::{
+    bool_body_field, number_body_field, safe_cached_installer_reference, segment, string_body_field,
+};
+pub(super) use host_target::host_target;
 
 pub(super) fn plan_for_runtime(runtime_id: &str) -> InstallPlan {
     if runtime_id == "runtime.mlx-lm" {
@@ -56,17 +58,9 @@ pub(super) fn runtime_state(state: RuntimeState) -> &'static str {
 
 pub(super) fn host_runtime_state(runtime_id: &str, fallback: RuntimeState) -> &'static str {
     if runtime_id == "runtime.mlx-lm" {
-        let output = <SystemProcessRunner as desktoplab_runtime::ProcessRunner>::run(
-            &SystemProcessRunner,
-            desktoplab_runtime::ProcessCommand::new("python3")
-                .arg("-c")
-                .arg("import mlx_lm; print('mlx-lm import ok')"),
-        );
-        return if output.succeeded() {
-            "installed"
-        } else {
-            runtime_state(fallback)
-        };
+        return super::mlx_lm_managed::status()
+            .map(|status| if status.ready() { "ready" } else { "degraded" })
+            .unwrap_or_else(|| runtime_state(fallback));
     }
     if runtime_id != "runtime.ollama" {
         return "degraded";
@@ -125,6 +119,7 @@ pub(super) fn runtime_install_error_reason(error: &RuntimeInstallError) -> &'sta
         RuntimeInstallError::UnknownSetupChoice => "unknown setup choice",
         RuntimeInstallError::UnsafeInstallerSource => "unsafe installer source",
         RuntimeInstallError::ExternallyManagedRuntime => "runtime is externally managed",
+        RuntimeInstallError::RuntimeNotAvailable => "runtime setup is not available",
         RuntimeInstallError::InsufficientDisk { .. } => "insufficient disk",
         RuntimeInstallError::NetworkUnavailable => "network unavailable",
     }

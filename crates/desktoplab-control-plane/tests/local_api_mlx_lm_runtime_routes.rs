@@ -3,7 +3,7 @@ use serde_json::Value;
 use xtask::check_logical_line_limit;
 
 #[test]
-fn runtime_inventory_lists_mlx_lm_as_desktoplab_managed_runtime() {
+fn runtime_inventory_lists_mlx_lm_as_unavailable_preview_runtime() {
     let mut router = LocalApiRouter::default();
     let inventory = route_json(&mut router, "GET", "/v1/runtimes", "");
 
@@ -15,23 +15,24 @@ fn runtime_inventory_lists_mlx_lm_as_desktoplab_managed_runtime() {
         .expect("MLX-LM runtime should be listed");
 
     assert_eq!(mlx_lm["displayName"], "MLX-LM Server");
-    assert_eq!(mlx_lm["ownership"], "desktoplab_managed");
+    assert_eq!(mlx_lm["ownership"], "none");
     assert_eq!(mlx_lm["provenance"]["runtimeId"], "runtime.mlx-lm");
     assert_eq!(mlx_lm["provenance"]["installSource"], "python_environment");
     assert_eq!(mlx_lm["provenance"]["integrity"]["state"], "unavailable");
+    assert_eq!(mlx_lm["install"]["supported"], false);
     if host_supports_mlx_lm() {
-        assert_eq!(mlx_lm["install"]["supported"], true);
+        assert_eq!(mlx_lm["runtimeCapability"]["availability"], "experimental");
+        assert_eq!(mlx_lm["install"]["blockedReason"], "Preview; not certified");
     } else {
-        assert_eq!(mlx_lm["install"]["supported"], false);
         assert_eq!(
             mlx_lm["install"]["blockedReason"],
-            "Apple Silicon Mac required"
+            "Not available on this computer"
         );
     }
 }
 
 #[test]
-fn mlx_lm_runtime_install_route_uses_python_environment_contract() {
+fn mlx_lm_runtime_install_route_is_blocked_until_isolation_is_certified() {
     let mut router = LocalApiRouter::default();
     let install = route_json(
         &mut router,
@@ -42,16 +43,9 @@ fn mlx_lm_runtime_install_route_uses_python_environment_contract() {
 
     assert_eq!(install["source"], "service_backed");
     assert_eq!(install["runtimeId"], "runtime.mlx-lm");
-    if host_supports_mlx_lm() {
-        assert_ne!(install["verificationState"], "pending");
-    } else {
-        assert_eq!(install["state"], "blocked");
-        assert_eq!(install["verificationState"], "unsupported_platform");
-        assert_eq!(
-            install["blockedReason"],
-            "MLX-LM Server is available only on Apple Silicon Macs."
-        );
-    }
+    assert_eq!(install["state"], "blocked");
+    assert_eq!(install["verificationState"], "pending");
+    assert_eq!(install["blockedReason"], "runtime setup is not available");
 }
 
 #[test]

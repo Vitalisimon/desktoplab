@@ -35,8 +35,8 @@ fn mlx_lm_install_plan_is_macos_aarch64_only_and_not_silent_system_mutation() {
         .expect("Apple Silicon Macs should get an MLX-LM plan");
 
     assert_eq!(plan.runtime_id().as_str(), "runtime.mlx-lm");
-    assert!(plan.explanation().contains("pip install mlx-lm"));
-    assert!(plan.explanation().contains("mlx_lm.server"));
+    assert!(plan.explanation().contains("hash-locked mlx-lm 0.31.3"));
+    assert!(plan.explanation().contains("managed loopback server"));
     assert!(plan.explanation().contains("OpenAI-compatible endpoint"));
     assert!(
         plan.explanation()
@@ -68,13 +68,24 @@ fn mlx_lm_endpoint_detection_and_process_spec_are_local_only() {
     assert!(metadata.is_openai_compatible());
     assert!(!metadata.requires_provider_credential());
 
-    let command = runtime.start_command("mlx-community/Qwen-3.5-4B-8bit");
-    assert_eq!(command.program(), "mlx_lm.server");
+    let command = runtime.managed_start_command(
+        "/private/DesktopLab/runtimes/mlx-lm/environment/bin/mlx_lm.server",
+        "/private/DesktopLab/runtimes/mlx-lm/models/selected",
+        18080,
+    );
+    assert_eq!(
+        command.program(),
+        "/private/DesktopLab/runtimes/mlx-lm/environment/bin/mlx_lm.server"
+    );
     assert_eq!(
         command.args(),
         &[
             "--model".to_string(),
-            "mlx-community/Qwen-3.5-4B-8bit".to_string()
+            "/private/DesktopLab/runtimes/mlx-lm/models/selected".to_string(),
+            "--host".to_string(),
+            "127.0.0.1".to_string(),
+            "--port".to_string(),
+            "18080".to_string(),
         ]
     );
 

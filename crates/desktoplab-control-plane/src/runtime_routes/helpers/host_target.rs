@@ -2,10 +2,6 @@ pub(in crate::runtime_routes) fn host_target() -> String {
     normalized_host_target(std::env::consts::OS, std::env::consts::ARCH)
 }
 
-pub(in crate::runtime_routes) fn host_supports_mlx_lm() -> bool {
-    matches!(host_target().as_str(), "macos-aarch64" | "darwin-arm64")
-}
-
 fn normalized_host_target(os: &str, arch: &str) -> String {
     let normalized_arch = match arch {
         "x86_64" => "x64",

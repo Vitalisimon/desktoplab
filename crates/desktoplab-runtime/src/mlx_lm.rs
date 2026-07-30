@@ -164,12 +164,13 @@ impl MlxLmRuntime {
                 .with_requirement("Python environment")
                 .with_network_required(true)
                 .with_installer_source(InstallerSource::signed_url(
-                    "https://pypi.org/project/mlx-lm/",
-                    "pypi-release-metadata",
+                    "https://github.com/astral-sh/uv/releases/tag/0.12.0",
+                    "sha256:2b9e582af54f84fa50c115427451a6c13e80f43b52f8282b8af5791077317bbf",
                 ))
-                .with_step("create isolated DesktopLab Python environment")
-                .with_step("pip install mlx-lm")
-                .with_step("start mlx_lm.server for the selected model")
+                .with_step("install pinned Python into the DesktopLab runtime root")
+                .with_step("sync hash-locked mlx-lm 0.31.3 dependencies")
+                .with_step("acquire the exact accepted model revision")
+                .with_step("start the managed loopback server")
                 .with_step("verify local OpenAI-compatible endpoint")
                 .with_verification_step("/v1/models responds locally"),
         )
@@ -195,20 +196,6 @@ impl MlxLmRuntime {
     }
 
     #[must_use]
-    pub fn download_command(&self, model_ref: impl Into<String>) -> Option<ProcessCommand> {
-        let model_ref = self.validate_model_ref(model_ref).ok()?;
-        Some(
-            ProcessCommand::new("mlx_lm.generate")
-                .arg("--model")
-                .arg(model_ref)
-                .arg("--prompt")
-                .arg("DesktopLab model readiness check.")
-                .arg("--max-tokens")
-                .arg("1"),
-        )
-    }
-
-    #[must_use]
     pub fn detect_endpoint(&self, probe: MlxLmEndpointProbe) -> MlxLmEndpointDetection {
         MlxLmEndpointDetection {
             endpoint: probe.endpoint,
@@ -224,10 +211,19 @@ impl MlxLmRuntime {
     }
 
     #[must_use]
-    pub fn start_command(&self, model_ref: impl Into<String>) -> ProcessCommand {
-        ProcessCommand::new("mlx_lm.server")
+    pub fn managed_start_command(
+        &self,
+        executable: impl Into<String>,
+        model_root: impl Into<String>,
+        port: u16,
+    ) -> ProcessCommand {
+        ProcessCommand::new(executable)
             .arg("--model")
-            .arg(model_ref.into())
+            .arg(model_root.into())
+            .arg("--host")
+            .arg("127.0.0.1")
+            .arg("--port")
+            .arg(port.to_string())
     }
 
     #[must_use]

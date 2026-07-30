@@ -150,7 +150,7 @@ fn runtime_install_blocks_unknown_setup_choice_before_execution() {
 }
 
 #[test]
-fn lm_studio_install_is_guided_and_does_not_mark_runtime_ready() {
+fn lm_studio_install_is_blocked_until_an_executable_route_is_certified() {
     let mut router = LocalApiRouter::default();
     let install = route_json(
         &mut router,
@@ -159,14 +159,9 @@ fn lm_studio_install_is_guided_and_does_not_mark_runtime_ready() {
         r#"{"setupAccepted":true,"networkAvailable":true,"diskAvailableGb":64}"#,
     );
 
-    assert_eq!(install["state"], "external_guided");
-    assert_eq!(install["verificationState"], "requires_external_app");
-    assert!(
-        install["remediation"]
-            .as_str()
-            .unwrap()
-            .contains("open LM Studio manually")
-    );
+    assert_eq!(install["state"], "blocked");
+    assert_eq!(install["verificationState"], "pending");
+    assert_eq!(install["blockedReason"], "runtime setup is not available");
 
     let state = route_json(&mut router, "GET", "/v1/app/state", "");
     assert_eq!(

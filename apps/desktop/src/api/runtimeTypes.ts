@@ -1,5 +1,6 @@
 import type { RepairAction } from "./coreTypes";
 import type { JobRetryClass } from "./jobTypes";
+import type { RuntimeSetupCapability } from "./setupTypes";
 
 export type RuntimeInstallMetadata = {
   supported: boolean;
@@ -34,7 +35,7 @@ export type RuntimeProvenance = {
 export type RuntimeInventoryItem = {
   runtimeId: string;
   displayName: string;
-  ownership: "desktoplab_managed" | "user_owned" | "externally_managed";
+  ownership: "desktoplab_managed" | "user_owned" | "externally_managed" | "none";
   status: "ready" | "running" | "stopped" | "installed" | "not_installed" | "blocked" | "degraded" | "unknown";
   detectionSource?: "host_probe" | "registry" | "unknown";
   version?: string;
@@ -44,6 +45,7 @@ export type RuntimeInventoryItem = {
   lifecycle?: RuntimeLifecycleBoundary;
   repairActions: RepairAction[];
   logExcerpt?: string;
+  runtimeCapability?: RuntimeSetupCapability;
 };
 
 export type RuntimesListResponse = {

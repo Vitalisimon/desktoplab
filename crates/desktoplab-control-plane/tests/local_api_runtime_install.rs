@@ -88,7 +88,12 @@ fn runtime_inventory_does_not_claim_unimplemented_update_or_uninstall() {
         ollama["lifecycle"]["uninstall"]["state"],
         "packaging_managed"
     );
-    assert_eq!(lm_studio["ownership"], "externally_managed");
+    let expected_ownership = if lm_studio["connection"]["state"] == "cli_missing" {
+        "none"
+    } else {
+        "user_owned"
+    };
+    assert_eq!(lm_studio["ownership"], expected_ownership);
     assert_eq!(lm_studio["install"]["supported"], false);
     assert_eq!(lm_studio["lifecycle"]["update"]["state"], "blocked");
     assert_eq!(lm_studio["lifecycle"]["uninstall"]["state"], "blocked");
