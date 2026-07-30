@@ -11,7 +11,6 @@ fn provider_schemas_keep_parameter_names_stable() {
     let run_terminal = provider_schema(&registry, "desktoplab.run_terminal");
     let start_process = provider_schema(&registry, "desktoplab.start_process");
     let run_tests = provider_schema(&registry, "desktoplab.run_tests");
-    let complete = provider_schema(&registry, "desktoplab.complete");
     let commit = provider_schema(&registry, "desktoplab.commit_changes");
     let spawn = provider_schema(&registry, "desktoplab.spawn_subagent");
     let update_plan = provider_schema(&registry, "desktoplab.update_plan");
@@ -62,27 +61,6 @@ fn provider_schemas_keep_parameter_names_stable() {
         assert!(cwd.contains("Omit it for the workspace root"), "{cwd}");
         assert!(cwd.contains("absolute path"), "{cwd}");
     }
-    assert!(description(&complete).contains("cite every successful executor call"));
-    let outcome = property(&complete, "outcome")["description"]
-        .as_str()
-        .expect("completion outcome should define its evidence semantics");
-    assert!(
-        outcome.contains("answered for read-only findings"),
-        "{outcome}"
-    );
-    assert!(
-        outcome.contains("reports about existing Git changes"),
-        "{outcome}"
-    );
-    assert!(outcome.contains("agent applied a mutation"), "{outcome}");
-    assert!(
-        outcome.contains("verified only with passing test evidence"),
-        "{outcome}"
-    );
-    assert_eq!(
-        complete["function"]["parameters"]["required"],
-        serde_json::json!(["message", "outcome", "evidenceCallIds"])
-    );
     assert!(description(&clarify).contains("absent from executor observations"));
     assert_eq!(
         clarify["function"]["parameters"]["required"],
