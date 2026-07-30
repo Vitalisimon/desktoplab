@@ -56,9 +56,16 @@ pub(crate) fn status() -> Option<desktoplab_runtime::MlxLmManagedStatus> {
 pub(super) fn managed_plan(
     body: &str,
 ) -> Result<desktoplab_runtime::MlxLmManagedPlan, desktoplab_runtime::MlxLmManagedPlanError> {
+    managed_plan_for_target(body, &host_target())
+}
+
+fn managed_plan_for_target(
+    body: &str,
+    target: &str,
+) -> Result<desktoplab_runtime::MlxLmManagedPlan, desktoplab_runtime::MlxLmManagedPlanError> {
     desktoplab_runtime::MlxLmManagedPlan::new(
         managed_root(),
-        &host_target(),
+        target,
         MODEL_ID,
         MODEL_REVISION,
         "apache-2.0",
@@ -89,23 +96,25 @@ fn managed_root() -> PathBuf {
 
 #[cfg(test)]
 mod tests {
-    use super::managed_plan;
+    use super::managed_plan_for_target;
 
     #[test]
     fn managed_plan_requires_license_acceptance_and_exact_model() {
         assert_eq!(
-            managed_plan(r#"{"modelLicenseAccepted":false}"#),
+            managed_plan_for_target(r#"{"modelLicenseAccepted":false}"#, "darwin-arm64"),
             Err(desktoplab_runtime::MlxLmManagedPlanError::ModelLicenseNotAccepted)
         );
-        if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
-            let plan =
-                managed_plan(r#"{"modelLicenseAccepted":true}"#).expect("supported Apple host");
-            assert_eq!(plan.model_id(), "mlx-community/SmolLM3-3B-4bit");
-            assert_eq!(
-                plan.model_revision(),
-                "d3a7e0594d6642dbcfb7d149bed8b0bdf49f95ce"
-            );
-            assert_eq!(plan.endpoint(), "http://127.0.0.1:18080");
-        }
+        let plan = managed_plan_for_target(r#"{"modelLicenseAccepted":true}"#, "darwin-arm64")
+            .expect("supported Apple host");
+        assert_eq!(plan.model_id(), "mlx-community/SmolLM3-3B-4bit");
+        assert_eq!(
+            plan.model_revision(),
+            "d3a7e0594d6642dbcfb7d149bed8b0bdf49f95ce"
+        );
+        assert_eq!(plan.endpoint(), "http://127.0.0.1:18080");
+        assert_eq!(
+            managed_plan_for_target(r#"{"modelLicenseAccepted":true}"#, "linux-x64"),
+            Err(desktoplab_runtime::MlxLmManagedPlanError::UnsupportedPlatform)
+        );
     }
 }
