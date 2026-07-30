@@ -35,6 +35,12 @@ export function requiredSafeSigningSteps(inputs, env = process.env) {
   return [
     command("clean-tree", "git", ["status", "--porcelain=v1"], { rejectOutput: true }),
     command("candidate-payload", "node", ["scripts/release/candidate-admission.mjs", "verify", "--candidate", inputs.candidate, "--app", inputs.app]),
+    command("runtime-certification-matrix", "node", [
+      "scripts/product/runtime-certification-matrix.mjs",
+      "--candidate", inputs.candidate, "--app", inputs.app,
+      "--ollama-managed", inputs.runtimeCertifications.ollamaManaged, "--lm-studio-existing", inputs.runtimeCertifications.lmStudioExisting,
+      "--lm-studio-managed", inputs.runtimeCertifications.lmStudioManaged, "--mlx-lm-managed", inputs.runtimeCertifications.mlxLmManaged, "--report", inputs.runtimeMatrix,
+    ]),
     command("rust-workspace", "cargo", ["test", "--locked", "--workspace"]),
     command("tauri-tests", "cargo", ["test", "--locked", "--manifest-path", "apps/desktop/src-tauri/Cargo.toml"]),
     command("frontend-typecheck", "npm", ["--prefix", "apps/desktop", "run", "typecheck"]),
@@ -67,6 +73,11 @@ export function candidateInputs(parsed, runId) {
     agentEvidenceMode: parsed.agentEvidenceMode,
     reuseAgentCertification: parsed.reuseAgentCertification ? resolve(parsed.reuseAgentCertification) : null,
     reuseAgentCampaign: parsed.reuseAgentCampaign ? resolve(parsed.reuseAgentCampaign) : null,
+    runtimeCertifications: {
+      ollamaManaged: parsed.runtimeOllamaManaged ? resolve(parsed.runtimeOllamaManaged) : null, lmStudioExisting: parsed.runtimeLmStudioExisting ? resolve(parsed.runtimeLmStudioExisting) : null,
+      lmStudioManaged: parsed.runtimeLmStudioManaged ? resolve(parsed.runtimeLmStudioManaged) : null, mlxLmManaged: parsed.runtimeMlxLmManaged ? resolve(parsed.runtimeMlxLmManaged) : null,
+    },
+    runtimeMatrix: resolve(parsed.runtimeMatrix ?? join(runRoot, "runtime-certification-matrix.json")),
     reliabilityRoot,
     reliabilityManifest: resolve(parsed.reliabilityManifest ?? join(reliabilityRoot, "manifest.json")),
     reliabilityCatalog: resolve(parsed.reliabilityCatalog ?? join(reliabilityRoot, "catalog.json")),

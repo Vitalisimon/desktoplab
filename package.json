@@ -75,6 +75,7 @@
     "product:agent-reliability": "node scripts/product/agent-reliability-campaign.mjs",
     "product:agent-reliability:recover": "node scripts/product/agent-reliability-recovery.mjs",
     "product:runtime-certification": "node scripts/product/runtime-certification.mjs",
+    "product:runtime-certification-matrix": "node scripts/product/runtime-certification-matrix.mjs",
     "product:runtime-certification:test": "node --test scripts/tests/runtime-*.test.mjs",
     "product:agent-release-freeze": "node scripts/product/agent-release-freeze.mjs",
     "product:agent-release-freeze:test": "node --test scripts/product/agent-release-freeze.test.mjs",
