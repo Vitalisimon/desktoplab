@@ -4,6 +4,12 @@ import type { ModelInventoryItem, RuntimeInventoryItem, SetupPlanPreview } from 
 import { visibleExpectedLimitations } from "./expectedLimitationCopy";
 import { setupFailureCopy } from "./setupFailureCopy";
 import { displayLocalModelName } from "../../domain/displayNames";
+import {
+  runtimeCapabilityDetail,
+  runtimeCapabilityLabel,
+  runtimeInventoryConfigurable,
+  runtimeSetupAction,
+} from "./runtimeCapabilityCopy";
 
 type SetupCatalogPanelProps = {
   preview: SetupPlanPreview;
@@ -19,7 +25,9 @@ export function SetupCatalogPanel({ preview, models, runtimes, downloading, inst
   const activeModel = models.find((model) => model.installState === "installed" && model.compatibility === "ready");
   const downloadableModels = models.filter((model) => model.installState === "downloadable" || model.installState === "blocked");
   const activeRuntime = runtimes.find((runtime) => runtime.status === "running" || runtime.status === "ready");
-  const configurableRuntimes = runtimes.filter((runtime) => runtime.status !== "running" && runtime.status !== "ready");
+  const inactiveRuntimes = runtimes.filter((runtime) => runtime.status !== "running" && runtime.status !== "ready");
+  const configurableRuntimes = inactiveRuntimes.filter(runtimeInventoryConfigurable);
+  const unavailableRuntimes = inactiveRuntimes.filter((runtime) => !runtimeInventoryConfigurable(runtime));
   const defaultModelId = downloadableModels[0]?.modelId ?? "";
   const defaultRuntimeId = configurableRuntimes[0]?.runtimeId ?? "";
   const [selectedModelId, setSelectedModelId] = useState(defaultModelId);
@@ -59,39 +67,57 @@ export function SetupCatalogPanel({ preview, models, runtimes, downloading, inst
         <h3 className="text-sm font-semibold text-ink">Local runners</h3>
         <StatusLine label="Active runner" value={activeRuntime ? `${activeRuntime.displayName} is active` : "No local runner is active yet"} />
         {activeRuntime ? <p className="text-sm text-muted">{runnerOwnershipLabel(activeRuntime)}</p> : null}
-        <label className="grid gap-2 text-sm font-medium text-ink">
-          Runner to configure
-          <span className="relative">
-            <select
-              aria-label="Choose a runner to configure"
-              className="h-10 w-full appearance-none rounded-desktop border border-line bg-panel px-3 pr-9 text-sm text-ink transition-colors duration-150 focus:border-accent"
-              disabled={configurableRuntimes.length === 0 || installingRunner}
-              value={selectedRuntime?.runtimeId ?? ""}
-              onChange={(event) => setSelectedRuntimeId(event.target.value)}
+        {configurableRuntimes.length > 0 ? (
+          <>
+            <label className="grid gap-2 text-sm font-medium text-ink">
+              Ready runtime to configure
+              <span className="relative">
+                <select
+                  aria-label="Choose a ready runner to configure"
+                  className="h-10 w-full appearance-none rounded-desktop border border-line bg-panel px-3 pr-9 text-sm text-ink transition-colors duration-150 focus:border-accent"
+                  disabled={installingRunner}
+                  value={selectedRuntime?.runtimeId ?? ""}
+                  onChange={(event) => setSelectedRuntimeId(event.target.value)}
+                >
+                  {configurableRuntimes.map((runtime) => (
+                    <option key={runtime.runtimeId} value={runtime.runtimeId}>
+                      {runtime.displayName} · {runnerSetupLabel(runtime)}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown size={15} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted" />
+              </span>
+            </label>
+            {selectedRuntime ? <p className="text-sm text-muted">{runnerSetupLabel(selectedRuntime)}</p> : null}
+            {startedRuntimeName ? <p className="text-sm font-medium text-success">Runner setup started for {startedRuntimeName}.</p> : null}
+            <button
+              type="button"
+              className="h-10 rounded-desktop bg-ink px-4 text-sm font-semibold text-canvas transition-colors duration-150 hover:bg-accent disabled:opacity-45"
+              disabled={runtimeBlocked || installingRunner}
+              onClick={() => void installSelectedRuntime()}
             >
-              {configurableRuntimes.length === 0 ? (
-                <option value="">No additional local runner</option>
-              ) : (
-                configurableRuntimes.map((runtime) => (
-                  <option key={runtime.runtimeId} value={runtime.runtimeId}>
-                    {runtime.displayName} · {runnerSetupLabel(runtime)}
-                  </option>
-                ))
-              )}
-            </select>
-            <ChevronDown size={15} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted" />
-          </span>
-        </label>
-        {selectedRuntime ? <p className="text-sm text-muted">{runnerSetupLabel(selectedRuntime)}</p> : null}
-        {startedRuntimeName ? <p className="text-sm font-medium text-success">Runner setup started for {startedRuntimeName}.</p> : null}
-        <button
-          type="button"
-          className="h-10 rounded-desktop bg-ink px-4 text-sm font-semibold text-canvas transition-colors duration-150 hover:bg-accent disabled:opacity-45"
-          disabled={runtimeBlocked || installingRunner}
-          onClick={() => void installSelectedRuntime()}
-        >
-          Configure selected runner
-        </button>
+              {selectedRuntime ? runtimeSetupAction(selectedRuntime) : "No ready runtime to configure"}
+            </button>
+          </>
+        ) : (
+          <p className="text-sm text-muted">
+            Ollama remains the only route with exact beta evidence. Additional routes are Preview and require installed-app certification.
+          </p>
+        )}
+        {unavailableRuntimes.length > 0 ? (
+          <div className="grid gap-2" aria-label="Runtime preview">
+            <h4 className="text-xs font-semibold uppercase text-muted">Planned and preview runtimes</h4>
+            {unavailableRuntimes.map((runtime) => (
+              <div key={runtime.runtimeId} className="rounded-desktop border border-line px-3 py-2 dl-elevated">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="font-medium text-ink">{runtime.displayName}</span>
+                  <span className="text-xs font-semibold text-muted">{runtimeCapabilityLabel(runtime.runtimeCapability)}</span>
+                </div>
+                <p className="mt-1 text-xs text-muted">{runtimeCapabilityDetail(runtime.runtimeCapability)}</p>
+              </div>
+            ))}
+          </div>
+        ) : null}
       </div>
 
       <div className="mt-5 grid gap-4 border-b border-line pb-4">
@@ -178,9 +204,8 @@ function formatParams(parametersBillion?: number) {
 }
 
 function runnerSetupLabel(runtime: RuntimeInventoryItem): string {
-  if (!runtime.install.supported) return setupFailureCopy(runtime.install.blockedReason) ?? "Not available on this computer";
-  if (runtime.runtimeId === "runtime.mlx-lm") return "Local Python setup";
-  if (runtime.ownership === "externally_managed") return "Guided external setup";
+  if (!runtime.install.supported) return runtimeCapabilityLabel(runtime.runtimeCapability);
+  if (runtime.runtimeCapability?.setupMode === "connect_existing") return "Use existing installation";
   if (runtime.ownership === "user_owned") return "Already installed on this computer";
   return "DesktopLab-managed setup";
 }
@@ -188,7 +213,8 @@ function runnerSetupLabel(runtime: RuntimeInventoryItem): string {
 function runnerOwnershipLabel(runtime: RuntimeInventoryItem): string {
   if (runtime.ownership === "desktoplab_managed") return "Managed by DesktopLab";
   if (runtime.ownership === "user_owned") return "Already installed on this computer";
-  return "Managed outside DesktopLab";
+  if (runtime.ownership === "externally_managed") return "Managed outside DesktopLab";
+  return "Not installed";
 }
 
 function catalogSourceLabel(source: string): string {

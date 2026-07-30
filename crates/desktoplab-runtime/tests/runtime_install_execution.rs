@@ -191,23 +191,19 @@ fn existing_ollama_requires_local_api_health_before_runtime_is_verified() {
 }
 
 #[test]
-fn mlx_lm_install_executor_manages_python_environment_and_verifies_import() {
+fn generic_install_executor_refuses_unowned_mlx_environment_mutation() {
     let runtime = MlxLmRuntime::new();
     let plan = runtime
         .try_install_plan("darwin-arm64")
         .expect("Apple Silicon should have an MLX-LM plan");
-    let runner = DeterministicProcessRunner::sequence(vec![
-        (Some(1), "", "ModuleNotFoundError: mlx_lm"),
-        (Some(0), "installed mlx-lm", ""),
-        (Some(0), "mlx-lm import ok", ""),
-    ]);
+    let runner = DeterministicProcessRunner::succeeds("must not run", "");
 
     let result = RuntimeInstallExecutor::new(runner).execute_existing_or_install(&plan);
 
-    assert_eq!(result.state(), RuntimeExecutionState::Completed);
-    assert_eq!(result.verification_state(), "verified");
-    assert!(result.evidence().contains("python3 -m pip install"));
-    assert!(result.evidence().contains("import mlx_lm"));
+    assert_eq!(result.state(), RuntimeExecutionState::Blocked);
+    assert_eq!(result.verification_state(), "blocked");
+    assert_eq!(result.evidence(), "unsupported runtime install adapter");
+    assert!(!result.evidence().contains("pip"));
 }
 
 #[test]
@@ -240,12 +236,6 @@ fn runtime_execution_sources_stay_small() {
         120,
     )
     .expect("runtime execution result should stay focused");
-    check_logical_line_limit(
-        "crates/desktoplab-runtime/src/mlx_lm_execution.rs",
-        include_str!("../src/mlx_lm_execution.rs"),
-        120,
-    )
-    .expect("MLX-LM runtime execution adapter should stay focused");
     check_logical_line_limit(
         "crates/desktoplab-runtime/src/windows_ollama_install.rs",
         include_str!("../src/windows_ollama_install.rs"),

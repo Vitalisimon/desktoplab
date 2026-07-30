@@ -25,6 +25,14 @@ impl LocalApiRouter {
                 "message":"Selected runtime and model are not compatible with the current catalog."
             }));
         }
+        if !crate::local_runtime_capability::LocalRuntimeCapability::for_runtime(&runtime_id)
+            .allows_setup()
+        {
+            return ApiRouteResponse::bad_request(json!({
+                "code":"SETUP_RUNTIME_NOT_AVAILABLE",
+                "message":"Selected runtime is not available for executable setup."
+            }));
+        }
         if self.setup.is_ready() && self.readiness.is_ready() {
             return ApiRouteResponse::ok(json!({
                 "source":"service_backed",
@@ -160,7 +168,7 @@ impl LocalApiRouter {
                 );
                 let _ = self.jobs.start(job.id());
                 let result =
-                    crate::runtime_routes::execute_runtime_install(&runtime_id, setup_choice);
+                    crate::runtime_routes::execute_runtime_install(&runtime_id, setup_choice, body);
                 match result.state() {
                     desktoplab_runtime::RuntimeExecutionState::Completed => {
                         let _ = self.jobs.succeed(job.id());

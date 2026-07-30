@@ -23,6 +23,16 @@ pub(in crate::runtime_routes) fn string_body_field(body: &str, field: &str) -> O
         .map(ToString::to_string)
 }
 
+pub(in crate::runtime_routes) fn safe_cached_installer_reference(value: &str) -> bool {
+    !value.trim().is_empty()
+        && !value.contains("..")
+        && !value.starts_with('/')
+        && !value.starts_with('~')
+        && value.chars().all(|character| {
+            character.is_ascii_alphanumeric() || matches!(character, '.' | '_' | '-' | '/')
+        })
+}
+
 pub(in crate::runtime_routes) fn segment(path: &str, index: usize) -> String {
     path.split('/')
         .nth(index + 1)

@@ -2,7 +2,6 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use desktoplab_agent_engine::{IterativeAgentLoop, IterativeLoopState};
 use desktoplab_backends::{BackendPrompt, OpenAiCodexResponderCommandPayload};
-use desktoplab_runtime::{ProcessCommand, ProcessRunner, SystemProcessRunner};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(super) enum AgentModelExecutionError {
@@ -79,7 +78,8 @@ pub(super) enum PreparedAgentModelExecution {
         payload: OpenAiCodexResponderCommandPayload,
     },
     Mlx {
-        command: ProcessCommand,
+        backend: desktoplab_backends::LmStudioExecutionBackend,
+        prompt: BackendPrompt,
     },
     Failed(String),
 }
@@ -132,23 +132,12 @@ impl PreparedAgentModelExecution {
                 .map_err(AgentModelExecutionError::runtime)?;
                 Ok(output.body().to_string())
             }
-            Self::Mlx { command } => {
-                let output =
-                    <SystemProcessRunner as ProcessRunner>::run(&SystemProcessRunner, command);
-                if cancellation.load(Ordering::SeqCst) {
-                    return Err(AgentModelExecutionError::Cancelled);
-                }
-                if !output.succeeded() {
-                    return Err(AgentModelExecutionError::runtime(
-                        "mlx_lm_generation_failed",
-                    ));
-                }
-                let response = output.stdout().trim();
-                if response.is_empty() {
-                    return Err(AgentModelExecutionError::runtime("mlx_lm_empty_response"));
-                }
-                Ok(response.to_string())
+            Self::Mlx { backend, prompt } => if streaming {
+                backend.execute_chat_stream(&prompt, cancellation, on_delta)
+            } else {
+                backend.execute_chat(&prompt)
             }
+            .map_err(AgentModelExecutionError::from_backend),
             Self::Failed(reason) => Err(AgentModelExecutionError::Runtime(reason)),
         }
     }

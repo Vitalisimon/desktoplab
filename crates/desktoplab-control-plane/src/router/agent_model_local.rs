@@ -5,6 +5,24 @@ use super::agent_execution_binding::AgentExecutionBinding;
 use super::agent_model_execution::PreparedAgentModelExecution;
 
 impl LocalApiRouter {
+    pub(super) fn mlx_lm_backend_and_model(
+        &self,
+    ) -> Result<(desktoplab_backends::LmStudioExecutionBackend, String), String> {
+        let status = crate::runtime_routes::mlx_lm_managed::status()
+            .filter(desktoplab_runtime::MlxLmManagedStatus::ready)
+            .ok_or_else(|| "mlx_lm_managed_runtime_unavailable".to_string())?;
+        let model = status
+            .models()
+            .first()
+            .cloned()
+            .ok_or_else(|| "mlx_lm_model_unavailable".to_string())?;
+        let backend = desktoplab_backends::LmStudioExecutionBackend::new(
+            desktoplab_backends::LocalEndpoint::available(status.endpoint()),
+            desktoplab_backends::BackendModelInventory::available(&[model.as_str()]),
+        );
+        Ok((backend, model))
+    }
+
     pub(super) fn prepare_ollama_model_execution(
         &self,
         binding: &AgentExecutionBinding,
@@ -52,6 +70,16 @@ impl LocalApiRouter {
         binding: &AgentExecutionBinding,
         messages: Vec<BackendMessage>,
     ) -> PreparedAgentModelExecution {
+        let discovery = desktoplab_runtime::discover_system_lm_studio();
+        self.prepare_lm_studio_model_execution_with_discovery(binding, messages, &discovery)
+    }
+
+    fn prepare_lm_studio_model_execution_with_discovery(
+        &self,
+        binding: &AgentExecutionBinding,
+        messages: Vec<BackendMessage>,
+        discovery: &desktoplab_runtime::LmStudioExistingDiscovery,
+    ) -> PreparedAgentModelExecution {
         let Some(model_id) = binding.model_id().map(str::to_string) else {
             return PreparedAgentModelExecution::Failed("local_model_unavailable".to_string());
         };
@@ -63,13 +91,46 @@ impl LocalApiRouter {
         let prompt = BackendPrompt::new(model.clone(), "")
             .with_messages(messages)
             .with_tools(tools);
-        PreparedAgentModelExecution::LmStudio {
-            backend: desktoplab_backends::LmStudioExecutionBackend::new(
-                desktoplab_backends::LocalEndpoint::available("http://127.0.0.1:1234"),
-                desktoplab_backends::BackendModelInventory::available(&[&model]),
-            ),
-            prompt,
+        let backend = match self.lm_studio_backend_for_model_with_discovery(&model, discovery) {
+            Ok(backend) => backend,
+            Err(error) => return PreparedAgentModelExecution::Failed(error),
+        };
+        PreparedAgentModelExecution::LmStudio { backend, prompt }
+    }
+
+    pub(super) fn lm_studio_backend_for_model(
+        &self,
+        model: &str,
+    ) -> Result<desktoplab_backends::LmStudioExecutionBackend, String> {
+        let discovery = desktoplab_runtime::discover_system_lm_studio();
+        self.lm_studio_backend_for_model_with_discovery(model, &discovery)
+    }
+
+    fn lm_studio_backend_for_model_with_discovery(
+        &self,
+        model: &str,
+        discovery: &desktoplab_runtime::LmStudioExistingDiscovery,
+    ) -> Result<desktoplab_backends::LmStudioExecutionBackend, String> {
+        let endpoint = discovery
+            .endpoint()
+            .filter(|_| discovery.ready())
+            .ok_or_else(|| format!("lm_studio_{}", discovery.state().as_str()))?;
+        if !discovery
+            .models()
+            .iter()
+            .any(|candidate| candidate == model)
+        {
+            return Err("lm_studio_model_unavailable".to_string());
         }
+        let models = discovery
+            .models()
+            .iter()
+            .map(String::as_str)
+            .collect::<Vec<_>>();
+        Ok(desktoplab_backends::LmStudioExecutionBackend::new(
+            desktoplab_backends::LocalEndpoint::available(endpoint),
+            desktoplab_backends::BackendModelInventory::available(&models),
+        ))
     }
 
     pub(super) fn prepare_high_end_model_execution(
@@ -114,82 +175,5 @@ impl LocalApiRouter {
 }
 
 #[cfg(test)]
-mod tests {
-    use desktoplab_backends::BackendMessage;
-
-    use super::{AgentExecutionBinding, LocalApiRouter, PreparedAgentModelExecution};
-
-    #[test]
-    fn lm_studio_execution_uses_the_model_bound_to_the_session() {
-        let mut router = LocalApiRouter::default();
-        router.selected_route_id = crate::execution_routes::local_route_id("model.gemma4-12b-q4");
-        let binding = AgentExecutionBinding::capture(&router, "backend.lm-studio");
-        router.selected_route_id = crate::execution_routes::local_route_id("model.qwen3.5-9b-q4");
-
-        let execution =
-            router.prepare_lm_studio_model_execution(&binding, vec![BackendMessage::user("test")]);
-
-        let PreparedAgentModelExecution::LmStudio { prompt, .. } = execution else {
-            panic!("session-bound LM Studio execution should be prepared");
-        };
-        assert_eq!(prompt.model(), "gemma4:12b");
-    }
-
-    #[test]
-    fn ollama_execution_fails_if_readiness_moved_to_another_model() {
-        let mut router = LocalApiRouter::default();
-        router.selected_route_id = crate::execution_routes::local_route_id("model.gemma4-12b-q4");
-        let binding = AgentExecutionBinding::capture(&router, "backend.ollama");
-        router.readiness = router
-            .readiness
-            .clone()
-            .select("runtime.ollama", "model.qwen3.5-9b-q4");
-        router.readiness.mark_model_capabilities(
-            desktoplab_backends::BackendModelCapabilities::reported(
-                "backend.ollama",
-                "qwen3.5:9b",
-                None,
-                Some(32_768),
-                ["tools"],
-            ),
-        );
-
-        let execution =
-            router.prepare_ollama_model_execution(&binding, vec![BackendMessage::user("test")]);
-
-        let PreparedAgentModelExecution::Failed(reason) = execution else {
-            panic!("changed model readiness must fail closed");
-        };
-        assert_eq!(reason, "session_model_configuration_changed");
-    }
-
-    #[test]
-    fn ollama_execution_uses_the_wizard_memory_budget_for_the_bound_model() {
-        let mut router = LocalApiRouter::default();
-        router.set_host_memory_gb_for_test(36);
-        router.selected_route_id = crate::execution_routes::local_route_id("model.gemma4-12b-q4");
-        router.readiness = router
-            .readiness
-            .clone()
-            .select("runtime.ollama", "model.gemma4-12b-q4");
-        router.readiness.mark_model_capabilities(
-            desktoplab_backends::BackendModelCapabilities::reported(
-                "backend.ollama",
-                "gemma4:12b",
-                None,
-                Some(256_000),
-                ["tools"],
-            ),
-        );
-        let binding = AgentExecutionBinding::capture(&router, "backend.ollama");
-
-        let execution =
-            router.prepare_ollama_model_execution(&binding, vec![BackendMessage::user("test")]);
-
-        let PreparedAgentModelExecution::Ollama { prompt, .. } = execution else {
-            panic!("configured Ollama execution should be prepared");
-        };
-        assert_eq!(prompt.context_window_tokens(), Some(65_536));
-        assert_eq!(prompt.request_timeout_seconds(), Some(240));
-    }
-}
+#[path = "agent_model_local_tests.rs"]
+mod tests;

@@ -1,11 +1,13 @@
 use desktoplab_runtime::{
-    InstallHostCapacity, LmStudioRuntime, MlxLmRuntime, OllamaRuntime, RuntimeExecutionState,
-    RuntimeInstallError, RuntimeInstallExecutor, RuntimeInstallJob, RuntimeInstallPlanner,
-    RuntimeInstallRequest, SystemProcessRunner,
+    InstallHostCapacity, OllamaRuntime, RuntimeExecutionState, RuntimeInstallError,
+    RuntimeInstallExecutor, RuntimeInstallJob, RuntimeInstallPlanner, RuntimeInstallRequest,
+    SystemProcessRunner,
 };
 
 mod helpers;
 mod inventory;
+mod lm_studio_managed;
+pub(crate) mod mlx_lm_managed;
 mod setup_choice;
 
 pub use inventory::runtimes_response;
@@ -14,7 +16,7 @@ pub use setup_choice::{RuntimeSetupChoice, runtime_setup_choice};
 use helpers::{
     bool_body_field, execution_state, host_target, number_body_field, plan_for_runtime,
     runtime_execution_retry_class, runtime_install_error_reason, runtime_install_retry_class,
-    segment, string_body_field,
+    safe_cached_installer_reference, segment, string_body_field,
 };
 use serde_json::{Value, json};
 
@@ -23,6 +25,11 @@ pub fn plan_runtime_install(
     body: &str,
 ) -> Result<(String, RuntimeInstallJob), RuntimeInstallError> {
     let runtime_id = segment(path, 2);
+    if !crate::local_runtime_capability::LocalRuntimeCapability::for_runtime(&runtime_id)
+        .allows_setup()
+    {
+        return Err(RuntimeInstallError::RuntimeNotAvailable);
+    }
     if let Some(cached_installer_path) = string_body_field(body, "cachedInstallerPath")
         && !safe_cached_installer_reference(&cached_installer_path)
     {
@@ -38,41 +45,19 @@ pub fn plan_runtime_install(
     planner.plan_job(request).map(|job| (runtime_id, job))
 }
 
-fn safe_cached_installer_reference(value: &str) -> bool {
-    !value.trim().is_empty()
-        && !value.contains("..")
-        && !value.starts_with('/')
-        && !value.starts_with('~')
-        && value.chars().all(|character| {
-            character.is_ascii_alphanumeric() || matches!(character, '.' | '_' | '-' | '/')
-        })
-}
-
 #[must_use]
 pub fn execute_runtime_install(
     runtime_id: &str,
     setup_choice: RuntimeSetupChoice,
+    body: &str,
 ) -> desktoplab_runtime::RuntimeInstallExecutionResult {
     if runtime_id == "runtime.lm-studio" {
-        return RuntimeInstallExecutor::<()>::external_guided(
-            LmStudioRuntime::new().guided_setup_plan(std::env::consts::OS),
-        );
+        return lm_studio_managed::execute(body);
+    }
+    if runtime_id == "runtime.mlx-lm" {
+        return mlx_lm_managed::execute(body);
     }
     let executor = RuntimeInstallExecutor::new(SystemProcessRunner);
-    if runtime_id == "runtime.mlx-lm" {
-        let Ok(plan) = MlxLmRuntime::new().try_install_plan(host_target()) else {
-            return desktoplab_runtime::RuntimeInstallExecutionResult::blocked_with_state(
-                "unsupported_platform",
-                "MLX-LM Server requires an Apple Silicon Mac.",
-                "MLX-LM Server is available only on Apple Silicon Macs.",
-            );
-        };
-        return if setup_choice == RuntimeSetupChoice::Replace {
-            executor.execute_install(&plan)
-        } else {
-            executor.execute_existing_or_install(&plan)
-        };
-    }
     let plan = OllamaRuntime::new().platform_install_plan(host_target());
     if setup_choice == RuntimeSetupChoice::Replace {
         executor.execute_install(&plan)
@@ -84,9 +69,10 @@ pub fn execute_runtime_install(
 #[must_use]
 pub fn verify_runtime(runtime_id: &str) -> desktoplab_runtime::RuntimeInstallExecutionResult {
     if runtime_id == "runtime.lm-studio" {
-        return RuntimeInstallExecutor::<()>::external_guided(
-            LmStudioRuntime::new().guided_setup_plan(std::env::consts::OS),
-        );
+        return lm_studio_managed::verify_existing();
+    }
+    if runtime_id == "runtime.mlx-lm" {
+        return mlx_lm_managed::verify();
     }
     RuntimeInstallExecutor::new(SystemProcessRunner).verify_existing(runtime_id)
 }

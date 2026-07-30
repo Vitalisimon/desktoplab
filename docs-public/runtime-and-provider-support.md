@@ -1,7 +1,7 @@
 # Runtime And Provider Support
 
-Status: scoped public claims frozen, no provider or model publicly certified
-Date: 2026-07-16
+Status: scoped public claims frozen for `v0.1.0-beta.10` and current source
+Date: 2026-07-30
 
 DesktopLab is designed to support local runtimes, cloud providers and external agent backends through explicit capability contracts.
 
@@ -13,13 +13,13 @@ Public docs must not imply that a runtime, model family, provider or bridge is r
 
 | Surface | Public claim state |
 | --- | --- |
-| Setup and first prompt | Product regression evidence exists in development, but public support waits for the platform packaging gate. |
-| Local runtime and model path | Not publicly claimed as supported beyond certified dev evidence. Platform-specific runtime/model and packaging evidence is required. |
-| File drawer and terminal | Product regression evidence exists in development, but public support waits for the platform packaging gate. |
+| Setup and first prompt | Public beta support is limited to the certified Ollama route on macOS Apple Silicon and Linux x64. |
+| Local runtime and model path | Public evidence is limited to the Ollama route in beta.10. LM Studio and MLX-LM are Preview in current source until exact installed-app certification passes. |
+| File drawer and terminal | Included in the public beta on macOS Apple Silicon and Linux x64, within the published beta support boundary. |
 | Cloud providers | Native-vault API-key boundary exists in development; live cloud execution is not publicly claimed. |
 | External app bridges and protocols | Future or blocked until sandbox, trust, account ownership and audit evidence exist. |
 | High-end local inference | DesktopLab is architected for high-end local workflows. No DGX/custom-rig or frontier-local support claim exists until an exact host, runtime and model combination passes live certification. |
-| Complete local coding agent | `private-installed-evidence-gated`. DesktopLab owns a persistent iterative model/tool/observation loop and real local tools, but public support requires fresh installed-app live evidence for the exact signed artifact, host, runtime and model. |
+| Complete local coding agent | The beta.10 Ollama route has exact installed-app behavioral evidence for its iterative model/tool/observation loop. The claim remains `private-installed-evidence-gated` by exact scope: other runtime/model combinations require their own fresh installed-app live evidence and inherit none of that certification. |
 
 ## Frontier-Local Claim Boundary
 
@@ -49,10 +49,10 @@ Repository RAG can improve grounding and context selection. It does not establis
 
 | Runtime | Current public claim | Certification required before support is advertised |
 | --- | --- | --- |
-| Ollama | Not publicly claimed as supported. Intended first local runtime path. | Platform-specific install, detect, start, health check, model download and readiness evidence. |
-| LM Studio | Not publicly claimed as supported. Intended local runtime path. | Platform-specific detection, launch/bridge, model availability and readiness evidence. |
+| Ollama | Supported public-beta route on macOS Apple Silicon and Linux x64 for the published beta.10 artifact. | Any new app candidate, platform, runtime version or model scope requires fresh exact evidence. |
+| LM Studio | Preview in current source, not a supported beta.10 route. Connect-existing and managed headless lifecycle contracts exist, but live installed-app certification is pending. | Exact platform/runtime/model install-or-connect, ownership, recovery, protocol, tool, approval and cleanup evidence. |
 | llama.cpp | Not publicly claimed as supported. | Runtime adapter plus platform-specific install/start/verify evidence. |
-| MLX | Not publicly claimed as supported. | Apple Silicon specific runtime evidence and compatible model catalog entries. |
+| MLX-LM | Preview in current source, not a supported beta.10 route. The Apple Silicon route uses an isolated DesktopLab-managed environment, but live installed-app certification is pending. | Exact Apple Silicon runtime/model installation, ownership, recovery, protocol, tool, approval and cleanup evidence. |
 | vLLM | Not publicly claimed as supported. | Host/GPU specific runtime evidence and compatible model catalog entries. |
 | Future runtimes | Not publicly claimed as supported. | Signed/cataloged compatibility data and runtime adapter evidence. |
 
@@ -64,7 +64,15 @@ Runtime lifecycle claims are intentionally narrow:
 - DesktopLab may install a DesktopLab-managed runtime only when a verified adapter exists for the current platform.
 - Runtime update and uninstall actions are not advertised as supported unless they have their own end-to-end evidence.
 - DesktopLab application updates are separate from local runtime updates.
-- Externally managed apps such as LM Studio remain guided setup paths until DesktopLab can verify their local endpoint; update and removal stay in the external app.
+- An existing LM Studio service remains user-owned. DesktopLab may connect only
+  after it verifies a loopback OpenAI-compatible endpoint and the selected
+  model. Updates and removal remain in LM Studio.
+- A DesktopLab-managed LM Studio headless route is a separate ownership mode.
+  It cannot inherit ownership of a user-started service and is not advertised
+  as supported until its exact installed-app certification passes.
+- MLX-LM installation is confined to a DesktopLab-managed environment on
+  supported Apple Silicon hosts. DesktopLab does not install it into a global
+  Python environment.
 - DesktopLab must never request administrator access silently.
 - Replace or reinstall actions must be explicit. They are never the default path when a working local runtime already exists.
 
@@ -127,7 +135,7 @@ Every concrete large-model entry must record quantization, precision, context le
 
 | Provider or bridge | Claim state | Current public claim | Certification required before support is advertised |
 | --- | --- | --- | --- |
-| Local-only operation | `blocked` until packaging/platform gates pass | Not publicly claimed as release-ready yet. | Fresh setup, local API auth, setup-first shell, local workbench proof and platform package proof. |
+| Local-only operation | `public-beta` for the exact Ollama route on macOS Apple Silicon and Linux x64 | Available in beta.10 within the published platform and runtime boundary. | Every new candidate or runtime route requires fresh setup, local API auth, workbench and platform package proof. |
 | OpenAI API-key billing | `blocked` for cloud execution; native-vault credential boundary exists in development | Not publicly claimed as cloud-model supported. | Native vault storage, live account certification, egress policy and model/backend path proof. |
 | OpenAI subscription account / Codex local bridge | `private-dev` but not public | Not publicly claimed as supported. Development builds require local bridge credential evidence, responder health and explicit repository-context egress approval. | Signed public package evidence, bridge certification, user-owned account flow evidence and capability boundary proof. |
 | Anthropic API-key billing | `future` | Not publicly claimed as supported. | Live account certification for the claimed account mode and model/backend path. |

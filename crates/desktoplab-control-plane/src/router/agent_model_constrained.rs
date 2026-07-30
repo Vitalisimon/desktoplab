@@ -1,5 +1,4 @@
-use desktoplab_backends::{BackendMessage, OpenAiCodexResponderCommandPayload};
-use desktoplab_runtime::ProcessCommand;
+use desktoplab_backends::{BackendMessage, BackendPrompt, OpenAiCodexResponderCommandPayload};
 
 use super::LocalApiRouter;
 use super::agent_execution_binding::AgentExecutionBinding;
@@ -85,19 +84,16 @@ impl LocalApiRouter {
         messages: Vec<BackendMessage>,
     ) -> PreparedAgentModelExecution {
         let result = (|| -> Result<_, String> {
-            let prompt = super::agent_sessions::constrained_backend_prompt(&messages)?;
-            let model_id = binding
+            let bound_model_id = binding
                 .model_id()
                 .ok_or_else(|| "session_model_binding_missing".to_string())?;
-            let pull_ref = crate::model_routes::model_pull_ref(&model_id)
+            crate::model_routes::model_pull_ref(&bound_model_id)
                 .ok_or_else(|| "local_model_pull_reference_missing".to_string())?;
-            Ok(PreparedAgentModelExecution::Mlx {
-                command: ProcessCommand::new("mlx_lm.generate")
-                    .arg("--model")
-                    .arg(pull_ref)
-                    .arg("--prompt")
-                    .arg(prompt),
-            })
+            let (backend, served_model) = self.mlx_lm_backend_and_model()?;
+            let prompt = BackendPrompt::new(served_model, "")
+                .with_messages(messages)
+                .with_tools(self.backend_tool_schemas()?);
+            Ok(PreparedAgentModelExecution::Mlx { backend, prompt })
         })();
         result.unwrap_or_else(PreparedAgentModelExecution::Failed)
     }

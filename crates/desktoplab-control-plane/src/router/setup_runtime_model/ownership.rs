@@ -36,11 +36,9 @@ mod tests {
         let plan = OllamaRuntime::new()
             .try_platform_install_plan("darwin-arm64")
             .expect("Ollama should support the test platform");
-        let existing = RuntimeInstallExecutor::new(DeterministicProcessRunner::succeeds(
-            "ollama 0.5.0",
-            "",
-        ))
-        .execute_existing_or_install(&plan);
+        let existing =
+            RuntimeInstallExecutor::new(DeterministicProcessRunner::succeeds("ollama 0.5.0", ""))
+                .execute_existing_or_install(&plan);
 
         record_desktoplab_runtime_ownership(
             Some(&marker),

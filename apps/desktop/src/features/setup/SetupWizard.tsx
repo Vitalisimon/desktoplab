@@ -108,7 +108,15 @@ export function SetupWizard({ onOpenRepository, hasActiveWorkspace = false }: Se
   const setupReady = setupState === "ready";
   const selectedModelForPlan = selectedRecommendation(preview.modelRecommendations, selectedModelId);
   const selectedRuntimeIdForPlan = selectedId(preview.runtimeRecommendations, selectedRuntimeId);
-  const canStartLocalSetup = Boolean(selectedRuntimeIdForPlan && modelDownloadAllowed(selectedModelForPlan, selectedRuntimeIdForPlan));
+  const selectedRuntimeForPlan = selectedRecommendation(
+    preview.runtimeRecommendations,
+    selectedRuntimeIdForPlan,
+  );
+  const canStartLocalSetup = Boolean(
+    selectedRuntimeIdForPlan
+      && isSelectableForLocalSetup(selectedRuntimeForPlan)
+      && modelDownloadAllowed(selectedModelForPlan, selectedRuntimeIdForPlan),
+  );
 
   return (
     <div data-ui-route="setup" data-ui-state={setupReady ? "ready" : "recommendation"} className="mx-auto grid w-full max-w-6xl gap-4 pb-16">

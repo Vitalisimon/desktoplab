@@ -64,6 +64,7 @@ pub enum RuntimeInstallError {
     UnknownSetupChoice,
     UnsafeInstallerSource,
     ExternallyManagedRuntime,
+    RuntimeNotAvailable,
     InsufficientDisk { required_gb: u32, available_gb: u32 },
     NetworkUnavailable,
 }

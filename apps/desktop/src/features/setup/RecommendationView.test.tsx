@@ -111,6 +111,43 @@ test("labels python environment runtimes without presenting them as one click in
   expect(screen.queryAllByText("One-click setup")).toHaveLength(1);
 });
 
+test("keeps uncertified runtimes visible as non-selectable preview or planned routes", () => {
+  renderRecommendationView(
+    preview([], undefined, [
+      {
+        manifestId: "runtime.ollama",
+        displayName: "Ollama",
+        channel: "stable",
+        role: "recommended",
+        installMode: "automatic",
+        runtimeCapability: capability("certified", "managed", ["macos-aarch64"]),
+      },
+      {
+        manifestId: "runtime.lm-studio",
+        displayName: "LM Studio",
+        channel: "experimental",
+        role: "alternative",
+        installMode: "external_guided",
+        runtimeCapability: capability("planned", "external_only"),
+      },
+      {
+        manifestId: "runtime.mlx-lm",
+        displayName: "MLX-LM Server",
+        channel: "experimental",
+        role: "alternative",
+        installMode: "python_environment",
+        runtimeCapability: capability("experimental", "none"),
+      },
+    ]),
+  );
+
+  expect(screen.getByText("Ready and supported")).toBeInTheDocument();
+  expect(screen.getAllByText("Planned runtime").length).toBeGreaterThan(0);
+  expect(screen.getAllByText("Preview · not certified").length).toBeGreaterThan(0);
+  expect(screen.queryByRole("button", { name: "Select LM Studio" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Select MLX-LM Server" })).not.toBeInTheDocument();
+});
+
 test("uses user-readable setup choice copy for existing local installs", () => {
   renderRecommendationView(
     preview(
@@ -251,5 +288,19 @@ function model(
     compatibilityReason: "fits this machine",
     licenseState: "known",
     trustLabel: "License verified",
+  };
+}
+
+function capability(
+  availability: "certified" | "experimental" | "planned",
+  setupMode: "managed" | "external_only" | "none",
+  certifiedPlatforms: string[] = [],
+) {
+  return {
+    availability,
+    setupMode,
+    verification: "unverified" as const,
+    certifiedPlatforms,
+    evidenceScope: availability === "certified" ? "exact_candidate_required" : "no_certification_evidence",
   };
 }

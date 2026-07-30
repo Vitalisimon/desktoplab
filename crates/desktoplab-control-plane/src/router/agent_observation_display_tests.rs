@@ -34,16 +34,23 @@ fn failed_test_output_is_human_readable_without_internal_codes() {
 
 #[test]
 fn command_statuses_have_stable_human_copy() {
-    let call = IterativeToolCall::new("call.2", "desktoplab.run_terminal", json!({ "command": "pwd" }));
+    let call = IterativeToolCall::new(
+        "call.2",
+        "desktoplab.run_terminal",
+        json!({ "command": "pwd" }),
+    );
     for (status, exit_code, expected) in [
         ("exited", Some(0), "completed successfully"),
         ("exited", Some(7), "finished with exit code 7"),
         ("timed_out", None, "timed out"),
         ("failed_to_spawn", None, "could not start"),
     ] {
-        let observation = ToolObservation::success(&call, json!({
-            "command": "pwd", "status": status, "exitCode": exit_code, "stdout": "", "stderr": ""
-        }));
+        let observation = ToolObservation::success(
+            &call,
+            json!({
+                "command": "pwd", "status": status, "exitCode": exit_code, "stdout": "", "stderr": ""
+            }),
+        );
         assert!(readable_observation(&observation).contains(expected));
     }
 }

@@ -88,13 +88,17 @@ fn setup_entries(
 ) -> Vec<SetupCatalogEntry> {
     let mut entries = vec![
         SetupCatalogEntry::runtime("runtime.ollama", "Ollama", CatalogChannel::Stable),
-        SetupCatalogEntry::runtime("runtime.lm-studio", "LM Studio", CatalogChannel::Stable),
+        SetupCatalogEntry::runtime(
+            "runtime.lm-studio",
+            "LM Studio",
+            CatalogChannel::Experimental,
+        ),
     ];
     if host_supports_mlx_lm() {
         entries.push(SetupCatalogEntry::runtime(
             "runtime.mlx-lm",
             "MLX-LM Server",
-            CatalogChannel::Stable,
+            CatalogChannel::Experimental,
         ));
     }
     entries.extend(
@@ -192,6 +196,13 @@ fn recommendation_json(recommendation: &SetupRecommendation, host: &HostSetupInv
     });
     if let Some(object) = value.as_object_mut() {
         if recommendation.manifest_id().starts_with("runtime.") {
+            object.insert(
+                "runtimeCapability".to_string(),
+                crate::local_runtime_capability::LocalRuntimeCapability::for_runtime(
+                    recommendation.manifest_id(),
+                )
+                .to_json(),
+            );
             object.insert(
                 "installMode".to_string(),
                 json!(runtime_install_mode(recommendation.manifest_id())),

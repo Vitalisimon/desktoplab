@@ -1,6 +1,4 @@
-use desktoplab_runtime::{
-    MlxLmRuntime, OllamaRuntime, ProcessCommand, ProcessOutput, ProcessRunner, RuntimeId,
-};
+use desktoplab_runtime::{OllamaRuntime, ProcessCommand, ProcessOutput, ProcessRunner, RuntimeId};
 
 use crate::ModelDownloadPlan;
 
@@ -85,13 +83,6 @@ impl RuntimeModelDownloadCommand {
             .chain(self.args.iter().map(String::as_str))
             .collect::<Vec<_>>()
             .join(" ")
-    }
-
-    fn from_process_command(command: ProcessCommand) -> Self {
-        Self {
-            program: command.program().to_string(),
-            args: command.args().to_vec(),
-        }
     }
 }
 
@@ -310,10 +301,9 @@ fn command_for_runtime(
                 &["pull", pull_ref.as_str()],
             ))
         }
-        "runtime.mlx-lm" => MlxLmRuntime::new()
-            .download_command(model_id)
-            .map(RuntimeModelDownloadCommand::from_process_command)
-            .ok_or_else(|| ModelDownloadError::UnsafeModelReference(model_id.to_string())),
+        "runtime.mlx-lm" => Err(ModelDownloadError::UnsupportedRuntime(
+            "runtime.mlx-lm:model_acquisition_owned_by_managed_setup".to_string(),
+        )),
         other => Err(ModelDownloadError::UnsupportedRuntime(other.to_string())),
     }
 }

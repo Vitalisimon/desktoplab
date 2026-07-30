@@ -28,6 +28,7 @@ mod frontier_setup_preview;
 mod high_end_runtime_routes;
 mod http;
 mod lifecycle;
+mod local_runtime_capability;
 mod mcp_tokens;
 mod model_inventory_routes;
 mod model_pull_ref_validation;

@@ -9,7 +9,6 @@ use desktoplab_agent_session::TerminalEvidence;
 use desktoplab_backend_services::JobId;
 use desktoplab_backend_services::{ApprovalState, BackendEventScope, EventReplayRequest, JobState};
 use desktoplab_policy::PolicyEngine;
-use desktoplab_runtime::{ProcessCommand, ProcessRunner, SystemProcessRunner};
 #[cfg(debug_assertions)]
 use desktoplab_tool_gateway::ToolGateway;
 #[cfg(debug_assertions)]
@@ -3450,24 +3449,14 @@ impl LocalApiRouter {
     }
 
     fn run_local_mlx_lm(&self, prompt: &str) -> Result<String, ()> {
-        let model_id = self.selected_local_model_id()?;
-        let pull_ref = crate::model_routes::model_pull_ref(&model_id).ok_or(())?;
-        let output = <SystemProcessRunner as ProcessRunner>::run(
-            &SystemProcessRunner,
-            ProcessCommand::new("mlx_lm.generate")
-                .arg("--model")
-                .arg(pull_ref)
-                .arg("--prompt")
-                .arg(prompt),
-        );
-        if !output.succeeded() {
-            return Err(());
-        }
-        let response = output.stdout().trim();
-        if response.is_empty() {
-            return Err(());
-        }
-        Ok(response.to_string())
+        let (backend, model) = self.mlx_lm_backend_and_model().map_err(|_| ())?;
+        backend
+            .execute_chat(
+                &desktoplab_backends::BackendPrompt::new(model, "")
+                    .with_messages(vec![desktoplab_backends::BackendMessage::user(prompt)])
+                    .with_tools(self.backend_tool_schemas().map_err(|_| ())?),
+            )
+            .map_err(|_| ())
     }
 
     fn run_local_lm_studio(&self, prompt: &str) -> Result<String, ()> {
@@ -3486,10 +3475,7 @@ impl LocalApiRouter {
         let prompt = desktoplab_backends::BackendPrompt::new(pull_ref.clone(), "")
             .with_messages(messages)
             .with_tools(self.backend_tool_schemas()?);
-        let backend = desktoplab_backends::LmStudioExecutionBackend::new(
-            desktoplab_backends::LocalEndpoint::available("http://127.0.0.1:1234"),
-            desktoplab_backends::BackendModelInventory::available(&[pull_ref.as_str()]),
-        );
+        let backend = self.lm_studio_backend_for_model(&pull_ref)?;
         backend.execute_chat(&prompt)
     }
 

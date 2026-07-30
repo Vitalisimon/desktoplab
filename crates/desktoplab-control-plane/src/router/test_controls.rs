@@ -215,9 +215,7 @@ mod tests {
         let body = serde_json::json!({"modelId":variant.model_id()}).to_string();
         let mut disabled = LocalApiRouter::default();
         assert_eq!(
-            disabled
-                .model_protocol_for_test_control(&body)
-                .status(),
+            disabled.model_protocol_for_test_control(&body).status(),
             "404 Not Found"
         );
 

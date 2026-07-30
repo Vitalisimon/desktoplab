@@ -41,6 +41,11 @@ impl RuntimeInstallExecutionResult {
         self.desktoplab_started_runtime
     }
 
+    #[must_use]
+    pub fn verified_existing(evidence: impl Into<String>) -> Self {
+        Self::completed(evidence)
+    }
+
     pub(crate) fn completed(evidence: impl Into<String>) -> Self {
         Self::new(
             RuntimeExecutionState::Completed,
