@@ -7,6 +7,13 @@ import test from "node:test";
 
 import { aggregateRun, appendRun, runCommand } from "./regression-gate-core.mjs";
 
+const runtimeCertificationArgs = [
+  "--runtime-ollama-managed", "/evidence/runtime-ollama-managed.json",
+  "--runtime-lm-studio-existing", "/evidence/runtime-lm-studio-existing.json",
+  "--runtime-lm-studio-managed", "/evidence/runtime-lm-studio-managed.json",
+  "--runtime-mlx-lm-managed", "/evidence/runtime-mlx-lm-managed.json",
+];
+
 test("a narrow pass cannot override any required failure", () => {
   const result = aggregateRun([
     { id: "narrow", status: "passed" },
@@ -47,6 +54,7 @@ test("safe signing validates a prebuilt candidate without rebuilding it", () => 
     "--dry-run",
     "--agent-evidence-mode",
     "fresh-recording",
+    ...runtimeCertificationArgs,
     "--report",
     report,
   ]);
@@ -55,6 +63,7 @@ test("safe signing validates a prebuilt candidate without rebuilding it", () => 
   const run = evidence.runs.at(-1);
   const betaFull = run.steps.find((step) => step.id === "beta-full");
   const candidatePayload = run.steps.find((step) => step.id === "candidate-payload");
+  const runtimeMatrix = run.steps.find((step) => step.id === "runtime-certification-matrix");
   const installedAgent = run.steps.find((step) => step.id === "installed-agent");
   const reliabilityRecording = run.steps.find((step) => step.id === "agent-reliability-recording");
   const reliabilityCampaign = run.steps.find((step) => step.id === "agent-reliability-campaign");
@@ -67,6 +76,11 @@ test("safe signing validates a prebuilt candidate without rebuilding it", () => 
     "--prebuilt-candidate",
   ]);
   assert.match(candidatePayload.args.join(" "), /dist\/release\/candidate\/admission\.json/);
+  assert.ok(run.steps.indexOf(runtimeMatrix) < run.steps.indexOf(installedAgent));
+  assert.match(runtimeMatrix.args.join(" "), /--ollama-managed \/evidence\/runtime-ollama-managed\.json/);
+  assert.match(runtimeMatrix.args.join(" "), /--lm-studio-existing \/evidence\/runtime-lm-studio-existing\.json/);
+  assert.match(runtimeMatrix.args.join(" "), /--lm-studio-managed \/evidence\/runtime-lm-studio-managed\.json/);
+  assert.match(runtimeMatrix.args.join(" "), /--mlx-lm-managed \/evidence\/runtime-mlx-lm-managed\.json/);
   assert.match(installedAgent.args.join(" "), /--candidate .*dist\/release\/candidate\/admission\.json/);
   assert.match(installedAgent.args.join(" "), /--app \/Applications\/DesktopLab\.app/);
   assert.match(installedAgent.args.join(" "), /--driver scripts\/product\/drivers\/macos-installed-agent-ui\.mjs/);
@@ -93,7 +107,7 @@ test("safe signing validates a prebuilt candidate without rebuilding it", () => 
   assert.match(stableUi.args.join(" "), /--candidate .*admission\.json/);
   assert.match(stableUi.args.join(" "), /--app .*DesktopLab\.app/);
 
-  spawnSync(process.execPath, ["scripts/release/safe-signing-regression-gate.mjs", "--dry-run", "--agent-evidence-mode", "fresh-recording", "--report", report]);
+  spawnSync(process.execPath, ["scripts/release/safe-signing-regression-gate.mjs", "--dry-run", "--agent-evidence-mode", "fresh-recording", ...runtimeCertificationArgs, "--report", report]);
   const retried = JSON.parse(readFileSync(report, "utf8"));
   const workspaces = retried.runs.slice(-2).map((entry) => entry.steps.find((step) => step.id === "installed-agent").args.join(" ").match(/--workspace ([^ ]+)/)[1]);
   assert.notEqual(workspaces[0], workspaces[1], "safe-signing retries must not reuse agent state");
@@ -110,6 +124,7 @@ test("verified agent evidence reuse never schedules a second canary or reliabili
     "/evidence/installed-agent.json",
     "--reuse-agent-campaign",
     "/evidence/reliability.json",
+    ...runtimeCertificationArgs,
     "--report",
     report,
   ]);
@@ -144,4 +159,18 @@ test("safe signing refuses an implicit or incomplete agent evidence mode", () =>
   ], { encoding: "utf8" });
   assert.notEqual(incomplete.status, 0);
   assert.match(incomplete.stderr, /requires both agent certification and campaign/);
+});
+
+test("safe signing refuses an incomplete live runtime certification matrix", () => {
+  const incomplete = spawnSync(process.execPath, [
+    "scripts/release/safe-signing-regression-gate.mjs",
+    "--dry-run",
+    "--agent-evidence-mode",
+    "fresh-recording",
+    "--runtime-ollama-managed",
+    "/evidence/runtime-ollama-managed.json",
+  ], { encoding: "utf8" });
+
+  assert.notEqual(incomplete.status, 0);
+  assert.match(incomplete.stderr, /requires all four live runtime certification reports/);
 });

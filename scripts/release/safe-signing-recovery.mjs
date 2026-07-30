@@ -21,6 +21,9 @@ if (args.agentEvidenceMode === "verified-reuse"
   && (!args.reuseAgentCertification || !args.reuseAgentCampaign)) {
   throw new Error("safe-signing verified reuse requires both agent certification and campaign evidence");
 }
+for (const name of ["runtimeOllamaManaged", "runtimeLmStudioExisting", "runtimeLmStudioManaged", "runtimeMlxLmManaged"]) {
+  if (!args[name]) throw new Error("safe-signing recovery requires all four live runtime certification reports");
+}
 const started = new Date();
 const runId = `${started.toISOString()}-${process.pid}-recovery`;
 const inputs = candidateInputs(args, runId);
@@ -83,6 +86,11 @@ function parseArgs(argv) {
     ["--agent-gates", "agentGates"], ["--run-root", "runRoot"], ["--reliability-root", "reliabilityRoot"],
     ["--reliability-manifest", "reliabilityManifest"], ["--reliability-catalog", "reliabilityCatalog"],
     ["--reuse-agent-certification", "reuseAgentCertification"], ["--reuse-agent-campaign", "reuseAgentCampaign"],
+    ["--runtime-ollama-managed", "runtimeOllamaManaged"],
+    ["--runtime-lm-studio-existing", "runtimeLmStudioExisting"],
+    ["--runtime-lm-studio-managed", "runtimeLmStudioManaged"],
+    ["--runtime-mlx-lm-managed", "runtimeMlxLmManaged"],
+    ["--runtime-matrix", "runtimeMatrix"],
     ["--agent-evidence-mode", "agentEvidenceMode"],
   ]);
   for (let index = 0; index < argv.length; index += 1) {

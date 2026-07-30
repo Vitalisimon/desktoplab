@@ -19,6 +19,9 @@ if (args.agentEvidenceMode === "fresh-recording"
   && (args.reuseAgentCertification || args.reuseAgentCampaign)) {
   throw new Error("safe-signing fresh recording cannot accept reused agent evidence");
 }
+for (const name of ["runtimeOllamaManaged", "runtimeLmStudioExisting", "runtimeLmStudioManaged", "runtimeMlxLmManaged"]) {
+  if (!args[name]) throw new Error("safe-signing requires all four live runtime certification reports");
+}
 const startedAt = new Date();
 const runId = `${startedAt.toISOString()}-${process.pid}`;
 const inputs = candidateInputs(args, runId);
@@ -63,7 +66,7 @@ function gitValue(commandArgs) {
 }
 
 function parseArgs(argv) {
-  const parsed = { report: null, dryRun: false, candidate: null, app: null, workspace: null, evidence: null, certification: null, runtime: null, campaign: null, agentGates: null, agentEvidenceMode: null, reuseAgentCertification: null, reuseAgentCampaign: null };
+  const parsed = { report: null, dryRun: false, candidate: null, app: null, workspace: null, evidence: null, certification: null, runtime: null, campaign: null, agentGates: null, agentEvidenceMode: null, reuseAgentCertification: null, reuseAgentCampaign: null, runtimeOllamaManaged: null, runtimeLmStudioExisting: null, runtimeLmStudioManaged: null, runtimeMlxLmManaged: null, runtimeMatrix: null };
   for (let index = 0; index < argv.length; index += 1) {
     if (argv[index] === "--report") parsed.report = argv[++index];
     else if (argv[index] === "--dry-run") parsed.dryRun = true;
@@ -81,6 +84,11 @@ function parseArgs(argv) {
     else if (argv[index] === "--reliability-catalog") parsed.reliabilityCatalog = argv[++index];
     else if (argv[index] === "--reuse-agent-certification") parsed.reuseAgentCertification = argv[++index];
     else if (argv[index] === "--reuse-agent-campaign") parsed.reuseAgentCampaign = argv[++index];
+    else if (argv[index] === "--runtime-ollama-managed") parsed.runtimeOllamaManaged = argv[++index];
+    else if (argv[index] === "--runtime-lm-studio-existing") parsed.runtimeLmStudioExisting = argv[++index];
+    else if (argv[index] === "--runtime-lm-studio-managed") parsed.runtimeLmStudioManaged = argv[++index];
+    else if (argv[index] === "--runtime-mlx-lm-managed") parsed.runtimeMlxLmManaged = argv[++index];
+    else if (argv[index] === "--runtime-matrix") parsed.runtimeMatrix = argv[++index];
     else if (argv[index] === "--agent-evidence-mode") parsed.agentEvidenceMode = argv[++index];
     else throw new Error(`unknown or incomplete argument ${argv[index]}`);
   }
