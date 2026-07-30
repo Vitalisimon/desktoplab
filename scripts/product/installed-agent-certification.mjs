@@ -76,6 +76,8 @@ export function assessInstalledAgentEvidence({
     host: evidence.host,
     screenshots: (evidence.interactions ?? []).map((entry) => entry.screenshot).filter(Boolean),
     executionKind: "installed_app_ui",
+    uiDriverSha256: evidence.installation?.uiDriver?.sha256 ?? null,
+    uiDriverBundleSha256: evidence.installation?.uiDriver?.bundleSha256 ?? null,
     localModelRequestCount: recording.metrics?.localModelRequestCount ?? 0,
     realToolExecutionCount: recording.metrics?.realToolExecutionCount ?? 0,
     testControlRequests: recording.metrics?.testControlRequests ?? null,

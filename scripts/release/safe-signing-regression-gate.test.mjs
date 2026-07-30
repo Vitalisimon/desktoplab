@@ -45,6 +45,8 @@ test("safe signing validates a prebuilt candidate without rebuilding it", () => 
   const result = spawnSync(process.execPath, [
     "scripts/release/safe-signing-regression-gate.mjs",
     "--dry-run",
+    "--agent-evidence-mode",
+    "fresh-recording",
     "--report",
     report,
   ]);
@@ -91,8 +93,55 @@ test("safe signing validates a prebuilt candidate without rebuilding it", () => 
   assert.match(stableUi.args.join(" "), /--candidate .*admission\.json/);
   assert.match(stableUi.args.join(" "), /--app .*DesktopLab\.app/);
 
-  spawnSync(process.execPath, ["scripts/release/safe-signing-regression-gate.mjs", "--dry-run", "--report", report]);
+  spawnSync(process.execPath, ["scripts/release/safe-signing-regression-gate.mjs", "--dry-run", "--agent-evidence-mode", "fresh-recording", "--report", report]);
   const retried = JSON.parse(readFileSync(report, "utf8"));
   const workspaces = retried.runs.slice(-2).map((entry) => entry.steps.find((step) => step.id === "installed-agent").args.join(" ").match(/--workspace ([^ ]+)/)[1]);
   assert.notEqual(workspaces[0], workspaces[1], "safe-signing retries must not reuse agent state");
+});
+
+test("verified agent evidence reuse never schedules a second canary or reliability recording", () => {
+  const report = join(mkdtempSync(join(tmpdir(), "desktoplab-safe-signing-reuse-")), "report.json");
+  const result = spawnSync(process.execPath, [
+    "scripts/release/safe-signing-regression-gate.mjs",
+    "--dry-run",
+    "--agent-evidence-mode",
+    "verified-reuse",
+    "--reuse-agent-certification",
+    "/evidence/installed-agent.json",
+    "--reuse-agent-campaign",
+    "/evidence/reliability.json",
+    "--report",
+    report,
+  ]);
+  const run = JSON.parse(readFileSync(report, "utf8")).runs.at(-1);
+  const installedAgent = run.steps.find((step) => step.id === "installed-agent");
+  assert.equal(result.status, 1, "dry-run remains non-certifying");
+  assert.match(installedAgent.args.join(" "), /safe-signing-agent-evidence\.mjs/);
+  assert.match(installedAgent.args.join(" "), /--certification \/evidence\/installed-agent\.json/);
+  assert.match(installedAgent.args.join(" "), /--campaign \/evidence\/reliability\.json/);
+  assert.match(installedAgent.args.join(" "), /--installed-ui-driver scripts\/product\/drivers\/macos-installed-agent-ui\.mjs/);
+  assert.equal(run.steps.some((step) => step.id === "measured-agent-runtime"), false);
+  assert.equal(run.steps.some((step) => step.id === "agent-reliability-recording"), false);
+  assert.equal(run.steps.some((step) => step.id === "agent-reliability-campaign"), false);
+  assert.equal(run.steps.some((step) => step.id === "agent-release-gates"), false);
+});
+
+test("safe signing refuses an implicit or incomplete agent evidence mode", () => {
+  const implicit = spawnSync(process.execPath, [
+    "scripts/release/safe-signing-regression-gate.mjs",
+    "--dry-run",
+  ], { encoding: "utf8" });
+  assert.notEqual(implicit.status, 0);
+  assert.match(implicit.stderr, /requires --agent-evidence-mode/);
+
+  const incomplete = spawnSync(process.execPath, [
+    "scripts/release/safe-signing-regression-gate.mjs",
+    "--dry-run",
+    "--agent-evidence-mode",
+    "verified-reuse",
+    "--reuse-agent-certification",
+    "/evidence/installed-agent.json",
+  ], { encoding: "utf8" });
+  assert.notEqual(incomplete.status, 0);
+  assert.match(incomplete.stderr, /requires both agent certification and campaign/);
 });
