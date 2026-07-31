@@ -60,6 +60,19 @@ test("renders user-facing local configuration without support bundle noise", asy
   }
 });
 
+test("opens the advanced runtime and model controls from settings", async () => {
+  const onOpenModels = vi.fn();
+  render(
+    <AppProviders apiClient={clientFor()}>
+      <SettingsFeature onOpenModels={onOpenModels} />
+    </AppProviders>,
+  );
+
+  fireEvent.click(await screen.findByRole("button", { name: "Local runtimes and models" }));
+
+  expect(onOpenModels).toHaveBeenCalledOnce();
+});
+
 test("theme preference contract defaults to system and resolves on boot", async () => {
   render(
     <AppProviders apiClient={clientFor()}>
