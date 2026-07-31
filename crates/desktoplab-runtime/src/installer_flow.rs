@@ -131,21 +131,42 @@ where
         );
     }
 
-    let health = runner.run(
-        ProcessCommand::new("curl")
-            .arg("--fail")
-            .arg("http://127.0.0.1:11434/api/tags"),
-    );
-    evidence = format!("{evidence}; {}", health.evidence().evidence());
-    if !health.succeeded() {
+    let (health_ready, health_evidence) = wait_for_macos_ollama_health(runner, evidence);
+    if !health_ready {
         return RuntimeInstallExecutionResult::failed(
             "health_failed_retryable",
-            evidence,
+            health_evidence,
             "Ollama started but its local API is not ready yet. Retry after it finishes launching.",
         );
     }
 
-    RuntimeInstallExecutionResult::completed_after_desktoplab_start(evidence)
+    RuntimeInstallExecutionResult::completed_after_desktoplab_start(health_evidence)
+}
+
+fn wait_for_macos_ollama_health<R>(runner: &R, mut evidence: String) -> (bool, String)
+where
+    R: ProcessRunner,
+{
+    const MAX_ATTEMPTS: usize = 30;
+    for attempt in 1..=MAX_ATTEMPTS {
+        let health = runner.run(
+            ProcessCommand::new("curl")
+                .arg("--fail")
+                .arg("http://127.0.0.1:11434/api/tags"),
+        );
+        evidence = format!("{evidence}; {}", health.evidence().evidence());
+        if health.succeeded() {
+            return (true, evidence);
+        }
+        if attempt < MAX_ATTEMPTS {
+            let wait = runner.run(ProcessCommand::new("sleep").arg("1"));
+            evidence = format!("{evidence}; {}", wait.evidence().evidence());
+            if !wait.succeeded() {
+                return (false, evidence);
+            }
+        }
+    }
+    (false, evidence)
 }
 
 pub(crate) fn run_linux_ollama_install<R>(
