@@ -59,7 +59,7 @@ export function AppRoutes({ route, activeWorkspace, selectedSession, forceEmptyT
   if (route === "context") return activeWorkspace ? <WorkspaceContextFeature workspaceId={activeWorkspace.workspaceId} /> : <OpenWorkspaceFirst />;
   if (route === "extensions") return <ExtensionsFeature />;
   if (route === "diagnostics") return <DiagnosticsFeature />;
-  if (route === "settings") return <SettingsFeature />;
+  if (route === "settings") return <SettingsFeature onOpenModels={() => setForcedRoute("models")} />;
   return <RouteBoundary route={route} />;
 }
 

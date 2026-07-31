@@ -10,8 +10,9 @@ import { UpdateStatusPanel } from "./UpdateStatusPanel";
 import { useSettingsDiagnostics } from "./useSettingsDiagnostics";
 import { HighEndLocalSetupPanel } from "../setup/HighEndLocalSetupPanel";
 import { ChevronRight } from "../../design/icons";
+import { SettingsNavigationRow } from "./SettingsNavigationRow";
 
-export function SettingsFeature() {
+export function SettingsFeature({ onOpenModels }: { onOpenModels?: () => void } = {}) {
   const diagnostics = useSettingsDiagnostics();
 
   if (diagnostics.setup.isLoading) {
@@ -44,7 +45,7 @@ export function SettingsFeature() {
           <HighEndLocalSetupPanel setup={diagnostics.setup.data.highEndLocal} embedded />
         </SettingsDisclosure>
       ) : null}
-
+      {onOpenModels ? <SettingsNavigationRow title="Local runtimes and models" description="Inspect, install or safely stop local model runners." onOpen={onOpenModels} /> : null}
       <SettingsDisclosure title="Safety and approvals" description="Choose when agents pause before local actions.">
         <div className="grid gap-4">
           <SafetyApprovalSettings />
