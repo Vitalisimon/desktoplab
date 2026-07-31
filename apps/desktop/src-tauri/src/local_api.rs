@@ -118,10 +118,19 @@ impl PackagedLocalApi {
             .lock()
             .expect("control plane lock should not be poisoned")
             .mark_ready();
+        let managed_ollama_marker_path = config
+            .app_data_dir
+            .as_ref()
+            .map(managed_ollama_marker_path);
         let managed_runtime_owner_id = config.app_data_dir.as_ref().map(|_| {
             config
                 .managed_runtime_owner_id
                 .clone()
+                .or_else(|| {
+                    managed_ollama_marker_path
+                        .as_deref()
+                        .and_then(runtime_marker_owner)
+                })
                 .unwrap_or_else(|| LocalAuthToken::for_desktop_session().as_str().to_string())
         });
         let router = router_for_config(&config, managed_runtime_owner_id.as_deref())?;
@@ -152,10 +161,7 @@ impl PackagedLocalApi {
             discovery_path: config.discovery_path,
             shutdown_managed_ollama: config.shutdown_managed_ollama,
             managed_runtime_owner_id,
-            managed_ollama_marker_path: config
-                .app_data_dir
-                .as_ref()
-                .map(managed_ollama_marker_path),
+            managed_ollama_marker_path,
             shutdown_evidence_path_for_test: config.shutdown_evidence_path_for_test,
             handle: Some(handle),
         })
@@ -214,11 +220,6 @@ impl PackagedLocalApi {
                 .map_err(|error| PackagedLocalApiError::Io(error.to_string()))?;
         } else {
             quit_ollama();
-        }
-        match std::fs::remove_file(marker_path) {
-            Ok(()) => {}
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
-            Err(error) => return Err(PackagedLocalApiError::Io(error.to_string())),
         }
         Ok(())
     }
@@ -303,7 +304,18 @@ fn router_for_config(
 }
 
 fn runtime_marker_matches(path: &Path, owner_id: &str) -> bool {
-    std::fs::read_to_string(path).is_ok_and(|marker| marker.trim() == owner_id)
+    runtime_marker_owner(path).as_deref() == Some(owner_id)
+}
+
+fn runtime_marker_owner(path: &Path) -> Option<String> {
+    let owner_id = std::fs::read_to_string(path).ok()?;
+    let owner_id = owner_id.trim();
+    (!owner_id.is_empty()
+        && owner_id.len() <= 256
+        && owner_id
+            .chars()
+            .all(|character| character.is_ascii_alphanumeric() || "-_.".contains(character)))
+    .then(|| owner_id.to_string())
 }
 
 fn desktoplab_storage_path(app_data_dir: impl AsRef<Path>) -> PathBuf {

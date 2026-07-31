@@ -207,7 +207,7 @@ fn local_api_server_window_close_shutdown_runs_managed_runtime_cleanup() {
 }
 
 #[test]
-fn packaged_local_api_shutdown_removes_owner_marker_after_managed_cleanup() {
+fn packaged_local_api_shutdown_retains_durable_owner_marker_after_managed_cleanup() {
     let fixture = TempDir::new().expect("shutdown fixture should exist");
     let app_data = fixture.path().join("app-data");
     let marker = app_data.join("runtime/ollama-owned-by-desktoplab");
@@ -227,9 +227,50 @@ fn packaged_local_api_shutdown_removes_owner_marker_after_managed_cleanup() {
     api.shutdown().expect("packaged local api should stop");
 
     assert!(evidence_path.exists(), "managed runtime cleanup should run");
+    assert_eq!(
+        std::fs::read_to_string(marker).expect("managed marker should remain durable"),
+        "desktop-session-1\n"
+    );
+}
+
+#[test]
+fn packaged_local_api_restart_reuses_managed_ownership_for_cleanup() {
+    let fixture = TempDir::new().expect("shutdown fixture should exist");
+    let app_data = fixture.path().join("app-data");
+    let marker = app_data.join("runtime/ollama-owned-by-desktoplab");
+    std::fs::create_dir_all(marker.parent().expect("marker parent should exist"))
+        .expect("runtime dir should exist");
+    std::fs::write(&marker, "desktop-session-managed\n").expect("owned marker should write");
+
+    let first_evidence = fixture.path().join("first-shutdown.txt");
+    PackagedLocalApi::start(
+        PackagedLocalApiConfig::for_app_data_dir(&app_data)
+            .with_managed_runtime_owner_id("desktop-session-managed")
+            .with_managed_ollama_shutdown(true)
+            .with_shutdown_evidence_path_for_test(&first_evidence),
+    )
+    .expect("first packaged api should start")
+    .shutdown()
+    .expect("first packaged api should stop");
+
+    let restart_evidence = fixture.path().join("restart-shutdown.txt");
+    PackagedLocalApi::start(
+        PackagedLocalApiConfig::for_app_data_dir(&app_data)
+            .with_managed_ollama_shutdown(true)
+            .with_shutdown_evidence_path_for_test(&restart_evidence),
+    )
+    .expect("restarted packaged api should start")
+    .shutdown()
+    .expect("restarted packaged api should stop");
+
+    assert!(first_evidence.exists(), "first managed cleanup should run");
     assert!(
-        !marker.exists(),
-        "managed marker should be consumed after shutdown"
+        restart_evidence.exists(),
+        "restart must retain and reuse managed ownership for cleanup"
+    );
+    assert_eq!(
+        std::fs::read_to_string(marker).expect("durable managed marker should remain"),
+        "desktop-session-managed\n"
     );
 }
 

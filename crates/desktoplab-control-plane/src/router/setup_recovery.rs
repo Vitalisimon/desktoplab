@@ -102,13 +102,13 @@ impl LocalApiRouter {
         let Some(pull_ref) = crate::model_routes::model_pull_ref(&model_id) else {
             return;
         };
+        let desktoplab_managed = self.owns_managed_ollama_runtime();
         let models = <SystemProcessRunner as ProcessRunner>::run(
             &SystemProcessRunner,
-            ProcessCommand::new("ollama").arg("list"),
+            ollama_inventory_probe(desktoplab_managed),
         );
         let model_installed = models.succeeded()
-            && crate::model_routes::verify_model_inventory(&pull_ref, models.stdout())
-                == desktoplab_model_manager::ModelVerification::passed();
+            && ollama_inventory_contains_model(desktoplab_managed, &pull_ref, models.stdout());
         self.reconcile_existing_host_setup(
             runtime_id,
             model_id,
@@ -184,4 +184,87 @@ fn selected_ids_from(value: &Value) -> Option<(String, String)> {
         return None;
     }
     Some((runtime_id, model_id))
+}
+
+fn ollama_inventory_probe(desktoplab_managed: bool) -> ProcessCommand {
+    if desktoplab_managed {
+        ProcessCommand::new("ollama").arg("list")
+    } else {
+        ProcessCommand::new("curl")
+            .arg("--fail")
+            .arg("http://127.0.0.1:11434/api/tags")
+    }
+}
+
+fn ollama_inventory_contains_model(
+    desktoplab_managed: bool,
+    pull_ref: &str,
+    inventory_output: &str,
+) -> bool {
+    if desktoplab_managed {
+        return crate::model_routes::verify_model_inventory(pull_ref, inventory_output)
+            == desktoplab_model_manager::ModelVerification::passed();
+    }
+
+    serde_json::from_str::<Value>(inventory_output)
+        .ok()
+        .and_then(|inventory| inventory.get("models").and_then(Value::as_array).cloned())
+        .is_some_and(|models| {
+            models.iter().any(|model| {
+                ["name", "model"].iter().any(|field| {
+                    model
+                        .get(field)
+                        .and_then(Value::as_str)
+                        .is_some_and(|name| name == pull_ref)
+                })
+            })
+        })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{ollama_inventory_contains_model, ollama_inventory_probe};
+
+    #[test]
+    fn user_owned_recovery_probe_cannot_autostart_ollama() {
+        let command = ollama_inventory_probe(false);
+
+        assert_eq!(command.program(), "curl");
+        assert_eq!(
+            command.args(),
+            ["--fail", "http://127.0.0.1:11434/api/tags"]
+        );
+    }
+
+    #[test]
+    fn managed_recovery_may_launch_through_the_owned_cli_inventory() {
+        let command = ollama_inventory_probe(true);
+
+        assert_eq!(command.program(), "ollama");
+        assert_eq!(command.args(), ["list"]);
+    }
+
+    #[test]
+    fn user_owned_api_inventory_verifies_exact_model_without_cli_output() {
+        let inventory =
+            r#"{"models":[{"name":"nemotron-3-nano:4b","model":"nemotron-3-nano:4b"}]}"#;
+
+        assert!(ollama_inventory_contains_model(
+            false,
+            "nemotron-3-nano:4b",
+            inventory
+        ));
+        assert!(!ollama_inventory_contains_model(
+            false, "qwen3:8b", inventory
+        ));
+    }
+
+    #[test]
+    fn malformed_user_owned_inventory_fails_closed() {
+        assert!(!ollama_inventory_contains_model(
+            false,
+            "nemotron-3-nano:4b",
+            "not-json"
+        ));
+    }
 }
