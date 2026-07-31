@@ -93,7 +93,10 @@ fn verified_macos_download_installs_starts_and_health_checks_ollama() {
     assert!(result.evidence().contains("hdiutil attach"));
     assert!(result.evidence().contains("ditto"));
     assert!(result.evidence().contains("hdiutil detach"));
-    assert!(result.evidence().contains("open -a Ollama"));
+    assert!(
+        result.evidence().contains("open /Applications/Ollama.app"),
+        "fresh installs must launch the exact copied bundle without waiting for LaunchServices name registration"
+    );
     assert!(
         result
             .evidence()
