@@ -116,7 +116,7 @@ fn ollama_install_executor_marks_runtime_started_by_desktoplab() {
 
     assert_eq!(result.state(), RuntimeExecutionState::Completed);
     assert_eq!(result.verification_state(), "verified");
-    assert!(result.evidence().contains("open -a Ollama"));
+    assert!(result.evidence().contains("open /Applications/Ollama.app"));
     assert!(result.desktoplab_started_runtime());
 }
 

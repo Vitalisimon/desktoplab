@@ -121,7 +121,7 @@ where
         );
     }
 
-    let start = runner.run(ProcessCommand::new("open").arg("-a").arg("Ollama"));
+    let start = runner.run(ProcessCommand::new("open").arg("/Applications/Ollama.app"));
     evidence = format!("{evidence}; {}", start.evidence().evidence());
     if !start.succeeded() {
         return RuntimeInstallExecutionResult::failed(
