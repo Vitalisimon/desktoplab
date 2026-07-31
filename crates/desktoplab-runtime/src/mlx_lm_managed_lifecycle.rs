@@ -14,7 +14,7 @@ pub fn stop_managed_mlx_lm(
     let Ok(Some(marker)) = read_marker(&plan.marker_path()) else {
         return RuntimeInstallExecutionResult::blocked(
             "mlx-lm ownership marker unavailable",
-            "DesktopLab will not stop an MLX-LM process it does not own.",
+            "DesktopLab ownership marker is unavailable; it will not stop an MLX-LM process it does not own.",
         );
     };
     let process = runner.run(managed(

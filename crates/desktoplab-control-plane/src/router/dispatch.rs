@@ -130,6 +130,12 @@ impl LocalApiRouter {
             {
                 self.runtime_install(runtime_install_path, body)
             }
+            ("POST", runtime_stop_path)
+                if runtime_stop_path.starts_with("/v1/runtimes/")
+                    && runtime_stop_path.ends_with("/stop") =>
+            {
+                self.runtime_stop(runtime_stop_path)
+            }
             ("POST", runtime_verify_path)
                 if runtime_verify_path.starts_with("/v1/runtimes/")
                     && runtime_verify_path.ends_with("/verify") =>

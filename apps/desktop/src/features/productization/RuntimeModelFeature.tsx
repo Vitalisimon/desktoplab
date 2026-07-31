@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useApiClient } from "../../api/ApiProvider";
-import type { ModelDownloadResponse, ModelInventoryItem, RuntimeInstallResponse } from "../../api/types";
+import type { ModelDownloadResponse, ModelInventoryItem, RuntimeInstallResponse, RuntimeStopResponse } from "../../api/types";
 import { CurrentLocalSetup } from "./CurrentLocalSetup";
 import { ModelRow } from "./ModelRow";
 import { RuntimeInspectPanel } from "./RuntimeInspectPanel";
@@ -11,6 +11,7 @@ export function RuntimeModelFeature() {
   const api = useApiClient();
   const queryClient = useQueryClient();
   const [runtimeInstallState, setRuntimeInstallState] = useState<Record<string, RuntimeInstallResponse>>({});
+  const [runtimeStopState, setRuntimeStopState] = useState<Record<string, RuntimeStopResponse>>({});
   const [modelDownloadState, setModelDownloadState] = useState<Record<string, ModelDownloadResponse>>({});
   const runtimes = useQuery({ queryKey: ["runtimes"], queryFn: () => api.listRuntimes() });
   const models = useQuery({ queryKey: ["models"], queryFn: () => api.listModels() });
@@ -27,6 +28,18 @@ export function RuntimeModelFeature() {
     onSuccess: (response) => {
       setModelDownloadState((state) => ({ ...state, [response.modelId]: response }));
       void queryClient.invalidateQueries({ queryKey: ["models"] });
+    },
+  });
+  const stop = useMutation({
+    mutationFn: (runtimeId: string) => api.stopRuntime(runtimeId),
+    onSuccess: (response) => {
+      setRuntimeStopState((state) => ({ ...state, [response.runtimeId]: response }));
+      void Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["runtimes"] }),
+        queryClient.invalidateQueries({ queryKey: ["models"] }),
+        queryClient.invalidateQueries({ queryKey: ["runtime-inspect"] }),
+        queryClient.invalidateQueries({ queryKey: ["app-state"] }),
+      ]);
     },
   });
 
@@ -58,8 +71,11 @@ export function RuntimeModelFeature() {
               key={runtime.runtimeId}
               runtime={runtime}
               installState={runtimeInstallState[runtime.runtimeId]}
+              stopState={runtimeStopState[runtime.runtimeId]}
               onInstall={() => install.mutate(runtime.runtimeId)}
+              onStop={() => stop.mutate(runtime.runtimeId)}
               installing={install.isPending}
+              stopping={stop.isPending}
             />
           ))}
         </section>

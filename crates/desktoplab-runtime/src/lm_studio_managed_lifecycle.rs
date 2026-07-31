@@ -14,7 +14,7 @@ pub fn stop_managed_lm_studio(
     let Ok(Some(marker)) = read_marker(plan.marker_path()) else {
         return RuntimeInstallExecutionResult::blocked(
             "lm-studio ownership marker unavailable",
-            "DesktopLab will not stop an LM Studio process it does not own.",
+            "DesktopLab ownership marker is unavailable; it will not stop an LM Studio process it does not own.",
         );
     };
     let status = runner.run(managed(daemon_status(plan), plan));

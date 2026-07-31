@@ -18,12 +18,13 @@ pub fn runtimes_response(managed_ollama: bool) -> Value {
         .into_iter()
         .map(|runtime| {
             let runtime_id = runtime.id().as_str();
+            let ownership = runtime_ownership(runtime_id, managed_ollama, &lm_studio, managed_lm_studio.as_ref(), managed_mlx_lm.as_ref());
             let runtime_capability =
                 crate::local_runtime_capability::LocalRuntimeCapability::for_runtime(runtime_id);
             json!({
                 "runtimeId":runtime_id,
                 "displayName":runtime.name(),
-                "ownership":runtime_ownership(runtime_id, managed_ollama, &lm_studio, managed_lm_studio.as_ref(), managed_mlx_lm.as_ref()),
+                "ownership":ownership,
                 "status":runtime_status(runtime_id, runtime.state(), &lm_studio, managed_lm_studio.as_ref(), managed_mlx_lm.as_ref()),
                 "detectionSource":"host_probe",
                 "capabilities":["llm.chat","api.openai-compatible.local"],
@@ -32,6 +33,7 @@ pub fn runtimes_response(managed_ollama: bool) -> Value {
                 "connection":runtime_connection(runtime_id, &lm_studio, managed_lm_studio.as_ref(), managed_mlx_lm.as_ref()),
                 "provenance":runtime_provenance(runtime_id),
                 "lifecycle":{
+                    "stop":runtime_stop_lifecycle(runtime_id, ownership),
                     "update":runtime_update_lifecycle(runtime_id),
                     "uninstall":runtime_uninstall_lifecycle(runtime_id)
                 },
@@ -155,6 +157,15 @@ fn runtime_install_metadata(
     json!({"supported":true,"diskRequiredGb":2})
 }
 
+fn runtime_stop_lifecycle(runtime_id: &str, ownership: &str) -> Value {
+    if matches!(runtime_id, "runtime.lm-studio" | "runtime.mlx-lm")
+        && ownership == "desktoplab_managed"
+    {
+        return json!({"state":"supported","label":"Stop managed runtime","reason":"Stops only the ownership-verified DesktopLab process."});
+    }
+    json!({"state":"blocked","label":"Not controlled by DesktopLab","reason":"DesktopLab will not stop a runtime without matching managed ownership evidence."})
+}
+
 fn runtime_update_lifecycle(runtime_id: &str) -> Value {
     if matches!(runtime_id, "runtime.lm-studio" | "runtime.mlx-lm") {
         return json!({"state":"blocked","label":"Not available in Preview","reason":"DesktopLab does not update this Preview runtime yet. Existing user-owned installations remain unchanged."});
@@ -167,4 +178,25 @@ fn runtime_uninstall_lifecycle(runtime_id: &str) -> Value {
         return json!({"state":"blocked","label":"Not available in Preview","reason":"DesktopLab does not remove this Preview runtime yet. Existing user-owned installations remain unchanged."});
     }
     json!({"state":"packaging_managed","label":"Installer managed","reason":"Runtime removal is handled by the DesktopLab installer."})
+}
+
+#[cfg(test)]
+mod tests {
+    use super::runtime_stop_lifecycle;
+
+    #[test]
+    fn stop_is_exposed_only_for_supported_desktoplab_managed_runtimes() {
+        assert_eq!(
+            runtime_stop_lifecycle("runtime.lm-studio", "desktoplab_managed")["state"],
+            "supported"
+        );
+        assert_eq!(
+            runtime_stop_lifecycle("runtime.mlx-lm", "user_owned")["state"],
+            "blocked"
+        );
+        assert_eq!(
+            runtime_stop_lifecycle("runtime.ollama", "desktoplab_managed")["state"],
+            "blocked"
+        );
+    }
 }

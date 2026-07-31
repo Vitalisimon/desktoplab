@@ -34,6 +34,7 @@ test("maps productization account runtime model and agent methods to local api p
     setupChoice: "install",
     vendorTermsAccepted: true,
   });
+  await client.stopRuntime("runtime.lm-studio");
   await client.listModels();
   const modelDownload = await client.startModelDownload({ modelId: "model.qwen3-coder", runtimeId: "runtime.ollama" });
   await client.catalogRefreshStatus();
@@ -60,6 +61,7 @@ test("maps productization account runtime model and agent methods to local api p
     "GET /v1/runtimes",
     "GET /v1/runtime/inspect",
     "POST /v1/runtimes/runtime.lm-studio/install",
+    "POST /v1/runtimes/runtime.lm-studio/stop",
     "GET /v1/models",
     "POST /v1/models/model.qwen3-coder/download",
     "GET /v1/setup/catalog-refresh",
@@ -106,7 +108,7 @@ test("maps productization account runtime model and agent methods to local api p
     state: "downloading",
     retryClass: "retryable",
   });
-  expect(requests[21].body).toEqual({ action: "pause" });
+  expect(requests[22].body).toEqual({ action: "pause" });
 });
 
 function transportFor(requests: TransportRequest[]): ApiTransport {
@@ -132,6 +134,7 @@ function responseFor(path: string) {
   if (path === "/v1/routing/options" || path === "/v1/routing/options/selection") return { selectedRouteId: "route.local.qwen-coder-7b", options: [] };
   if (path === "/v1/runtimes") return { runtimes: [] };
   if (path === "/v1/runtime/inspect") return { source: "service_backed", inspectState: "ready", active: { selectedRouteId: "route.local.qwen-coder-7b", backendId: "backend.ollama", accountMode: "local_runtime", egress: "local_or_approval_gated", toolCapability: "filesystem_write_requires_approval" }, evidence: { coldManifest: { source: "route_selection" }, liveRuntime: { state: "verified" } } };
+  if (path.endsWith("/stop")) return { source: "service_backed", runtimeId: decodeURIComponent(path.split("/")[3]), state: "completed", verificationState: "stopped", retryClass: "non_retryable" };
   if (path.endsWith("/install")) return { jobId: "job.runtime.install", runtimeId: decodeURIComponent(path.split("/")[3]), state: "downloading", verificationState: "pending", retryClass: "retryable" };
   if (path === "/v1/models") return { models: [] };
   if (path.endsWith("/download")) {

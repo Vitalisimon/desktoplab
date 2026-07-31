@@ -88,6 +88,7 @@ fn runtime_inventory_does_not_claim_unimplemented_update_or_uninstall() {
         .expect("MLX-LM runtime");
 
     assert_eq!(ollama["lifecycle"]["update"]["state"], "packaging_managed");
+    assert_eq!(ollama["lifecycle"]["stop"]["state"], "blocked");
     assert_eq!(
         ollama["lifecycle"]["uninstall"]["state"],
         "packaging_managed"
@@ -104,6 +105,7 @@ fn runtime_inventory_does_not_claim_unimplemented_update_or_uninstall() {
         "experimental"
     );
     for runtime in [lm_studio, mlx_lm] {
+        assert_eq!(runtime["lifecycle"]["stop"]["state"], "blocked");
         assert_eq!(runtime["lifecycle"]["update"]["state"], "blocked");
         assert_eq!(runtime["lifecycle"]["uninstall"]["state"], "blocked");
     }

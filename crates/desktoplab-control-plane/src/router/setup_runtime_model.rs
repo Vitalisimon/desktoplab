@@ -282,6 +282,24 @@ impl LocalApiRouter {
         }))
     }
 
+    pub(crate) fn runtime_stop(&mut self, path: &str) -> ApiRouteResponse {
+        let runtime_id = segment(path, 2);
+        self.audit.record(
+            AuditAction::PolicyDecision,
+            format!("runtime.stop requested runtime_id={runtime_id}"),
+        );
+        let result = crate::runtime_routes::stop::execute(&runtime_id);
+        if result.state() == desktoplab_runtime::RuntimeExecutionState::Completed
+            && self.readiness.runtime_id() == Some(runtime_id.as_str())
+        {
+            self.block_runtime_setup(
+                runtime_id.clone(),
+                "Selected local runtime was explicitly stopped.",
+            );
+        }
+        ApiRouteResponse::ok(crate::runtime_routes::stop::response(&runtime_id, &result))
+    }
+
     fn block_runtime_setup(&mut self, runtime_id: String, reason: impl Into<String>) {
         let reason = reason.into();
         self.setup_pipeline = self.setup_pipeline.clone().block(reason.clone());

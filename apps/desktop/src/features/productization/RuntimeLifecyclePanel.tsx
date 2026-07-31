@@ -18,6 +18,7 @@ export function RuntimeLifecyclePanel({ runtime }: { runtime: RuntimeInventoryIt
           stateLabel={runtime.provenance.installSource}
         />
       ) : null}
+      <LifecycleLine label="Stop" reason={runtime.lifecycle.stop.reason} stateLabel={runtime.lifecycle.stop.label} />
       <LifecycleLine label="Update" reason={runtime.lifecycle.update.reason} stateLabel={runtime.lifecycle.update.label} />
       <LifecycleLine label="Remove" reason={runtime.lifecycle.uninstall.reason} stateLabel={runtime.lifecycle.uninstall.label} />
     </div>

@@ -25,7 +25,7 @@ import {
   type ProviderCredentialRemovalRequest, type ProviderCredentialRemovalResponse,
   type ProviderCredentialTestRequest, type ProviderDiagnostic, type ProvidersListResponse,
   type ReadinessResponse, type RoutePreference, type RoutePreferenceUpdateRequest,
-  type RuntimeInspectSnapshot, type RuntimeInstallRequest, type RuntimeInstallResponse, type SecurityAuditSnapshot,
+  type RuntimeInspectSnapshot, type RuntimeInstallRequest, type RuntimeInstallResponse, type RuntimeStopResponse, type SecurityAuditSnapshot,
   type RuntimesListResponse, type RollbackSavePointRequest, type RollbackSavePointResponse,
   type AgentSessionSnapshot,
   type SessionArchiveResponse,
@@ -163,6 +163,10 @@ export class DesktopLabApiClient {
       vendorTermsAccepted: request.vendorTermsAccepted,
       modelLicenseAccepted: request.modelLicenseAccepted,
     });
+  }
+
+  stopRuntime(runtimeId: string): Promise<RuntimeStopResponse> {
+    return this.request("POST", `/v1/runtimes/${encodeURIComponent(runtimeId)}/stop`);
   }
 
   listModels(): Promise<ModelsListResponse> {

@@ -82,6 +82,41 @@ test("shows runtime verification failure as a diagnostics handoff", async () => 
   expect(screen.getByText("Open Diagnostics")).toBeInTheDocument();
 });
 
+test("stops only a backend-authorized managed runtime", async () => {
+  const stopRuntime = vi.fn().mockResolvedValue({
+    source: "service_backed",
+    runtimeId: "runtime.lm-studio",
+    state: "completed",
+    verificationState: "stopped",
+    retryClass: "non_retryable",
+  });
+  renderRuntimeModel({
+    stopRuntime,
+    listRuntimes: vi.fn<() => Promise<RuntimesListResponse>>().mockResolvedValue({
+      runtimes: [
+        {
+          runtimeId: "runtime.lm-studio",
+          displayName: "LM Studio",
+          ownership: "desktoplab_managed",
+          status: "ready",
+          capabilities: ["OpenAI-compatible local endpoint"],
+          install: { supported: true, diskRequiredGb: 14 },
+          lifecycle: {
+            stop: { state: "supported", label: "Stop managed runtime", reason: "Stops only the ownership-verified DesktopLab process." },
+            update: { state: "blocked", label: "Not available in Preview", reason: "Updates are not available yet." },
+            uninstall: { state: "blocked", label: "Not available in Preview", reason: "Removal is not available yet." },
+          },
+          repairActions: [],
+        },
+      ],
+    }),
+  });
+
+  fireEvent.click(await screen.findByRole("button", { name: "Stop LM Studio" }));
+
+  await waitFor(() => expect(stopRuntime).toHaveBeenCalledWith("runtime.lm-studio"));
+});
+
 test("shows installed, downloadable and hardware-blocked catalog models honestly", async () => {
   const startModelDownload = vi.fn().mockResolvedValue({
     jobId: "job.model.download",
@@ -161,6 +196,7 @@ function renderRuntimeModel(overrides: Partial<DesktopLabApiClient> = {}) {
           capabilities: ["Local chat", "Model downloads"],
           install: { supported: true, diskRequiredGb: 3 },
           lifecycle: {
+            stop: { state: "blocked", label: "Not controlled by DesktopLab", reason: "No matching managed ownership evidence." },
             update: { state: "packaging_managed", label: "Installer managed", reason: "Updates are handled by the DesktopLab installer." },
             uninstall: { state: "packaging_managed", label: "Installer managed", reason: "Runtime removal is handled by the DesktopLab installer." },
           },
@@ -175,6 +211,7 @@ function renderRuntimeModel(overrides: Partial<DesktopLabApiClient> = {}) {
           capabilities: ["OpenAI-compatible local endpoint"],
           install: { supported: false, blockedReason: "Guided setup" },
           lifecycle: {
+            stop: { state: "blocked", label: "Not controlled by DesktopLab", reason: "No matching managed ownership evidence." },
             update: { state: "blocked", label: "External app", reason: "Managed outside DesktopLab." },
             uninstall: { state: "blocked", label: "External app", reason: "Remove LM Studio from its own app." },
           },
