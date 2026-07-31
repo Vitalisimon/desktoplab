@@ -176,6 +176,26 @@ fn lm_studio_managed_install_requires_explicit_vendor_terms() {
 }
 
 #[test]
+fn managed_runtime_stop_is_routed_and_refuses_missing_ownership() {
+    let mut router = LocalApiRouter::default();
+    let stopped = route_json(
+        &mut router,
+        "POST",
+        "/v1/runtimes/runtime.lm-studio/stop",
+        "",
+    );
+
+    assert_eq!(stopped["source"], "service_backed");
+    assert_eq!(stopped["runtimeId"], "runtime.lm-studio");
+    assert_eq!(stopped["state"], "blocked");
+    assert!(
+        stopped["remediation"]
+            .as_str()
+            .is_some_and(|copy| copy.contains("ownership marker"))
+    );
+}
+
+#[test]
 fn runtime_verify_persists_backend_runtime_readiness() {
     let mut router = LocalApiRouter::default();
     router.set_runtime_verification_for_test(true, "backend detected ollama 0.5.0");

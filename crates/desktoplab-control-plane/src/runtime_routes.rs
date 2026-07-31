@@ -9,6 +9,7 @@ mod inventory;
 mod lm_studio_managed;
 pub(crate) mod mlx_lm_managed;
 mod setup_choice;
+pub(crate) mod stop;
 
 pub use inventory::runtimes_response;
 pub(crate) use lm_studio_managed::{

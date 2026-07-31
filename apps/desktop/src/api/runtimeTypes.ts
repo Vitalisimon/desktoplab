@@ -17,6 +17,7 @@ export type RuntimeLifecycleControl = {
 };
 
 export type RuntimeLifecycleBoundary = {
+  stop: RuntimeLifecycleControl;
   update: RuntimeLifecycleControl;
   uninstall: RuntimeLifecycleControl;
 };
@@ -66,6 +67,17 @@ export type RuntimeInstallResponse = {
   verificationState: "pending" | "verified" | "blocked" | "requires_external_app" | "failed";
   retryClass: JobRetryClass;
   setupChoice?: "use_existing" | "install" | "replace";
+  executionEvidence?: string;
+  blockedReason?: string | null;
+  remediation?: string;
+};
+
+export type RuntimeStopResponse = {
+  source: "service_backed";
+  runtimeId: string;
+  state: "completed" | "blocked" | "failed";
+  verificationState: string;
+  retryClass: JobRetryClass;
   executionEvidence?: string;
   blockedReason?: string | null;
   remediation?: string;
