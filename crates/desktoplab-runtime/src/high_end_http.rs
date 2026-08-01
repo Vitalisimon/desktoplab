@@ -46,7 +46,11 @@ fn read_http_response(stream: &mut TcpStream) -> Result<Vec<u8>, RuntimeEndpoint
     let mut buffer = [0_u8; 4096];
     loop {
         match stream.read(&mut buffer) {
-            Ok(0) => break,
+            Ok(0) => {
+                return eof_response_is_complete(&response)?
+                    .then_some(response)
+                    .ok_or(RuntimeEndpointError::InvalidResponse);
+            }
             Ok(read) => {
                 response.extend_from_slice(&buffer[..read]);
                 if response.len() > MAX_RESPONSE_BYTES {
@@ -74,15 +78,30 @@ fn response_is_complete(response: &[u8]) -> Result<bool, RuntimeEndpointError> {
     let Some(header_end) = find_header_end(response) else {
         return Ok(false);
     };
+    Ok(content_length(response, header_end)?
+        .is_some_and(|length| response.len() >= header_end + 4 + length))
+}
+
+fn eof_response_is_complete(response: &[u8]) -> Result<bool, RuntimeEndpointError> {
+    let Some(header_end) = find_header_end(response) else {
+        return Ok(false);
+    };
+    Ok(content_length(response, header_end)?
+        .is_none_or(|length| response.len() >= header_end + 4 + length))
+}
+
+fn content_length(
+    response: &[u8],
+    header_end: usize,
+) -> Result<Option<usize>, RuntimeEndpointError> {
     let headers = std::str::from_utf8(&response[..header_end])
         .map_err(|_| RuntimeEndpointError::InvalidResponse)?;
-    let content_length = headers.lines().find_map(|line| {
+    Ok(headers.lines().find_map(|line| {
         let (name, value) = line.split_once(':')?;
         name.eq_ignore_ascii_case("content-length")
             .then(|| value.trim().parse::<usize>().ok())
             .flatten()
-    });
-    Ok(content_length.is_some_and(|length| response.len() >= header_end + 4 + length))
+    }))
 }
 
 fn find_header_end(response: &[u8]) -> Option<usize> {
@@ -97,5 +116,59 @@ pub(crate) fn is_local_ip(ip: IpAddr) -> bool {
     match ip {
         IpAddr::V4(ip) => ip.is_loopback() || ip.is_private(),
         IpAddr::V6(ip) => ip.is_loopback() || (ip.segments()[0] & 0xfe00) == 0xfc00,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{
+        io::{Read, Write},
+        net::{Shutdown, TcpListener},
+        thread::{self, JoinHandle},
+        time::Duration,
+    };
+
+    use crate::{RuntimeEndpointError, RuntimeEndpointSpec};
+
+    use super::http_get_json;
+
+    #[test]
+    fn accepts_http_10_json_framed_by_eof() {
+        let (endpoint, server) = endpoint_serving(
+            b"HTTP/1.0 200 OK\r\nContent-Type: application/json\r\n\r\n{\"data\":[{\"id\":\"model.local\"}]}",
+        );
+
+        let response = http_get_json(&endpoint, "/v1/models", Duration::from_secs(2))
+            .expect("HTTP/1.0 EOF framing should be accepted");
+
+        server.join().expect("server completion");
+        assert_eq!(response["data"][0]["id"], "model.local");
+    }
+
+    #[test]
+    fn rejects_eof_before_declared_content_length() {
+        let (endpoint, server) =
+            endpoint_serving(b"HTTP/1.1 200 OK\r\nContent-Length: 64\r\n\r\n{}");
+
+        assert_eq!(
+            http_get_json(&endpoint, "/v1/models", Duration::from_secs(2)),
+            Err(RuntimeEndpointError::InvalidResponse)
+        );
+        server.join().expect("server completion");
+    }
+
+    fn endpoint_serving(response: &'static [u8]) -> (RuntimeEndpointSpec, JoinHandle<()>) {
+        let listener = TcpListener::bind("127.0.0.1:0").expect("loopback listener");
+        let address = listener.local_addr().expect("listener address");
+        let server = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().expect("probe connection");
+            let mut request = [0_u8; 512];
+            stream.read(&mut request).expect("probe request");
+            stream.write_all(response).expect("probe response");
+            stream.shutdown(Shutdown::Write).expect("response EOF");
+        });
+        let endpoint = RuntimeEndpointSpec::local(format!("http://{address}"), "model.local")
+            .expect("local endpoint");
+        (endpoint, server)
     }
 }
