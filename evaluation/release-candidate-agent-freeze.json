@@ -40,7 +40,7 @@
     { "path": "crates/desktoplab-backends/src/ollama_stream.rs", "sha256": "sha256:02779085af688d1365d67dfffb45f537711c958dd3ce5f1f13b7d46e10d92e6a" },
     { "path": "crates/desktoplab-backends/src/ollama_protocol_canary.rs", "sha256": "sha256:466b625c039fbd74e03aaf8b872f0d1586185da5d3d8abd26e40205b249cad25" },
     { "path": "crates/desktoplab-backends/src/lm_studio_execution.rs", "sha256": "sha256:bc9eb7889987fc8825e0708ac9af6a6a4d40634223fd5e915e907cb1498d88b3" },
-    { "path": "crates/desktoplab-backends/src/openai_compatible_protocol_canary.rs", "sha256": "sha256:3a2a9d57af2611486ce331f30df12acb393227dd0c39f08b055aef645189bb0b" },
+    { "path": "crates/desktoplab-backends/src/openai_compatible_protocol_canary.rs", "sha256": "sha256:4c7d803ed9c81be15d1f394d3518268e8d41d269b2c87ed4d523b6c3a5c6bb96" },
     { "path": "crates/desktoplab-control-plane/src/execution_route_options.rs", "sha256": "sha256:0a70417beca8d6609befc0fa1a049fa8fa18d1ba46649ede3c1fcc88e6fdc59b" },
     { "path": "crates/desktoplab-control-plane/src/execution_tool_calling.rs", "sha256": "sha256:b7f16294e2f96e104d3626149ea227ec7480bb42beae40041dcaf6217a4d7d5d" },
     { "path": "crates/desktoplab-control-plane/src/router/agent_model_tools.rs", "sha256": "sha256:f42b3f9336987006ad2bfa913f6b24b6228a48b192daa67ea022d23bc1f6435e" },
