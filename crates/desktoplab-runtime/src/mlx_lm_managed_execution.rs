@@ -155,14 +155,15 @@ fn wait_for_models(
     model_probe: &impl LmStudioModelProbe,
     plan: &MlxLmManagedPlan,
 ) -> Option<Vec<String>> {
-    for attempt in 0..30 {
+    let attempts = plan.health_retry_attempts();
+    for attempt in 0..attempts {
         if let Ok(models) = model_probe.models(&plan.endpoint()) {
             if !models.is_empty() {
                 return Some(models);
             }
         }
-        if attempt < 29 {
-            std::thread::sleep(std::time::Duration::from_secs(1));
+        if attempt < attempts.saturating_sub(1) {
+            std::thread::sleep(plan.health_retry_delay());
         }
     }
     None
