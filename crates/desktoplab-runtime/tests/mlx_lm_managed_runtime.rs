@@ -142,6 +142,8 @@ fn execution_uses_locked_environment_exact_revision_and_loopback_server() {
     assert_eq!(result.state(), RuntimeExecutionState::Completed);
     assert!(result.evidence().contains("ownership=desktoplab_managed"));
     assert!(plan.lock_path().is_file());
+    let hf_hub_cache = plan.cache_root().join("huggingface").join("hub");
+    assert!(hf_hub_cache.is_dir());
     let commands = spawner.commands.lock().expect("commands");
     assert_eq!(commands.len(), 1);
     let command = &commands[0];
@@ -161,6 +163,10 @@ fn execution_uses_locked_environment_exact_revision_and_loopback_server() {
     assert_eq!(
         command.env_value("UV_PYTHON_INSTALL_DIR"),
         Some(plan.python_root().to_string_lossy().as_ref())
+    );
+    assert_eq!(
+        command.env_value("HF_HUB_CACHE"),
+        Some(hf_hub_cache.to_string_lossy().as_ref())
     );
     assert_eq!(command.env_value("HF_HUB_DISABLE_TELEMETRY"), Some("1"));
 }
