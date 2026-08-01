@@ -32,12 +32,15 @@ test("committed release freeze verifies against the current source tree", () => 
   const freeze = JSON.parse(readFileSync("evaluation/release-candidate-agent-freeze.json", "utf8"));
   const report = verifyAgentReleaseFreeze(freeze, { repoRoot: process.cwd() });
   assert.equal(report.status, "pass", report.failures.join("; "));
-  assert.ok(report.sourceCount >= 30);
+  assert.ok(report.sourceCount >= 44);
   const frozenPaths = new Set(report.sources.map((source) => source.path));
   for (const path of [
     "crates/desktoplab-control-plane/src/agent_model_adapter.rs",
     "crates/desktoplab-control-plane/src/agent_completion_grounding.rs",
     "crates/desktoplab-control-plane/src/agent_execution_obligations.rs",
+    "crates/desktoplab-backends/src/lm_studio_execution.rs",
+    "crates/desktoplab-backends/src/openai_compatible_protocol_canary.rs",
+    "crates/desktoplab-control-plane/src/router/local_model_protocol.rs",
   ]) {
     assert.ok(frozenPaths.has(path), "required protocol source must be frozen");
   }

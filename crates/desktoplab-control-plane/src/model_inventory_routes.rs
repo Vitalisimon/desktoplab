@@ -9,6 +9,7 @@ pub(crate) fn models_response_with_state(
     verified_model_id: Option<&str>,
     installed_models: &[String],
     host_memory_gb: Option<u32>,
+    test_runtime_support_override: bool,
 ) -> Value {
     let catalog = ModelManager::new().default_family_catalog();
     let variants = catalog.variants();
@@ -23,6 +24,7 @@ pub(crate) fn models_response_with_state(
                 verified_model_id,
                 installed_models,
                 memory_gb,
+                test_runtime_support_override,
             )
         })
         .collect::<Vec<_>>();
@@ -35,9 +37,11 @@ fn model_response(
     verified_model_id: Option<&str>,
     installed_models: &[String],
     memory_gb: u32,
+    test_runtime_support_override: bool,
 ) -> Value {
     let runtime = variant.runtime_compatibility();
-    let runtime_supported = runtime_supported_on_host(runtime.runtime_id());
+    let runtime_supported =
+        test_runtime_support_override || runtime_supported_on_host(runtime.runtime_id());
     let runtime_cloud = runtime.runtime_id() == "runtime.ollama-cloud";
     let installed = installed_models
         .iter()

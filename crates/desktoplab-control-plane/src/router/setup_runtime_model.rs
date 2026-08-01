@@ -288,6 +288,12 @@ impl LocalApiRouter {
             AuditAction::PolicyDecision,
             format!("runtime.stop requested runtime_id={runtime_id}"),
         );
+        #[cfg(debug_assertions)]
+        let result = self
+            .runtime_stop_result_for_test
+            .take()
+            .unwrap_or_else(|| crate::runtime_routes::stop::execute(&runtime_id));
+        #[cfg(not(debug_assertions))]
         let result = crate::runtime_routes::stop::execute(&runtime_id);
         if result.state() == desktoplab_runtime::RuntimeExecutionState::Completed
             && self.readiness.runtime_id() == Some(runtime_id.as_str())

@@ -107,7 +107,7 @@ impl LocalApiRouter {
                 "selected from verified local model inventory".to_string(),
             );
             if let Some(pull_ref) = crate::model_routes::model_pull_ref(model_id) {
-                self.refresh_ollama_model_capabilities(runtime_id, &pull_ref);
+                self.refresh_local_model_capabilities(runtime_id, model_id, &pull_ref);
             }
             self.selected_route_id = route_id.clone();
             let (agent_ready, blocked_reason) = self.local_agent_readiness();

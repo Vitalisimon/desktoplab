@@ -178,6 +178,7 @@ fn lm_studio_managed_install_requires_explicit_vendor_terms() {
 #[test]
 fn managed_runtime_stop_is_routed_and_refuses_missing_ownership() {
     let mut router = LocalApiRouter::default();
+    router.block_runtime_stop_for_test();
     let stopped = route_json(
         &mut router,
         "POST",

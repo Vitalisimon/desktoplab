@@ -133,9 +133,9 @@ impl PreparedAgentModelExecution {
                 Ok(output.body().to_string())
             }
             Self::Mlx { backend, prompt } => if streaming {
-                backend.execute_chat_stream(&prompt, cancellation, on_delta)
+                backend.execute_constrained_chat_stream(&prompt, cancellation, on_delta)
             } else {
-                backend.execute_chat(&prompt)
+                backend.execute_constrained_chat(&prompt)
             }
             .map_err(AgentModelExecutionError::from_backend),
             Self::Failed(reason) => Err(AgentModelExecutionError::Runtime(reason)),

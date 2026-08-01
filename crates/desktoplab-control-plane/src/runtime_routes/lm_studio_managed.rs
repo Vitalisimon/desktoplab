@@ -69,6 +69,18 @@ pub(crate) fn connection() -> Option<(String, Vec<String>)> {
         .map(|status| (status.endpoint().to_string(), status.models().to_vec()))
 }
 
+pub(crate) fn capability_connection() -> Option<(String, Vec<String>, String)> {
+    status()
+        .filter(desktoplab_runtime::LmStudioManagedStatus::ready)
+        .map(|status| {
+            (
+                status.endpoint().to_string(),
+                status.models().to_vec(),
+                status.version().to_string(),
+            )
+        })
+}
+
 fn managed_root() -> PathBuf {
     if let Some(root) = std::env::var_os("DESKTOPLAB_RUNTIME_DATA_DIR") {
         return PathBuf::from(root)
