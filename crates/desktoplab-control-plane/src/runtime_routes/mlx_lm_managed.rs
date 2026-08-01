@@ -54,10 +54,17 @@ pub(crate) fn status() -> Option<desktoplab_runtime::MlxLmManagedStatus> {
 }
 
 pub(crate) fn models() -> Vec<String> {
-    status()
-        .filter(desktoplab_runtime::MlxLmManagedStatus::ready)
-        .map(|status| status.models().to_vec())
-        .unwrap_or_default()
+    let Some(status) = status() else {
+        return Vec::new();
+    };
+    managed_model_inventory(status.ready(), status.model_revision())
+}
+
+fn managed_model_inventory(ready: bool, model_revision: &str) -> Vec<String> {
+    if ready && model_revision == MODEL_REVISION {
+        return vec![MODEL_ID.to_string()];
+    }
+    Vec::new()
 }
 
 pub(super) fn managed_plan(
@@ -103,7 +110,17 @@ fn managed_root() -> PathBuf {
 
 #[cfg(test)]
 mod tests {
-    use super::managed_plan_for_target;
+    use super::{MODEL_ID, MODEL_REVISION, managed_model_inventory, managed_plan_for_target};
+
+    #[test]
+    fn ready_managed_runtime_reports_the_canonical_model_reference() {
+        assert_eq!(
+            managed_model_inventory(true, MODEL_REVISION),
+            vec![MODEL_ID.to_string()]
+        );
+        assert!(managed_model_inventory(false, MODEL_REVISION).is_empty());
+        assert!(managed_model_inventory(true, "different-revision").is_empty());
+    }
 
     #[test]
     fn managed_plan_requires_license_acceptance_and_exact_model() {
