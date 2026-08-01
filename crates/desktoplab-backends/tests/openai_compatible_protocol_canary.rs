@@ -97,6 +97,10 @@ fn protocol_mismatch_and_non_loopback_endpoint_fail_closed() {
 
 #[test]
 fn openai_compatible_canary_source_stays_focused() {
+    assert!(
+        include_str!("../src/openai_compatible_protocol_canary.rs").contains(r#""max_tokens":512"#),
+        "the live canary must leave enough completion budget for reasoning-capable local models"
+    );
     check_logical_line_limit(
         "crates/desktoplab-backends/src/openai_compatible_protocol_canary.rs",
         include_str!("../src/openai_compatible_protocol_canary.rs"),
