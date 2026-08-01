@@ -59,6 +59,8 @@ fn managed_plan_is_exact_apple_silicon_and_private() {
     assert_eq!(plan.model_license(), "apache-2.0");
     assert_eq!(plan.model_storage_bytes(), 1_747_260_812);
     assert_eq!(plan.endpoint(), "http://127.0.0.1:18080");
+    assert_eq!(plan.health_retry_attempts(), 120);
+    assert_eq!(plan.health_retry_delay(), std::time::Duration::from_secs(1));
     assert_eq!(
         plan.phases().last(),
         Some(&MlxLmManagedPhase::PersistOwnership)

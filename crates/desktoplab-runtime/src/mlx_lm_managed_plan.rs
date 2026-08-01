@@ -5,6 +5,8 @@ const PYTHON_VERSION: &str = "3.14.6";
 const MLX_LM_VERSION: &str = "0.31.3";
 const LOCK_SHA256: &str = "60b758378744dd31603ccf389ada3b80a3a483d75be2b336dd0b4532d59568c6";
 const LOCK_CONTENT: &str = include_str!("../../../runtime-catalog/mlx-lm/darwin-arm64-py314.lock");
+const HEALTH_RETRY_ATTEMPTS: usize = 120;
+const HEALTH_RETRY_DELAY: std::time::Duration = std::time::Duration::from_secs(1);
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum MlxLmManagedPhase {
@@ -249,6 +251,16 @@ impl MlxLmManagedPlan {
     #[must_use]
     pub fn endpoint(&self) -> String {
         format!("http://127.0.0.1:{}", self.port)
+    }
+
+    #[must_use]
+    pub fn health_retry_attempts(&self) -> usize {
+        HEALTH_RETRY_ATTEMPTS
+    }
+
+    #[must_use]
+    pub fn health_retry_delay(&self) -> std::time::Duration {
+        HEALTH_RETRY_DELAY
     }
 
     #[must_use]
