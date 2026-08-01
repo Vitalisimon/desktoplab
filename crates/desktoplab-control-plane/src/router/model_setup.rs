@@ -33,6 +33,7 @@ impl LocalApiRouter {
                 .filter(|_| self.readiness.model_verified()),
             &installed_models,
             self.host_memory_gb_for_test,
+            cfg!(debug_assertions) && self.local_model_inventory_for_test.is_some(),
         ))
     }
 
@@ -151,7 +152,7 @@ impl LocalApiRouter {
             model_id.to_string(),
             format!("{evidence}; {runtime_id} inventory {pull_ref}"),
         );
-        self.refresh_ollama_model_capabilities(runtime_id, pull_ref);
+        self.refresh_local_model_capabilities(runtime_id, model_id, pull_ref);
         self.selected_route_id = crate::execution_routes::local_route_id(model_id);
         self.stability.mark_route_decision();
         self.setup_pipeline = self.setup_pipeline.clone().ready();
@@ -315,7 +316,7 @@ impl LocalApiRouter {
                 model_id.clone(),
                 format!("{runtime_id} inventory {pull_ref}"),
             );
-            self.refresh_ollama_model_capabilities_fresh(&runtime_id, &pull_ref);
+            self.refresh_local_model_capabilities_fresh(&runtime_id, &model_id, &pull_ref);
             self.selected_route_id = crate::execution_routes::local_route_id(&model_id);
             self.stability.mark_route_decision();
             self.persist_readiness_state();
@@ -356,7 +357,11 @@ impl LocalApiRouter {
         self.refresh_ollama_model_capabilities_with_mode(runtime_id, pull_ref, false);
     }
 
-    fn refresh_ollama_model_capabilities_fresh(&mut self, runtime_id: &str, pull_ref: &str) {
+    pub(crate) fn refresh_ollama_model_capabilities_fresh(
+        &mut self,
+        runtime_id: &str,
+        pull_ref: &str,
+    ) {
         self.refresh_ollama_model_capabilities_with_mode(runtime_id, pull_ref, true);
     }
 

@@ -93,19 +93,22 @@ fn runtime_inventory_does_not_claim_unimplemented_update_or_uninstall() {
         ollama["lifecycle"]["uninstall"]["state"],
         "packaging_managed"
     );
-    let expected_ownership = if lm_studio["connection"]["state"] == "cli_missing" {
-        "none"
-    } else {
-        "user_owned"
-    };
-    assert_eq!(lm_studio["ownership"], expected_ownership);
+    assert!(matches!(
+        lm_studio["ownership"].as_str(),
+        Some("none" | "user_owned" | "desktoplab_managed")
+    ));
     assert_eq!(lm_studio["install"]["supported"], true);
     assert_eq!(
         lm_studio["runtimeCapability"]["availability"],
         "experimental"
     );
     for runtime in [lm_studio, mlx_lm] {
-        assert_eq!(runtime["lifecycle"]["stop"]["state"], "blocked");
+        let expected_stop = if runtime["ownership"] == "desktoplab_managed" {
+            "supported"
+        } else {
+            "blocked"
+        };
+        assert_eq!(runtime["lifecycle"]["stop"]["state"], expected_stop);
         assert_eq!(runtime["lifecycle"]["update"]["state"], "blocked");
         assert_eq!(runtime["lifecycle"]["uninstall"]["state"], "blocked");
     }

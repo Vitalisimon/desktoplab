@@ -50,6 +50,7 @@ mod dispatch;
 mod git_fingerprint;
 mod helpers;
 mod high_end_runtime;
+mod local_model_protocol;
 mod mcp;
 mod mcp_persistence;
 mod migration_status;
@@ -134,9 +135,13 @@ pub struct LocalApiRouter {
     pub(crate) openai_codex_bridge_dir: Option<PathBuf>,
     pub(crate) openai_codex_native_vault_for_test: Option<FakeVault>,
     pub(crate) runtime_verification_for_test: Option<RuntimeVerificationFixture>,
+    pub(crate) runtime_stop_result_for_test:
+        Option<desktoplab_runtime::RuntimeInstallExecutionResult>,
     pub(crate) local_model_inventory_for_test: Option<Vec<String>>,
     pub(crate) ollama_model_capabilities: desktoplab_backends::OllamaModelCapabilityResolver,
     pub(crate) ollama_tool_protocol_canary: desktoplab_backends::OllamaToolProtocolCanary,
+    pub(crate) openai_compatible_tool_protocol_canary:
+        desktoplab_backends::OpenAiCompatibleToolProtocolCanary,
     pub(crate) host_memory_gb: u32,
     pub(crate) host_memory_gb_for_test: Option<u32>,
     pub(crate) model_download_execution: ModelDownloadExecutionMode,
@@ -292,10 +297,13 @@ impl Default for LocalApiRouter {
             openai_codex_bridge_dir: None,
             openai_codex_native_vault_for_test: None,
             runtime_verification_for_test: None,
+            runtime_stop_result_for_test: None,
             local_model_inventory_for_test: None,
             ollama_model_capabilities: desktoplab_backends::OllamaModelCapabilityResolver::default(
             ),
             ollama_tool_protocol_canary: desktoplab_backends::OllamaToolProtocolCanary::default(),
+            openai_compatible_tool_protocol_canary:
+                desktoplab_backends::OpenAiCompatibleToolProtocolCanary::default(),
             host_memory_gb: crate::model_routes::effective_memory_gb(),
             host_memory_gb_for_test: None,
             model_download_execution: ModelDownloadExecutionMode::Execute,

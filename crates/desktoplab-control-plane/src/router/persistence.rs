@@ -127,10 +127,13 @@ impl LocalApiRouter {
             openai_codex_bridge_dir: None,
             openai_codex_native_vault_for_test: None,
             runtime_verification_for_test: None,
+            runtime_stop_result_for_test: None,
             local_model_inventory_for_test: None,
             ollama_model_capabilities: desktoplab_backends::OllamaModelCapabilityResolver::default(
             ),
             ollama_tool_protocol_canary: desktoplab_backends::OllamaToolProtocolCanary::default(),
+            openai_compatible_tool_protocol_canary:
+                desktoplab_backends::OpenAiCompatibleToolProtocolCanary::default(),
             host_memory_gb: crate::model_routes::effective_memory_gb(),
             host_memory_gb_for_test: None,
             model_download_execution: super::ModelDownloadExecutionMode::Execute,

@@ -67,6 +67,16 @@ impl LocalApiRouter {
         });
     }
 
+    pub fn block_runtime_stop_for_test(&mut self) {
+        self.runtime_stop_result_for_test = Some(
+            desktoplab_runtime::RuntimeInstallExecutionResult::blocked_with_state(
+                "ownership_marker_unavailable",
+                "test runtime has no ownership marker",
+                "DesktopLab ownership marker is unavailable; it will not stop an unowned runtime.",
+            ),
+        );
+    }
+
     pub fn mark_model_verified_for_test(
         &mut self,
         runtime_id: &str,
@@ -145,6 +155,13 @@ impl LocalApiRouter {
     pub fn set_local_model_inventory_for_test(&mut self, models: &[&str]) {
         self.local_model_inventory_for_test =
             Some(models.iter().map(ToString::to_string).collect());
+    }
+
+    pub fn set_openai_compatible_canary_response_for_test(&mut self, response: serde_json::Value) {
+        self.openai_compatible_tool_protocol_canary =
+            desktoplab_backends::OpenAiCompatibleToolProtocolCanary::with_response_for_test(
+                response,
+            );
     }
 
     pub fn set_host_memory_gb_for_test(&mut self, memory_gb: u32) {

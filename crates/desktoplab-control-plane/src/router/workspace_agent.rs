@@ -72,11 +72,11 @@ impl LocalApiRouter {
 
     pub(crate) fn agent_workspace(&mut self) -> ApiRouteResponse {
         if self.readiness.model_capabilities().is_none()
-            && self.readiness.runtime_id() == Some("runtime.ollama")
+            && let Some(runtime_id) = self.readiness.runtime_id().map(ToString::to_string)
             && let Some(model_id) = self.readiness.model_id().map(ToString::to_string)
             && let Some(pull_ref) = crate::model_routes::model_pull_ref(&model_id)
         {
-            self.refresh_ollama_model_capabilities("runtime.ollama", &pull_ref);
+            self.refresh_local_model_capabilities(&runtime_id, &model_id, &pull_ref);
             self.persist_readiness_state();
         }
         if !self.setup.is_ready() {

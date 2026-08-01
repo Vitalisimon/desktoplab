@@ -16,6 +16,7 @@ mod openai_codex_device_auth;
 mod openai_codex_device_http;
 mod openai_codex_local_bridge;
 mod openai_compatible_local;
+mod openai_compatible_protocol_canary;
 mod openai_compatible_stream;
 mod productization;
 mod provider_compatibility;
@@ -51,6 +52,7 @@ pub use openai_codex_local_bridge::{
     OpenAiCodexResponderCommandPayload, is_loopback_codex_responder_url,
 };
 pub use openai_compatible_local::OpenAiCompatibleLocalExecutionBackend;
+pub use openai_compatible_protocol_canary::OpenAiCompatibleToolProtocolCanary;
 pub use productization::{BridgeCallFailure, ImportedBridgeEvents};
 pub use provider_compatibility::{ProviderCompatibilityProfile, ProviderMessageEnvelope};
 pub use tool_calling::{

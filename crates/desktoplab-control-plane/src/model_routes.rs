@@ -9,12 +9,13 @@ use serde_json::{Value, json};
 pub use crate::model_route_errors::ModelRouteError;
 
 #[must_use]
-pub fn models_response_with_state(
+pub(crate) fn models_response_with_state(
     runtime_verified: bool,
     verified_runtime_id: Option<&str>,
     verified_model_id: Option<&str>,
     installed_models: &[String],
     host_memory_gb: Option<u32>,
+    test_runtime_support_override: bool,
 ) -> Value {
     crate::model_inventory_routes::models_response_with_state(
         runtime_verified,
@@ -22,6 +23,7 @@ pub fn models_response_with_state(
         verified_model_id,
         installed_models,
         host_memory_gb,
+        test_runtime_support_override,
     )
 }
 
