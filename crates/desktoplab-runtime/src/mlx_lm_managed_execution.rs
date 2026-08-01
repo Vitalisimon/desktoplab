@@ -180,6 +180,7 @@ fn prepare_environment(plan: &MlxLmManagedPlan) -> std::io::Result<()> {
     fs::create_dir_all(plan.archive_path().parent().unwrap_or(plan.root()))?;
     fs::create_dir_all(plan.bootstrap_root())?;
     fs::create_dir_all(plan.model_root())?;
+    fs::create_dir_all(plan.cache_root().join("huggingface").join("hub"))?;
     fs::write(plan.lock_path(), plan.lock_content())
 }
 
@@ -242,6 +243,13 @@ pub(crate) fn managed(command: ProcessCommand, plan: &MlxLmManagedPlan) -> Proce
         .with_env(
             "HF_HOME",
             plan.cache_root().join("huggingface").to_string_lossy(),
+        )
+        .with_env(
+            "HF_HUB_CACHE",
+            plan.cache_root()
+                .join("huggingface")
+                .join("hub")
+                .to_string_lossy(),
         )
         .with_env("HF_HUB_DISABLE_TELEMETRY", "1")
 }
