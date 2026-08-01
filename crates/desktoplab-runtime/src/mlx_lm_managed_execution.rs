@@ -196,7 +196,8 @@ fn environment_commands(plan: &MlxLmManagedPlan) -> Vec<ProcessCommand> {
             .arg("venv")
             .arg(plan.environment_root().to_string_lossy())
             .arg("--python")
-            .arg(plan.python_version()),
+            .arg(plan.python_version())
+            .arg("--allow-existing"),
         ProcessCommand::new(plan.uv_path().to_string_lossy())
             .arg("pip")
             .arg("sync")
