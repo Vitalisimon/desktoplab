@@ -141,6 +141,10 @@ fn execution_uses_locked_environment_exact_revision_and_loopback_server() {
 
     assert_eq!(result.state(), RuntimeExecutionState::Completed);
     assert!(result.evidence().contains("ownership=desktoplab_managed"));
+    assert!(
+        result.evidence().contains("venv") && result.evidence().contains("--allow-existing"),
+        "managed MLX retries must preserve and re-verify an existing locked environment"
+    );
     assert!(plan.lock_path().is_file());
     let hf_hub_cache = plan.cache_root().join("huggingface").join("hub");
     assert!(hf_hub_cache.is_dir());
