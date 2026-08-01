@@ -175,7 +175,7 @@ fn canary_payload(model: &str, protocol: ModelToolProtocolKind) -> Value {
         "messages":[{"role":"user","content":prompt}],
         "stream":false,
         "temperature":0,
-        "max_tokens":128
+        "max_tokens":512
     });
     if protocol == ModelToolProtocolKind::NativeTools {
         payload["tools"] = json!([{
