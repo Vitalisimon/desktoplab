@@ -9,20 +9,31 @@ impl LocalApiRouter {
         &self,
         binding: &AgentExecutionBinding,
         messages: Vec<BackendMessage>,
+        suppressed_tool: Option<&str>,
     ) -> PreparedAgentModelExecution {
         if let Some((endpoint, models)) = crate::runtime_routes::managed_lm_studio_connection() {
             return self.prepare_lm_studio_model_execution_with_inventory(
-                binding, messages, &endpoint, &models,
+                binding,
+                messages,
+                suppressed_tool,
+                &endpoint,
+                &models,
             );
         }
         let discovery = desktoplab_runtime::discover_system_lm_studio();
-        self.prepare_lm_studio_model_execution_with_discovery(binding, messages, &discovery)
+        self.prepare_lm_studio_model_execution_with_discovery(
+            binding,
+            messages,
+            suppressed_tool,
+            &discovery,
+        )
     }
 
     pub(super) fn prepare_lm_studio_model_execution_with_discovery(
         &self,
         binding: &AgentExecutionBinding,
         messages: Vec<BackendMessage>,
+        suppressed_tool: Option<&str>,
         discovery: &desktoplab_runtime::LmStudioExistingDiscovery,
     ) -> PreparedAgentModelExecution {
         let Some(endpoint) = discovery.endpoint().filter(|_| discovery.ready()) else {
@@ -34,6 +45,7 @@ impl LocalApiRouter {
         self.prepare_lm_studio_model_execution_with_inventory(
             binding,
             messages,
+            suppressed_tool,
             endpoint,
             discovery.models(),
         )
@@ -43,6 +55,7 @@ impl LocalApiRouter {
         &self,
         binding: &AgentExecutionBinding,
         messages: Vec<BackendMessage>,
+        suppressed_tool: Option<&str>,
         endpoint: &str,
         models: &[String],
     ) -> PreparedAgentModelExecution {
@@ -51,7 +64,12 @@ impl LocalApiRouter {
         };
         let model =
             crate::model_routes::model_pull_ref(&model_id).unwrap_or_else(|| model_id.clone());
-        let prompt = match self.local_openai_compatible_prompt(&model_id, model.clone(), messages) {
+        let prompt = match self.local_openai_compatible_prompt(
+            &model_id,
+            model.clone(),
+            messages,
+            suppressed_tool,
+        ) {
             Ok(prompt) => prompt,
             Err(error) => return PreparedAgentModelExecution::Failed(error),
         };

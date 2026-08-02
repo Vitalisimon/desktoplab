@@ -33,7 +33,7 @@ mod agent_model_jobs;
 mod agent_model_lm_studio;
 mod agent_model_local;
 mod agent_model_tools;
-mod agent_observation_display;
+pub(crate) mod agent_observation_display;
 mod agent_pending;
 mod agent_plan_tools;
 #[cfg(debug_assertions)]

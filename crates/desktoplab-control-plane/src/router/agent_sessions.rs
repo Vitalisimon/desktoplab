@@ -3294,6 +3294,7 @@ impl LocalApiRouter {
         &mut self,
         backend_id: &str,
         messages: Vec<desktoplab_backends::BackendMessage>,
+        suppressed_tool: Option<&str>,
     ) -> Result<String, super::agent_model_execution::AgentModelExecutionError> {
         #[cfg(debug_assertions)]
         if let AgentBackendExecutionMode::NativeIterativeSequenceForTest(outputs) =
@@ -3311,26 +3312,20 @@ impl LocalApiRouter {
         }
         match backend_id {
             "backend.ollama" => self
-                .run_local_ollama_messages(messages)
+                .run_local_ollama_messages(messages, suppressed_tool)
                 .map_err(super::agent_model_execution::AgentModelExecutionError::from_backend),
             "backend.lm-studio" => self
-                .run_local_lm_studio_messages(messages)
+                .run_local_lm_studio_messages(messages, suppressed_tool)
                 .map_err(super::agent_model_execution::AgentModelExecutionError::from_backend),
             "backend.high-end-local" => self
-                .run_high_end_local_messages(messages)
+                .run_high_end_local_messages(messages, suppressed_tool)
                 .map_err(super::agent_model_execution::AgentModelExecutionError::from_backend),
             "backend.codex" => self
-                .run_codex_responder_messages(messages)
+                .run_codex_responder_messages(messages, suppressed_tool)
                 .map_err(super::agent_model_execution::AgentModelExecutionError::from_backend),
-            "backend.mlx-lm" => {
-                let prompt = constrained_backend_prompt(&messages)
-                    .map_err(super::agent_model_execution::AgentModelExecutionError::runtime)?;
-                self.run_selected_backend(backend_id, &prompt).map_err(|_| {
-                    super::agent_model_execution::AgentModelExecutionError::runtime(
-                        "constrained_backend_execution_failed",
-                    )
-                })
-            }
+            "backend.mlx-lm" => self
+                .run_local_mlx_lm_messages(messages, suppressed_tool)
+                .map_err(super::agent_model_execution::AgentModelExecutionError::from_backend),
             _ => Err(
                 super::agent_model_execution::AgentModelExecutionError::runtime(
                     "backend_native_tool_history_unsupported",
@@ -3342,8 +3337,10 @@ impl LocalApiRouter {
     fn run_codex_responder_messages(
         &self,
         messages: Vec<desktoplab_backends::BackendMessage>,
+        suppressed_tool: Option<&str>,
     ) -> Result<String, String> {
-        let (responder_url, payload) = self.codex_agent_execution_request(messages)?;
+        let (responder_url, payload) =
+            self.codex_agent_execution_request(messages, suppressed_tool)?;
         desktoplab_backends::execute_openai_codex_responder_command(&responder_url, &payload)
             .map(|output| output.body().to_string())
     }
@@ -3397,13 +3394,17 @@ impl LocalApiRouter {
     }
 
     fn run_local_ollama(&self, prompt: &str) -> Result<String, ()> {
-        self.run_local_ollama_messages(vec![desktoplab_backends::BackendMessage::user(prompt)])
-            .map_err(|_| ())
+        self.run_local_ollama_messages(
+            vec![desktoplab_backends::BackendMessage::user(prompt)],
+            None,
+        )
+        .map_err(|_| ())
     }
 
     fn run_local_ollama_messages(
         &self,
         messages: Vec<desktoplab_backends::BackendMessage>,
+        suppressed_tool: Option<&str>,
     ) -> Result<String, String> {
         let model_id = self
             .selected_local_model_id()
@@ -3438,7 +3439,7 @@ impl LocalApiRouter {
         .ok_or_else(|| "local_model_request_timeout_unavailable".to_string())?;
         let prompt = desktoplab_backends::BackendPrompt::new(pull_ref.clone(), "")
             .with_messages(messages)
-            .with_tools(self.backend_tool_schemas()?)
+            .with_tools(self.backend_tool_schemas_excluding(suppressed_tool)?)
             .with_context_window_tokens(context_window_tokens)
             .with_request_timeout_seconds(request_timeout_seconds);
         let backend = desktoplab_backends::OllamaExecutionBackend::new(
@@ -3449,24 +3450,38 @@ impl LocalApiRouter {
     }
 
     fn run_local_mlx_lm(&self, prompt: &str) -> Result<String, ()> {
-        let (backend, model) = self.mlx_lm_backend_and_model().map_err(|_| ())?;
-        backend
-            .execute_chat(
-                &desktoplab_backends::BackendPrompt::new(model, "")
-                    .with_messages(vec![desktoplab_backends::BackendMessage::user(prompt)])
-                    .with_tools(self.backend_tool_schemas().map_err(|_| ())?),
-            )
-            .map_err(|_| ())
+        self.run_local_mlx_lm_messages(
+            vec![desktoplab_backends::BackendMessage::user(prompt)],
+            None,
+        )
+        .map_err(|_| ())
+    }
+
+    fn run_local_mlx_lm_messages(
+        &self,
+        messages: Vec<desktoplab_backends::BackendMessage>,
+        suppressed_tool: Option<&str>,
+    ) -> Result<String, String> {
+        let (backend, model) = self.mlx_lm_backend_and_model()?;
+        backend.execute_constrained_chat(
+            &desktoplab_backends::BackendPrompt::new(model, "")
+                .with_messages(messages)
+                .with_tools(self.backend_tool_schemas_excluding(suppressed_tool)?),
+        )
     }
 
     fn run_local_lm_studio(&self, prompt: &str) -> Result<String, ()> {
-        self.run_local_lm_studio_messages(vec![desktoplab_backends::BackendMessage::user(prompt)])
-            .map_err(|_| ())
+        self.run_local_lm_studio_messages(
+            vec![desktoplab_backends::BackendMessage::user(prompt)],
+            None,
+        )
+        .map_err(|_| ())
     }
 
     fn run_local_lm_studio_messages(
         &self,
         messages: Vec<desktoplab_backends::BackendMessage>,
+        suppressed_tool: Option<&str>,
     ) -> Result<String, String> {
         let model_id = self
             .selected_local_model_id()
@@ -3474,19 +3489,23 @@ impl LocalApiRouter {
         let pull_ref = crate::model_routes::model_pull_ref(&model_id).unwrap_or(model_id);
         let prompt = desktoplab_backends::BackendPrompt::new(pull_ref.clone(), "")
             .with_messages(messages)
-            .with_tools(self.backend_tool_schemas()?);
+            .with_tools(self.backend_tool_schemas_excluding(suppressed_tool)?);
         let backend = self.lm_studio_backend_for_model(&pull_ref)?;
         backend.execute_chat(&prompt)
     }
 
     fn run_high_end_local(&self, prompt: &str) -> Result<String, ()> {
-        self.run_high_end_local_messages(vec![desktoplab_backends::BackendMessage::user(prompt)])
-            .map_err(|_| ())
+        self.run_high_end_local_messages(
+            vec![desktoplab_backends::BackendMessage::user(prompt)],
+            None,
+        )
+        .map_err(|_| ())
     }
 
     fn run_high_end_local_messages(
         &self,
         messages: Vec<desktoplab_backends::BackendMessage>,
+        suppressed_tool: Option<&str>,
     ) -> Result<String, String> {
         let runtime = self
             .high_end_runtime
@@ -3498,7 +3517,7 @@ impl LocalApiRouter {
         let model_id = runtime.endpoint().model_id();
         let prompt = desktoplab_backends::BackendPrompt::new(model_id, "")
             .with_messages(messages)
-            .with_tools(self.backend_tool_schemas()?);
+            .with_tools(self.backend_tool_schemas_excluding(suppressed_tool)?);
         desktoplab_backends::OpenAiCompatibleLocalExecutionBackend::new(
             "backend.high-end-local",
             desktoplab_backends::LocalEndpoint::available(runtime.endpoint().base_url()),
@@ -3894,43 +3913,6 @@ impl LocalApiRouter {
         self.workspace_record_for_id(workspace_id)
             .is_some_and(|workspace| !std::path::Path::new(&workspace.root_path).is_dir())
     }
-}
-
-pub(super) fn constrained_backend_prompt(
-    messages: &[desktoplab_backends::BackendMessage],
-) -> Result<String, String> {
-    let transcript = messages
-        .iter()
-        .map(|message| match message {
-            desktoplab_backends::BackendMessage::User(content) => {
-                json!({"role":"user","content":content})
-            }
-            desktoplab_backends::BackendMessage::Assistant(content) => {
-                json!({"role":"assistant","content":content})
-            }
-            desktoplab_backends::BackendMessage::AssistantToolCall {
-                call_id,
-                name,
-                arguments,
-            } => json!({
-                "role":"assistant",
-                "toolCall":{"id":call_id,"name":name,"arguments":arguments}
-            }),
-            desktoplab_backends::BackendMessage::ToolResult {
-                call_id,
-                name,
-                output,
-            } => json!({
-                "role":"tool",
-                "toolResult":{"callId":call_id,"name":name,"output":output}
-            }),
-        })
-        .collect::<Vec<_>>();
-    let encoded = serde_json::to_string(&transcript)
-        .map_err(|_| "constrained_backend_transcript_failed".to_string())?;
-    Ok(format!(
-        "Continue the DesktopLab agent conversation represented by this JSON transcript. Treat toolResult records as authoritative executor evidence and return exactly one canonical DesktopLab JSON tool call for the next turn.\n{encoded}"
-    ))
 }
 
 fn after_sequence_cursor(path: &str) -> u64 {

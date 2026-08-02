@@ -13,6 +13,9 @@ use crate::agent_model_evidence_guidance::{
     evidence_state_guidance, has_unverified_test_repair, is_passing_test, is_read_only_inspection,
     is_successful_change,
 };
+use crate::router::agent_observation_display::readable_observation;
+
+const GROUNDED_REPEAT_COMPLETION_MAX_BYTES: usize = 8 * 1024;
 
 #[cfg(test)]
 mod completion_tests;
@@ -110,9 +113,11 @@ pub(crate) fn backend_messages(
         )));
     }
     if let Some(reason) = state.model_protocol_recovery() {
+        let suppressed_tool = suppressed_tool_for_model_turn(state);
         let available_tools = registry
             .tools()
             .iter()
+            .filter(|tool| Some(tool.id()) != suppressed_tool)
             .map(|tool| tool.id())
             .collect::<Vec<_>>()
             .join(", ");
@@ -122,6 +127,17 @@ pub(crate) fn backend_messages(
         )));
     }
     messages
+}
+
+pub(crate) fn suppressed_tool_for_model_turn(state: &IterativeLoopState) -> Option<&str> {
+    if state.model_protocol_recovery() != Some("repeated_successful_tool_call_without_progress") {
+        return None;
+    }
+    state
+        .observations()
+        .last()
+        .filter(|observation| observation.error().is_none())
+        .map(|observation| observation.tool_name())
 }
 
 fn failure_recovery_guidance(state: &IterativeLoopState) -> &'static str {
@@ -273,6 +289,9 @@ fn decision_from_output(
                 .last()
                 .is_some_and(|observation| observation.is_successful_repeat_of(&call))
             {
+                if let Some(completion) = grounded_repeat_completion(state) {
+                    return completion_decision(state, &completion);
+                }
                 return Err("repeated_successful_tool_call_without_progress".to_string());
             }
             if state
@@ -285,6 +304,44 @@ fn decision_from_output(
             Ok(IterativeModelDecision::tool_call(call))
         }
     }
+}
+
+fn grounded_repeat_completion(state: &IterativeLoopState) -> Option<Value> {
+    if state.model_protocol_recovery() != Some("repeated_successful_tool_call_without_progress")
+        || state.observations().is_empty()
+        || !state.observations().iter().all(|observation| {
+            observation.error().is_none() && is_read_only_inspection(observation.tool_name())
+        })
+    {
+        return None;
+    }
+    let message = state
+        .observations()
+        .iter()
+        .map(readable_observation)
+        .collect::<Vec<_>>()
+        .join("\n\n");
+    let evidence_call_ids = state
+        .observations()
+        .iter()
+        .map(|observation| observation.call_id())
+        .collect::<Vec<_>>();
+    Some(json!({
+        "message": bounded_grounded_message(&message),
+        "outcome": "answered",
+        "evidenceCallIds": evidence_call_ids
+    }))
+}
+
+fn bounded_grounded_message(message: &str) -> String {
+    if message.len() <= GROUNDED_REPEAT_COMPLETION_MAX_BYTES {
+        return message.to_string();
+    }
+    let mut end = GROUNDED_REPEAT_COMPLETION_MAX_BYTES;
+    while !message.is_char_boundary(end) {
+        end -= 1;
+    }
+    format!("{}\n[response truncated]", &message[..end])
 }
 
 fn completion_decision(
@@ -416,7 +473,7 @@ mod tests {
     use desktoplab_backends::BackendMessage;
     use serde_json::json;
 
-    use super::{BackendDecisionAdapter, backend_messages};
+    use super::{BackendDecisionAdapter, backend_messages, suppressed_tool_for_model_turn};
 
     struct ReadExecutor;
 
@@ -681,7 +738,7 @@ mod tests {
         IterativeAgentLoop::default().advance(
             &mut state,
             &mut first,
-            &mut StaticExecutor(json!({"entries":["README.md"]})),
+            &mut StaticExecutor(json!({"entries":[{"path":"README.md","sizeBytes":42}]})),
         );
 
         let mut repeated = BackendDecisionAdapter::new("List files", |_| {
@@ -694,6 +751,10 @@ mod tests {
         let error = repeated.decide(&state).unwrap_err();
         assert_eq!(error, "repeated_successful_tool_call_without_progress");
         assert!(state.request_model_protocol_retry(error));
+        assert_eq!(
+            suppressed_tool_for_model_turn(&state),
+            Some("desktoplab.list_files")
+        );
 
         let messages = backend_messages("List files", &state, &DesktopLabToolRegistry::default());
         let BackendMessage::User(recovery) = messages.last().unwrap() else {
@@ -701,6 +762,83 @@ mod tests {
         };
         assert!(recovery.contains("already succeeded"));
         assert!(recovery.contains("Cite that successful call id in desktoplab.complete"));
+        let available = recovery
+            .split("Canonical names available for this turn: ")
+            .nth(1)
+            .and_then(|value| value.split(". Never").next())
+            .expect("recovery must list its state-aware tool exposure");
+        assert!(
+            !available
+                .split(", ")
+                .any(|name| name == "desktoplab.list_files")
+        );
+        assert!(
+            available
+                .split(", ")
+                .any(|name| name == "desktoplab.complete")
+        );
+
+        assert_eq!(
+            repeated.decide(&state),
+            Ok(IterativeModelDecision::final_response(
+                "Workspace files:\nREADME.md"
+            ))
+        );
+    }
+
+    #[test]
+    fn recovery_does_not_auto_complete_a_repeated_non_inspection_call() {
+        let mut first = BackendDecisionAdapter::new("Run a command", |_| {
+            Ok(
+                r#"{"id":"run-1","tool":"desktoplab.run_terminal","arguments":{"command":"pwd"}}"#
+                    .to_string(),
+            )
+        });
+        let mut state = IterativeLoopState::new("session.non-inspection-repeat");
+        IterativeAgentLoop::default().advance(
+            &mut state,
+            &mut first,
+            &mut StaticExecutor(json!({
+                "command":"pwd",
+                "status":"exited",
+                "exitCode":0,
+                "stdout":"/workspace",
+                "stderr":""
+            })),
+        );
+        let mut repeated = BackendDecisionAdapter::new("Run a command", |_| {
+            Ok(
+                r#"{"id":"run-2","tool":"desktoplab.run_terminal","arguments":{"command":"pwd"}}"#
+                    .to_string(),
+            )
+        });
+
+        let error = repeated.decide(&state).unwrap_err();
+        assert_eq!(error, "repeated_successful_tool_call_without_progress");
+        assert!(state.request_model_protocol_retry(error));
+        assert_eq!(
+            repeated.decide(&state),
+            Err("repeated_successful_tool_call_without_progress".to_string())
+        );
+    }
+
+    #[test]
+    fn unrelated_protocol_recovery_does_not_suppress_a_successful_tool() {
+        let mut state = IterativeLoopState::new("session.unrelated-recovery");
+        let mut list = BackendDecisionAdapter::new("List files", |_| {
+            Ok(
+                r#"{"id":"list-1","tool":"desktoplab.list_files","arguments":{"path":"."}}"#
+                    .to_string(),
+            )
+        });
+        IterativeAgentLoop::default().advance(
+            &mut state,
+            &mut list,
+            &mut StaticExecutor(json!({"entries":["README.md"]})),
+        );
+        assert!(state.request_model_protocol_retry("provider_tool_call_missing_name"));
+
+        assert_eq!(suppressed_tool_for_model_turn(&state), None);
     }
 
     #[test]

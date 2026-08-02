@@ -35,6 +35,7 @@ fn lm_studio_execution_uses_session_model_and_discovered_port() {
     let execution = router.prepare_lm_studio_model_execution_with_discovery(
         &binding,
         vec![BackendMessage::user("test")],
+        None,
         &discovery(),
     );
 
@@ -59,6 +60,7 @@ fn lm_studio_execution_fails_when_bound_model_is_not_loaded() {
     let execution = router.prepare_lm_studio_model_execution_with_discovery(
         &binding,
         vec![BackendMessage::user("test")],
+        None,
         &discovery(),
     );
 
@@ -78,6 +80,7 @@ fn managed_lm_studio_execution_uses_the_pinned_api_model_identifier() {
     let execution = router.prepare_lm_studio_model_execution_with_inventory(
         &binding,
         vec![BackendMessage::user("test")],
+        None,
         "http://127.0.0.1:12345",
         &["desktoplab-gpt-oss-20b".to_string()],
     );
@@ -112,7 +115,7 @@ fn ollama_execution_fails_if_readiness_moved_to_another_model() {
     );
 
     let execution =
-        router.prepare_ollama_model_execution(&binding, vec![BackendMessage::user("test")]);
+        router.prepare_ollama_model_execution(&binding, vec![BackendMessage::user("test")], None);
 
     let PreparedAgentModelExecution::Failed(reason) = execution else {
         panic!("changed model readiness must fail closed");
@@ -141,7 +144,7 @@ fn ollama_execution_uses_wizard_memory_budget_for_bound_model() {
     let binding = AgentExecutionBinding::capture(&router, "backend.ollama");
 
     let execution =
-        router.prepare_ollama_model_execution(&binding, vec![BackendMessage::user("test")]);
+        router.prepare_ollama_model_execution(&binding, vec![BackendMessage::user("test")], None);
 
     let PreparedAgentModelExecution::Ollama { prompt, .. } = execution else {
         panic!("configured Ollama execution should be prepared");
@@ -160,10 +163,47 @@ fn mlx_prompt_uses_catalog_context_and_adaptive_timeout() {
             "model.smollm3-3b-4bit-mlx",
             "mlx-community/SmolLM3-3B-4bit",
             vec![BackendMessage::user("inspect")],
+            None,
         )
         .expect("cataloged MLX prompt should receive local execution policy");
 
     assert_eq!(prompt.model(), "mlx-community/SmolLM3-3B-4bit");
     assert_eq!(prompt.context_window_tokens(), Some(32_768));
     assert_eq!(prompt.request_timeout_seconds(), Some(240));
+}
+
+#[test]
+fn model_turn_tool_schema_excludes_only_the_suppressed_tool() {
+    let mut router = LocalApiRouter::default();
+    router.set_host_memory_gb_for_test(36);
+    let schemas = router
+        .backend_tool_schemas_excluding(Some("desktoplab.list_files"))
+        .expect("canonical tool schemas should remain available");
+    let names = desktoplab_backends::provider_tools(&schemas)
+        .into_iter()
+        .filter_map(|schema| schema["function"]["name"].as_str().map(str::to_string))
+        .collect::<Vec<_>>();
+
+    assert!(!names.iter().any(|name| name == "desktoplab.list_files"));
+    assert!(names.iter().any(|name| name == "desktoplab.complete"));
+    assert!(names.iter().any(|name| name == "desktoplab.read_file"));
+
+    let prompt = router
+        .local_openai_compatible_prompt(
+            "model.smollm3-3b-4bit-mlx",
+            "mlx-community/SmolLM3-3B-4bit",
+            vec![BackendMessage::user("recover")],
+            Some("desktoplab.list_files"),
+        )
+        .expect("MLX recovery prompt should use state-aware schemas");
+    let backend = desktoplab_backends::LmStudioExecutionBackend::new(
+        desktoplab_backends::LocalEndpoint::available("http://127.0.0.1:18080"),
+        desktoplab_backends::BackendModelInventory::available(&["mlx-community/SmolLM3-3B-4bit"]),
+    );
+    let payload = backend.constrained_chat_completion_payload(&prompt);
+    let contract = payload["messages"][0]["content"]
+        .as_str()
+        .expect("constrained MLX prompt should contain its tool contract");
+    assert!(!contract.contains(r#""name":"desktoplab.list_files""#));
+    assert!(contract.contains(r#""name":"desktoplab.complete""#));
 }

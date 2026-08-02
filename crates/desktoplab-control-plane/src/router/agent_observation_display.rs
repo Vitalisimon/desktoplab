@@ -1,7 +1,7 @@
 use desktoplab_agent_engine::ToolObservation;
 use serde_json::Value;
 
-pub(super) fn readable_observation(observation: &ToolObservation) -> String {
+pub(crate) fn readable_observation(observation: &ToolObservation) -> String {
     let output = observation.output();
     match observation.tool_name() {
         "desktoplab.list_files" => format!(

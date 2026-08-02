@@ -14,13 +14,15 @@ impl LocalApiRouter {
         registry_with_mcp_tools(&self.mcp_runtime)
     }
 
-    pub(super) fn backend_tool_schemas(
+    pub(super) fn backend_tool_schemas_excluding(
         &self,
+        suppressed_tool: Option<&str>,
     ) -> Result<Vec<desktoplab_backends::BackendToolSchema>, String> {
         Ok(self
             .agent_tool_registry()?
             .tools()
             .iter()
+            .filter(|tool| Some(tool.id()) != suppressed_tool)
             .map(|tool| {
                 desktoplab_backends::BackendToolSchema::new(
                     tool.id(),

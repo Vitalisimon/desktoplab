@@ -9,8 +9,9 @@ impl LocalApiRouter {
         &self,
         binding: &AgentExecutionBinding,
         messages: Vec<BackendMessage>,
+        suppressed_tool: Option<&str>,
     ) -> PreparedAgentModelExecution {
-        match self.codex_agent_execution_request_from_binding(binding, messages) {
+        match self.codex_agent_execution_request_from_binding(binding, messages, suppressed_tool) {
             Ok((responder_url, payload)) => PreparedAgentModelExecution::Codex {
                 responder_url,
                 payload,
@@ -23,6 +24,7 @@ impl LocalApiRouter {
         &self,
         binding: &AgentExecutionBinding,
         messages: Vec<BackendMessage>,
+        suppressed_tool: Option<&str>,
     ) -> Result<(String, OpenAiCodexResponderCommandPayload), String> {
         if binding.provider_id() != Some("provider.openai")
             || !matches!(
@@ -43,7 +45,7 @@ impl LocalApiRouter {
             .ok_or_else(|| "session_codex_responder_binding_missing".to_string())?;
         let payload = OpenAiCodexResponderCommandPayload::for_agent_turn(
             messages,
-            self.backend_tool_schemas()?,
+            self.backend_tool_schemas_excluding(suppressed_tool)?,
             vault_ref,
             binding.vault_kind().unwrap_or("native_vault"),
         )?;
@@ -53,6 +55,7 @@ impl LocalApiRouter {
     pub(super) fn codex_agent_execution_request(
         &self,
         messages: Vec<BackendMessage>,
+        suppressed_tool: Option<&str>,
     ) -> Result<(String, OpenAiCodexResponderCommandPayload), String> {
         let account = self
             .provider_accounts
@@ -71,7 +74,7 @@ impl LocalApiRouter {
             .to_string();
         let payload = OpenAiCodexResponderCommandPayload::for_agent_turn(
             messages,
-            self.backend_tool_schemas()?,
+            self.backend_tool_schemas_excluding(suppressed_tool)?,
             vault_ref,
             account.vault_kind().unwrap_or("native_vault"),
         )?;
@@ -82,6 +85,7 @@ impl LocalApiRouter {
         &self,
         binding: &AgentExecutionBinding,
         messages: Vec<BackendMessage>,
+        suppressed_tool: Option<&str>,
     ) -> PreparedAgentModelExecution {
         let result = (|| -> Result<_, String> {
             let bound_model_id = binding
@@ -90,8 +94,12 @@ impl LocalApiRouter {
             crate::model_routes::model_pull_ref(&bound_model_id)
                 .ok_or_else(|| "local_model_pull_reference_missing".to_string())?;
             let (backend, served_model) = self.mlx_lm_backend_and_model()?;
-            let prompt =
-                self.local_openai_compatible_prompt(bound_model_id, served_model, messages)?;
+            let prompt = self.local_openai_compatible_prompt(
+                bound_model_id,
+                served_model,
+                messages,
+                suppressed_tool,
+            )?;
             Ok(PreparedAgentModelExecution::Mlx { backend, prompt })
         })();
         result.unwrap_or_else(PreparedAgentModelExecution::Failed)
