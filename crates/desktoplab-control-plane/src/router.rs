@@ -28,6 +28,7 @@ mod agent_iterative;
 mod agent_iterative_resume;
 mod agent_memory;
 mod agent_model_constrained;
+mod agent_model_dispatch;
 mod agent_model_execution;
 mod agent_model_jobs;
 mod agent_model_lm_studio;
