@@ -13,7 +13,7 @@ pub(crate) fn evidence_state_guidance(state: &IterativeLoopState) -> String {
         .rev()
         .find(|(_, observation)| is_content_change(observation))
     else {
-        return String::new();
+        return read_only_completion_guidance(observations);
     };
     if let Some(test) = observations
         .iter()
@@ -67,6 +67,17 @@ pub(crate) fn is_passing_test(observation: &ToolObservation) -> bool {
     observation.is_passing_test_evidence()
 }
 
+pub(crate) fn is_read_only_inspection(tool_name: &str) -> bool {
+    matches!(
+        tool_name,
+        "desktoplab.read_file"
+            | "desktoplab.list_files"
+            | "desktoplab.search_text"
+            | "desktoplab.git_status"
+            | "desktoplab.git_diff"
+    )
+}
+
 pub(crate) fn has_unverified_test_repair(state: &IterativeLoopState) -> bool {
     let observations = state.observations();
     let Some(last_failed_test) = observations.iter().rposition(|observation| {
@@ -102,6 +113,20 @@ fn completion_state_guidance(
     format!(
         " Current completion classification: if the current goal is complete, desktoplab.complete must use outcome {outcome} with evidenceCallIds {}, not {forbidden}.",
         Value::Array(ids)
+    )
+}
+
+fn read_only_completion_guidance(observations: &[ToolObservation]) -> String {
+    let Some(evidence) = observations.last() else {
+        return String::new();
+    };
+    if evidence.error().is_some() || !is_read_only_inspection(evidence.tool_name()) {
+        return String::new();
+    }
+    let ids = Value::Array(vec![Value::String(evidence.call_id().to_string())]);
+    format!(
+        " Current completion classification: only if every requested outcome is already satisfied by current executor evidence, desktoplab.complete must use outcome answered with evidenceCallIds {ids} and a message grounded in that evidence. Otherwise select one distinct missing evidence action. Do not repeat {} while this observation is current.",
+        evidence.tool_name()
     )
 }
 
