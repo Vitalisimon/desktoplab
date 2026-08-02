@@ -292,8 +292,10 @@ fn decision_from_output(
                 .last()
                 .is_some_and(|observation| observation.is_successful_repeat_of(&call))
             {
-                if let Some(completion) = grounded_repeat_completion(state) {
-                    return completion_decision(state, &completion);
+                if state.model_protocol_recovery().is_some() {
+                    if let Some(completion) = grounded_read_only_completion(state) {
+                        return completion_decision(state, &completion);
+                    }
                 }
                 return Err("repeated_successful_tool_call_without_progress".to_string());
             }
@@ -310,8 +312,14 @@ fn decision_from_output(
 }
 
 fn grounded_repeat_completion(state: &IterativeLoopState) -> Option<Value> {
-    if state.model_protocol_recovery() != Some("repeated_successful_tool_call_without_progress")
-        || state.observations().is_empty()
+    if state.model_protocol_recovery() != Some("repeated_successful_tool_call_without_progress") {
+        return None;
+    }
+    grounded_read_only_completion(state)
+}
+
+fn grounded_read_only_completion(state: &IterativeLoopState) -> Option<Value> {
+    if state.observations().is_empty()
         || !state.observations().iter().all(|observation| {
             observation.error().is_none() && is_read_only_inspection(observation.tool_name())
         })
@@ -819,6 +827,37 @@ mod tests {
         });
         assert_eq!(
             malformed.decide(&state),
+            Ok(IterativeModelDecision::final_response(
+                "Workspace files:\nREADME.md"
+            ))
+        );
+    }
+
+    #[test]
+    fn repeated_successful_inspection_during_existing_recovery_uses_grounded_completion() {
+        let mut first = BackendDecisionAdapter::new("List files", |_| {
+            Ok(
+                r#"{"id":"list-1","tool":"desktoplab.list_files","arguments":{"path":"."}}"#
+                    .to_string(),
+            )
+        });
+        let mut state = IterativeLoopState::new("session.exhausted-recovery-repeat");
+        IterativeAgentLoop::default().advance(
+            &mut state,
+            &mut first,
+            &mut StaticExecutor(json!({"entries":[{"path":"README.md","sizeBytes":42}]})),
+        );
+        assert!(state.request_model_protocol_retry("missing_argument:message"));
+        assert!(state.request_model_protocol_retry("provider_constrained_tool_invalid_json"));
+
+        let mut repeated = BackendDecisionAdapter::new("List files", |_| {
+            Ok(
+                r#"{"id":"list-2","tool":"desktoplab.list_files","arguments":{"path":"."}}"#
+                    .to_string(),
+            )
+        });
+        assert_eq!(
+            repeated.decide(&state),
             Ok(IterativeModelDecision::final_response(
                 "Workspace files:\nREADME.md"
             ))
