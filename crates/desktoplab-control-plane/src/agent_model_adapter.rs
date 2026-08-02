@@ -232,6 +232,9 @@ fn decision_from_output(
             .and_then(Value::as_str)
     });
     let Some(name) = name.map(ToString::to_string) else {
+        if let Some(completion) = grounded_repeat_completion(state) {
+            return completion_decision(state, &completion);
+        }
         return Err("provider_tool_call_missing_name".to_string());
     };
     let arguments = object
@@ -780,6 +783,42 @@ mod tests {
 
         assert_eq!(
             repeated.decide(&state),
+            Ok(IterativeModelDecision::final_response(
+                "Workspace files:\nREADME.md"
+            ))
+        );
+    }
+
+    #[test]
+    fn malformed_output_after_repeated_successful_inspection_uses_grounded_completion() {
+        let mut first = BackendDecisionAdapter::new("List files", |_| {
+            Ok(
+                r#"{"id":"list-1","tool":"desktoplab.list_files","arguments":{"path":"."}}"#
+                    .to_string(),
+            )
+        });
+        let mut state = IterativeLoopState::new("session.successful-call-malformed-recovery");
+        IterativeAgentLoop::default().advance(
+            &mut state,
+            &mut first,
+            &mut StaticExecutor(json!({"entries":[{"path":"README.md","sizeBytes":42}]})),
+        );
+
+        let mut repeated = BackendDecisionAdapter::new("List files", |_| {
+            Ok(
+                r#"{"id":"list-2","tool":"desktoplab.list_files","arguments":{"path":"."}}"#
+                    .to_string(),
+            )
+        });
+        let error = repeated.decide(&state).unwrap_err();
+        assert_eq!(error, "repeated_successful_tool_call_without_progress");
+        assert!(state.request_model_protocol_retry(error));
+
+        let mut malformed = BackendDecisionAdapter::new("List files", |_| {
+            Ok(r#"{"arguments":{"path":"."}}"#.to_string())
+        });
+        assert_eq!(
+            malformed.decide(&state),
             Ok(IterativeModelDecision::final_response(
                 "Workspace files:\nREADME.md"
             ))
