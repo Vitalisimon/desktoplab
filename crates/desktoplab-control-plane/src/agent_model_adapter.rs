@@ -9,6 +9,9 @@ use crate::agent_completion_grounding::validate_inspection_message;
 use crate::agent_execution_obligations::{
     validate_file_change_completion, validate_tool_prerequisites,
 };
+use crate::agent_model_evidence_guidance::{
+    evidence_state_guidance, has_unverified_test_repair, is_passing_test, is_successful_change,
+};
 
 #[cfg(test)]
 mod completion_tests;
@@ -99,8 +102,9 @@ pub(crate) fn backend_messages(
         .collect::<Vec<_>>();
     if !evidence_ledger.is_empty() {
         let failed_evidence_guidance = failure_recovery_guidance(state);
+        let state_guidance = evidence_state_guidance(state);
         messages.push(BackendMessage::user(format!(
-            "Executor evidence ledger: {}. In desktoplab.complete evidenceCallIds, use only exact ids whose status is success. Classify outcome as answered for read-only findings, including reports about existing Git changes; executed for a successful non-mutation action; changed only when the agent applied a mutation with changed=true; or verified only with passing test evidence. Do not repeat a successful tool call with unchanged arguments while its observation is still current; select the next missing evidence or complete the task.{failed_evidence_guidance}",
+            "Executor evidence ledger: {}. In desktoplab.complete evidenceCallIds, use only exact ids whose status is success. Classify outcome as answered for read-only findings, including reports about existing Git changes; executed for a successful non-mutation action; changed only when the agent applied a mutation with changed=true; or verified only with passing test evidence. Do not repeat a successful tool call with unchanged arguments while its observation is still current; select the next missing evidence or complete the task.{failed_evidence_guidance}{state_guidance}",
             Value::Array(evidence_ledger),
         )));
     }
@@ -365,29 +369,6 @@ fn completion_decision(
     Ok(IterativeModelDecision::final_response(message))
 }
 
-fn is_successful_change(observation: &desktoplab_agent_engine::ToolObservation) -> bool {
-    match observation.tool_name() {
-        "desktoplab.write_file"
-        | "desktoplab.patch_file"
-        | "desktoplab.create_directory"
-        | "desktoplab.move_path"
-        | "desktoplab.delete_path" => {
-            observation.output().get("changed").and_then(Value::as_bool) == Some(true)
-        }
-        "desktoplab.commit_changes" => {
-            observation.output().get("status").and_then(Value::as_str) == Some("committed")
-        }
-        "desktoplab.push_changes" => {
-            observation.output().get("status").and_then(Value::as_str) == Some("pushed")
-        }
-        _ => false,
-    }
-}
-
-fn is_passing_test(observation: &desktoplab_agent_engine::ToolObservation) -> bool {
-    observation.is_passing_test_evidence()
-}
-
 fn is_git_change_report(evidence: &[&desktoplab_agent_engine::ToolObservation]) -> bool {
     !evidence.is_empty()
         && evidence
@@ -419,27 +400,6 @@ fn is_read_only_inspection(tool_name: &str) -> bool {
             | "desktoplab.git_status"
             | "desktoplab.git_diff"
     )
-}
-
-fn has_unverified_test_repair(state: &IterativeLoopState) -> bool {
-    let observations = state.observations();
-    let Some(last_failed_test) = observations.iter().rposition(|observation| {
-        observation.tool_name() == "desktoplab.run_tests" && observation.error().is_some()
-    }) else {
-        return false;
-    };
-    let Some(last_change) = observations
-        .iter()
-        .rposition(|observation| is_successful_change(observation))
-    else {
-        return false;
-    };
-    let validation_boundary = last_failed_test.max(last_change);
-
-    !observations
-        .iter()
-        .skip(validation_boundary + 1)
-        .any(|observation| is_passing_test(observation))
 }
 
 fn provider_arguments(value: &Value) -> Option<Value> {
@@ -611,6 +571,70 @@ mod tests {
     }
 
     #[test]
+    fn successful_file_write_requires_a_concrete_inspection_next() {
+        let mut state = IterativeLoopState::new("session.write-inspection-guidance");
+        let mut write = BackendDecisionAdapter::new("Create proof.md", |_| {
+            Ok(r#"{"id":"write-1","tool":"desktoplab.write_file","arguments":{"path":"proof.md","content":"proof\n"}}"#.to_string())
+        });
+        IterativeAgentLoop::default().advance(
+            &mut state,
+            &mut write,
+            &mut StaticExecutor(json!({"path":"proof.md","changed":true})),
+        );
+
+        let messages = backend_messages(
+            "Create proof.md",
+            &state,
+            &DesktopLabToolRegistry::default(),
+        );
+        let BackendMessage::User(ledger) = messages.last().unwrap() else {
+            panic!("state guidance should be the final user message");
+        };
+        assert!(ledger.contains("Required next action"));
+        assert!(ledger.contains("desktoplab.read_file"));
+        assert!(ledger.contains("proof.md"));
+        assert!(ledger.contains("Do not call desktoplab.complete"));
+        assert!(ledger.contains("do not repeat desktoplab.write_file"));
+    }
+
+    #[test]
+    fn inspected_file_write_requires_changed_completion_with_exact_evidence() {
+        let mut state = IterativeLoopState::new("session.write-completion-guidance");
+        let mut write = BackendDecisionAdapter::new("Create proof.md", |_| {
+            Ok(r#"{"id":"write-1","tool":"desktoplab.write_file","arguments":{"path":"proof.md","content":"proof\n"}}"#.to_string())
+        });
+        IterativeAgentLoop::default().advance(
+            &mut state,
+            &mut write,
+            &mut StaticExecutor(json!({"path":"proof.md","changed":true})),
+        );
+        let mut read = BackendDecisionAdapter::new("Create proof.md", |_| {
+            Ok(
+                r#"{"id":"read-2","tool":"desktoplab.read_file","arguments":{"path":"proof.md"}}"#
+                    .to_string(),
+            )
+        });
+        IterativeAgentLoop::default().advance(
+            &mut state,
+            &mut read,
+            &mut StaticExecutor(json!({"path":"proof.md","text":"proof\n"})),
+        );
+
+        let messages = backend_messages(
+            "Create proof.md",
+            &state,
+            &DesktopLabToolRegistry::default(),
+        );
+        let BackendMessage::User(ledger) = messages.last().unwrap() else {
+            panic!("completion guidance should be the final user message");
+        };
+        assert!(ledger.contains("Current completion classification"));
+        assert!(ledger.contains("outcome changed"));
+        assert!(ledger.contains(r#"["write-1","read-2"]"#));
+        assert!(ledger.contains("not answered or executed"));
+    }
+
+    #[test]
     fn immediate_retry_of_the_same_failed_call_is_rejected() {
         let mut first = BackendDecisionAdapter::new("Run tests", |_| {
             Ok(r#"{"id":"test-1","tool":"desktoplab.run_tests","arguments":{"command":"npm test"}}"#.to_string())
@@ -677,6 +701,19 @@ mod tests {
     }
 
     #[test]
+    fn failed_test_followed_by_change_requires_a_concrete_test_rerun_next() {
+        let state = state_after_failed_test_and_patch("session.test-rerun-guidance");
+        let messages = backend_messages("Repair tests", &state, &DesktopLabToolRegistry::default());
+        let BackendMessage::User(ledger) = messages.last().unwrap() else {
+            panic!("test rerun guidance should be the final user message");
+        };
+        assert!(ledger.contains("Required next action"));
+        assert!(ledger.contains("desktoplab.run_tests"));
+        assert!(ledger.contains("after the latest mutation"));
+        assert!(ledger.contains("Do not call desktoplab.complete"));
+    }
+
+    #[test]
     fn passing_rerun_after_the_latest_change_satisfies_validation() {
         let mut state = state_after_failed_test_and_patch("session.verified-repair");
 
@@ -699,6 +736,28 @@ mod tests {
                 "Fixed calculator.js and npm test passed."
             ))
         );
+    }
+
+    #[test]
+    fn passing_rerun_after_change_requires_verified_completion_evidence() {
+        let mut state = state_after_failed_test_and_patch("session.verified-guidance");
+        let mut passing_test = BackendDecisionAdapter::new("Repair tests", |_| {
+            Ok(r#"{"id":"test-2","tool":"desktoplab.run_tests","arguments":{"command":"npm test"}}"#.to_string())
+        });
+        IterativeAgentLoop::default().advance(
+            &mut state,
+            &mut passing_test,
+            &mut StaticExecutor(json!({"passed":true,"exitCode":0})),
+        );
+
+        let messages = backend_messages("Repair tests", &state, &DesktopLabToolRegistry::default());
+        let BackendMessage::User(ledger) = messages.last().unwrap() else {
+            panic!("verified completion guidance should be the final user message");
+        };
+        assert!(ledger.contains("Current completion classification"));
+        assert!(ledger.contains("outcome verified"));
+        assert!(ledger.contains(r#"["patch-1","test-2"]"#));
+        assert!(ledger.contains("not answered, executed, or changed"));
     }
 
     #[test]

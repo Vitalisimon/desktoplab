@@ -8,7 +8,8 @@ use crate::{
     parse_openai_compatible_tool_response, provider_tools,
 };
 
-const CONSTRAINED_AGENT_MAX_TOKENS: u64 = 2_048;
+const CONSTRAINED_AGENT_MAX_TOKENS: u64 = 4_096;
+const CONSTRAINED_AGENT_POLICY: &str = "Execute the user's current request using canonical tools. Do not ask for confirmation when the request already authorizes the action. Use desktoplab.clarify only when required information is missing and cannot be discovered with available tools. Use desktoplab.write_file to create a new file with complete requested content; use desktoplab.patch_file only for a localized edit after reading the current file.";
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct LocalEndpoint {
@@ -227,8 +228,9 @@ impl LmStudioExecutionBackend {
 
 fn constrained_tool_contract(prompt: &BackendPrompt) -> String {
     format!(
-        "Return exactly one JSON object and no prose or Markdown. The object must use this shape: {contract}. Select one exact tool name from the schemas and provide an arguments object satisfying that schema. Tool schemas: {tools}",
+        "Return exactly one JSON object and no prose or Markdown. The object must use this shape: {contract}. Select one exact tool name from the schemas and provide an arguments object satisfying that schema. {policy} Tool schemas: {tools}",
         contract = r#"{"name":"desktoplab.tool_name","arguments":{}}"#,
+        policy = CONSTRAINED_AGENT_POLICY,
         tools = Value::Array(provider_tools(prompt.tools()))
     )
 }

@@ -5,6 +5,7 @@ mod agent_completion_grounding;
 mod agent_execution_obligations;
 mod agent_failure;
 mod agent_model_adapter;
+mod agent_model_evidence_guidance;
 mod api;
 mod app_state;
 mod auth;
