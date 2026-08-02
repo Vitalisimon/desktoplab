@@ -37,7 +37,7 @@ impl OpenAiCompatibleLocalExecutionBackend {
             return Err("model_unavailable".to_string());
         }
         let url = self.endpoint.chat_completions_url();
-        let response = reqwest::blocking::Client::new()
+        let response = crate::openai_compatible_http::request_client(prompt)?
             .post(&url)
             .json(&chat_completion_payload(prompt))
             .send()
@@ -67,8 +67,13 @@ impl OpenAiCompatibleLocalExecutionBackend {
         let url = self.endpoint.chat_completions_url();
         let mut payload = chat_completion_payload(prompt);
         payload["stream"] = json!(true);
-        let value =
-            crate::openai_compatible_stream::execute(&url, payload, cancellation, &mut on_delta)?;
+        let value = crate::openai_compatible_stream::execute(
+            &url,
+            payload,
+            prompt,
+            cancellation,
+            &mut on_delta,
+        )?;
         backend_response_to_agent_text(parse_openai_compatible_tool_response(
             &value,
             BackendToolCallEvidence::native(&self.backend_id, prompt.model(), &url, false),

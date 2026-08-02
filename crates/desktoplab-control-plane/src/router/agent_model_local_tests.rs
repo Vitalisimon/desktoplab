@@ -27,6 +27,7 @@ fn discovery() -> desktoplab_runtime::LmStudioExistingDiscovery {
 #[test]
 fn lm_studio_execution_uses_session_model_and_discovered_port() {
     let mut router = LocalApiRouter::default();
+    router.set_host_memory_gb_for_test(36);
     router.selected_route_id = crate::execution_routes::local_route_id("model.gemma4-12b-q4");
     let binding = AgentExecutionBinding::capture(&router, "backend.lm-studio");
     router.selected_route_id = crate::execution_routes::local_route_id("model.qwen3.5-9b-q4");
@@ -41,6 +42,8 @@ fn lm_studio_execution_uses_session_model_and_discovered_port() {
         panic!("session-bound LM Studio execution should be prepared");
     };
     assert_eq!(prompt.model(), "gemma4:12b");
+    assert_eq!(prompt.context_window_tokens(), Some(65_536));
+    assert_eq!(prompt.request_timeout_seconds(), Some(240));
     assert_eq!(
         backend.chat_completions_url(),
         "http://127.0.0.1:12345/v1/chat/completions"
@@ -144,5 +147,23 @@ fn ollama_execution_uses_wizard_memory_budget_for_bound_model() {
         panic!("configured Ollama execution should be prepared");
     };
     assert_eq!(prompt.context_window_tokens(), Some(65_536));
+    assert_eq!(prompt.request_timeout_seconds(), Some(240));
+}
+
+#[test]
+fn mlx_prompt_uses_catalog_context_and_adaptive_timeout() {
+    let mut router = LocalApiRouter::default();
+    router.set_host_memory_gb_for_test(36);
+
+    let prompt = router
+        .local_openai_compatible_prompt(
+            "model.smollm3-3b-4bit-mlx",
+            "mlx-community/SmolLM3-3B-4bit",
+            vec![BackendMessage::user("inspect")],
+        )
+        .expect("cataloged MLX prompt should receive local execution policy");
+
+    assert_eq!(prompt.model(), "mlx-community/SmolLM3-3B-4bit");
+    assert_eq!(prompt.context_window_tokens(), Some(32_768));
     assert_eq!(prompt.request_timeout_seconds(), Some(240));
 }

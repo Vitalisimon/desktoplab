@@ -39,7 +39,13 @@ test("committed release freeze verifies against the current source tree", () => 
     "crates/desktoplab-control-plane/src/agent_completion_grounding.rs",
     "crates/desktoplab-control-plane/src/agent_execution_obligations.rs",
     "crates/desktoplab-backends/src/lm_studio_execution.rs",
+    "crates/desktoplab-backends/src/openai_compatible_http.rs",
+    "crates/desktoplab-backends/src/openai_compatible_local.rs",
+    "crates/desktoplab-backends/src/openai_compatible_stream.rs",
     "crates/desktoplab-backends/src/openai_compatible_protocol_canary.rs",
+    "crates/desktoplab-control-plane/src/router/agent_model_constrained.rs",
+    "crates/desktoplab-control-plane/src/router/agent_model_local.rs",
+    "crates/desktoplab-control-plane/src/router/agent_model_lm_studio.rs",
     "crates/desktoplab-control-plane/src/router/local_model_protocol.rs",
   ]) {
     assert.ok(frozenPaths.has(path), "required protocol source must be frozen");

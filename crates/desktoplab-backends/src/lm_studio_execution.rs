@@ -134,7 +134,7 @@ impl LmStudioExecutionBackend {
             return Err("model_unavailable".to_string());
         }
         let url = self.chat_completions_url();
-        let response = reqwest::blocking::Client::new()
+        let response = crate::openai_compatible_http::request_client(prompt)?
             .post(&url)
             .json(&self.chat_completion_payload(prompt))
             .send()
@@ -166,8 +166,13 @@ impl LmStudioExecutionBackend {
         let url = self.chat_completions_url();
         let mut payload = self.chat_completion_payload(prompt);
         payload["stream"] = json!(true);
-        let value =
-            crate::openai_compatible_stream::execute(&url, payload, cancellation, &mut on_delta)?;
+        let value = crate::openai_compatible_stream::execute(
+            &url,
+            payload,
+            prompt,
+            cancellation,
+            &mut on_delta,
+        )?;
         backend_response_to_agent_text(parse_openai_compatible_tool_response(
             &value,
             BackendToolCallEvidence::native("backend.lm-studio", prompt.model(), &url, false),
@@ -181,7 +186,7 @@ impl LmStudioExecutionBackend {
         if !self.inventory.contains(prompt.model()) {
             return Err("model_unavailable".to_string());
         }
-        let response = reqwest::blocking::Client::new()
+        let response = crate::openai_compatible_http::request_client(prompt)?
             .post(self.chat_completions_url())
             .json(&self.constrained_chat_completion_payload(prompt))
             .send()
@@ -210,8 +215,13 @@ impl LmStudioExecutionBackend {
         let url = self.chat_completions_url();
         let mut payload = self.constrained_chat_completion_payload(prompt);
         payload["stream"] = json!(true);
-        let value =
-            crate::openai_compatible_stream::execute(&url, payload, cancellation, &mut on_delta)?;
+        let value = crate::openai_compatible_stream::execute(
+            &url,
+            payload,
+            prompt,
+            cancellation,
+            &mut on_delta,
+        )?;
         constrained_response_to_agent_text(&value)
     }
 

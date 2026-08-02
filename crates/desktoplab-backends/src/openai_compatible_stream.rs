@@ -14,13 +14,14 @@ struct ToolCallFragments {
 pub(crate) fn execute(
     url: &str,
     payload: Value,
+    prompt: &crate::BackendPrompt,
     cancellation: &AtomicBool,
     on_delta: &mut impl FnMut(&str),
 ) -> Result<Value, String> {
     if cancellation.load(Ordering::SeqCst) {
         return Err("agent_cancelled".to_string());
     }
-    let response = reqwest::blocking::Client::new()
+    let response = crate::openai_compatible_http::request_client(prompt)?
         .post(url)
         .json(&payload)
         .send()

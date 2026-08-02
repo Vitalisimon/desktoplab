@@ -15,6 +15,7 @@ mod ollama_stream;
 mod openai_codex_device_auth;
 mod openai_codex_device_http;
 mod openai_codex_local_bridge;
+mod openai_compatible_http;
 mod openai_compatible_local;
 mod openai_compatible_protocol_canary;
 mod openai_compatible_stream;

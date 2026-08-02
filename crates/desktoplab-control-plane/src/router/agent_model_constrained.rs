@@ -1,4 +1,4 @@
-use desktoplab_backends::{BackendMessage, BackendPrompt, OpenAiCodexResponderCommandPayload};
+use desktoplab_backends::{BackendMessage, OpenAiCodexResponderCommandPayload};
 
 use super::LocalApiRouter;
 use super::agent_execution_binding::AgentExecutionBinding;
@@ -90,9 +90,8 @@ impl LocalApiRouter {
             crate::model_routes::model_pull_ref(&bound_model_id)
                 .ok_or_else(|| "local_model_pull_reference_missing".to_string())?;
             let (backend, served_model) = self.mlx_lm_backend_and_model()?;
-            let prompt = BackendPrompt::new(served_model, "")
-                .with_messages(messages)
-                .with_tools(self.backend_tool_schemas()?);
+            let prompt =
+                self.local_openai_compatible_prompt(bound_model_id, served_model, messages)?;
             Ok(PreparedAgentModelExecution::Mlx { backend, prompt })
         })();
         result.unwrap_or_else(PreparedAgentModelExecution::Failed)
