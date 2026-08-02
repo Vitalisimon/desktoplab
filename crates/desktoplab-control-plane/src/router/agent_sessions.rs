@@ -3214,7 +3214,13 @@ impl LocalApiRouter {
                 InitialBackendRecoveryState::NotNeeded,
             ),
             AgentBackendExecutionMode::Execute => {
-                let Ok(tool_ids) = self.agent_tool_ids() else {
+                let model_id = matches!(
+                    backend_id,
+                    "backend.ollama" | "backend.lm-studio" | "backend.mlx-lm"
+                )
+                .then(|| self.selected_local_model_id().ok())
+                .flatten();
+                let Ok(tool_ids) = self.agent_tool_ids_for_model(model_id.as_deref()) else {
                     return (
                         request,
                         adapter_for_backend(backend_id).with_external_backend_unavailable(),
@@ -3439,7 +3445,7 @@ impl LocalApiRouter {
         .ok_or_else(|| "local_model_request_timeout_unavailable".to_string())?;
         let prompt = desktoplab_backends::BackendPrompt::new(pull_ref.clone(), "")
             .with_messages(messages)
-            .with_tools(self.backend_tool_schemas_excluding(suppressed_tool)?)
+            .with_tools(self.backend_tool_schemas_for_model(Some(&model_id), suppressed_tool)?)
             .with_context_window_tokens(context_window_tokens)
             .with_request_timeout_seconds(request_timeout_seconds);
         let backend = desktoplab_backends::OllamaExecutionBackend::new(
@@ -3462,11 +3468,14 @@ impl LocalApiRouter {
         messages: Vec<desktoplab_backends::BackendMessage>,
         suppressed_tool: Option<&str>,
     ) -> Result<String, String> {
+        let model_id = self
+            .selected_local_model_id()
+            .map_err(|_| "local_model_unavailable".to_string())?;
         let (backend, model) = self.mlx_lm_backend_and_model()?;
         backend.execute_constrained_chat(
             &desktoplab_backends::BackendPrompt::new(model, "")
                 .with_messages(messages)
-                .with_tools(self.backend_tool_schemas_excluding(suppressed_tool)?),
+                .with_tools(self.backend_tool_schemas_for_model(Some(&model_id), suppressed_tool)?),
         )
     }
 
@@ -3486,10 +3495,11 @@ impl LocalApiRouter {
         let model_id = self
             .selected_local_model_id()
             .map_err(|_| "local_model_unavailable".to_string())?;
-        let pull_ref = crate::model_routes::model_pull_ref(&model_id).unwrap_or(model_id);
+        let pull_ref =
+            crate::model_routes::model_pull_ref(&model_id).unwrap_or_else(|| model_id.clone());
         let prompt = desktoplab_backends::BackendPrompt::new(pull_ref.clone(), "")
             .with_messages(messages)
-            .with_tools(self.backend_tool_schemas_excluding(suppressed_tool)?);
+            .with_tools(self.backend_tool_schemas_for_model(Some(&model_id), suppressed_tool)?);
         let backend = self.lm_studio_backend_for_model(&pull_ref)?;
         backend.execute_chat(&prompt)
     }

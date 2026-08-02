@@ -21,7 +21,7 @@ impl LocalApiRouter {
                 .ok_or_else(|| "local_model_request_timeout_unavailable".to_string())?;
         Ok(BackendPrompt::new(served_model, "")
             .with_messages(messages)
-            .with_tools(self.backend_tool_schemas_excluding(suppressed_tool)?)
+            .with_tools(self.backend_tool_schemas_for_model(Some(model_id), suppressed_tool)?)
             .with_context_window_tokens(context_window_tokens)
             .with_request_timeout_seconds(request_timeout_seconds))
     }
@@ -62,7 +62,7 @@ impl LocalApiRouter {
                 .filter(|_| self.readiness.model_id() == Some(model_id))
                 .cloned()
                 .ok_or_else(|| "session_model_configuration_changed".to_string())?;
-            let tools = self.backend_tool_schemas_excluding(suppressed_tool)?;
+            let tools = self.backend_tool_schemas_for_model(Some(&model_id), suppressed_tool)?;
             let context_window_tokens = crate::model_routes::agent_context_window_tokens(
                 &model_id,
                 self.host_memory_gb_for_test.unwrap_or(self.host_memory_gb),

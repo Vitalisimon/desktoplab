@@ -51,11 +51,6 @@ fn model_inventory_exposes_curated_agent_candidates_and_excludes_unsuitable_mode
     assert!(ids.contains(&"model.qwen3-coder-480b-q4"));
     assert!(ids.contains(&"model.gpt-oss-20b-lm-studio"));
     assert!(ids.contains(&"model.smollm3-3b-4bit-mlx"));
-    assert!(inventory["models"].as_array().unwrap().iter().all(|model| {
-        model["recommended"] == false
-            && model["agentQualification"] == "runtime_validation_required"
-    }));
-
     let download = route_json(
         &mut router,
         "POST",

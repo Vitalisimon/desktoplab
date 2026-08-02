@@ -44,7 +44,13 @@ impl LocalApiRouter {
                 Err("agent_continuation_backend_failed".to_string())
             }
             AgentBackendExecutionMode::Execute => {
-                let tool_ids = self.agent_tool_ids()?;
+                let model_id = matches!(
+                    backend_id,
+                    "backend.ollama" | "backend.lm-studio" | "backend.mlx-lm"
+                )
+                .then(|| self.selected_local_model_id().ok())
+                .flatten();
+                let tool_ids = self.agent_tool_ids_for_model(model_id.as_deref())?;
                 let prompt = continuation_prompt(user_goal, tool_summary, observations, &tool_ids);
                 continuation_backend_output(|| self.run_selected_backend(backend_id, &prompt))
                     .map_err(|()| "agent_continuation_backend_failed".to_string())

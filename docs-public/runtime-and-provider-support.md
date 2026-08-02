@@ -14,7 +14,7 @@ Public docs must not imply that a runtime, model family, provider or bridge is r
 | Surface | Public claim state |
 | --- | --- |
 | Setup and first prompt | Public beta support is limited to the certified Ollama route on macOS Apple Silicon and Linux x64. |
-| Local runtime and model path | Public evidence is limited to the Ollama route in beta.10. LM Studio and MLX-LM are Preview in current source until exact installed-app certification passes. |
+| Local runtime and model path | Public evidence is limited to the Ollama route in beta.10. LM Studio and MLX-LM are Preview in current source. The current managed MLX SmolLM3 model is inspection-only and cannot mutate a workspace. |
 | File drawer and terminal | Included in the public beta on macOS Apple Silicon and Linux x64, within the published beta support boundary. |
 | Cloud providers | Native-vault API-key boundary exists in development; live cloud execution is not publicly claimed. |
 | External app bridges and protocols | Future or blocked until sandbox, trust, account ownership and audit evidence exist. |
@@ -52,7 +52,7 @@ Repository RAG can improve grounding and context selection. It does not establis
 | Ollama | Supported public-beta route on macOS Apple Silicon and Linux x64 for the published beta.10 artifact. | Any new app candidate, platform, runtime version or model scope requires fresh exact evidence. |
 | LM Studio | Preview in current source, not a supported beta.10 route. Connect-existing and managed headless lifecycle contracts exist, but live installed-app certification is pending. | Exact platform/runtime/model install-or-connect, ownership, recovery, protocol, tool, approval and cleanup evidence. |
 | llama.cpp | Not publicly claimed as supported. | Runtime adapter plus platform-specific install/start/verify evidence. |
-| MLX-LM | Preview in current source, not a supported beta.10 route. The Apple Silicon route uses an isolated DesktopLab-managed environment, but live installed-app certification is pending. | Exact Apple Silicon runtime/model installation, ownership, recovery, protocol, tool, approval and cleanup evidence. |
+| MLX-LM | Preview in current source, not a supported beta.10 route. The Apple Silicon route uses an isolated DesktopLab-managed environment. Exact live evidence passed repository inspection but rejected the bundled SmolLM3 model for mutation, so its exposed tool scope is read-only. | A replacement mutation-capable model requires exact Apple Silicon runtime/model installation, ownership, recovery, protocol, read/write tool, approval and cleanup evidence. |
 | vLLM | Not publicly claimed as supported. | Host/GPU specific runtime evidence and compatible model catalog entries. |
 | Future runtimes | Not publicly claimed as supported. | Signed/cataloged compatibility data and runtime adapter evidence. |
 

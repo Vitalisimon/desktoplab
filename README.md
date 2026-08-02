@@ -99,8 +99,10 @@ DesktopLab does not bundle large runtime installers or model weights. Compatible
 runtimes and models are selected through the setup flow based on host
 capabilities. See [runtime and provider support](docs-public/runtime-and-provider-support.md)
 for the currently verified boundary. In the published beta.10, Ollama is the
-only certified automatic local-runtime route; LM Studio and MLX-LM work in
-current source remains Preview until exact installed-app certification passes.
+only certified automatic local-runtime route. LM Studio remains Preview in
+current source. MLX-LM also remains Preview, and its current bundled SmolLM3
+model is limited to repository inspection after exact installed-app evidence
+failed the mutation gate.
 
 ## Public beta availability
 

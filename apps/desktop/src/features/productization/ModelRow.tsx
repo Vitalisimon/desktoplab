@@ -80,6 +80,7 @@ function formatMemory(requiredMemoryGb: number | undefined) {
 }
 
 function agentQualificationLabel(qualification: ModelInventoryItem["agentQualification"]) {
+  if (qualification === "inspection_only") return "Inspection only · workspace changes are disabled";
   return qualification === "runtime_validation_required"
     ? "Agent protocol is validated after download"
     : "Agent validation required";

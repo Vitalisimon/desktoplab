@@ -32,13 +32,19 @@ fn seed_catalog_contains_curated_downloadable_agent_models() {
             "model.qwen3-coder-480b-q4",
         ]
     );
-    assert!(catalog.entries().iter().all(|entry| {
-        entry.capabilities().contains(&"tool_use".to_string())
-            && entry
-                .capabilities()
-                .contains(&"agent_candidate".to_string())
-            && entry.is_downloadable_now()
-    }));
+    assert!(
+        catalog
+            .entries()
+            .iter()
+            .filter(|entry| { entry.model_id() != "model.smollm3-3b-4bit-mlx" })
+            .all(|entry| {
+                entry.capabilities().contains(&"tool_use".to_string())
+                    && entry
+                        .capabilities()
+                        .contains(&"agent_candidate".to_string())
+                    && entry.is_downloadable_now()
+            })
+    );
     let validated = catalog
         .entries()
         .iter()
@@ -50,6 +56,25 @@ fn seed_catalog_contains_curated_downloadable_agent_models() {
         .map(|entry| entry.model_id())
         .collect::<Vec<_>>();
     assert!(validated.is_empty());
+}
+
+#[test]
+fn smollm3_is_scoped_to_inspection_after_live_mutation_rejection() {
+    let catalog = ProductModelSeedCatalog::initial_coding();
+    let smollm3 = catalog.entry("model.smollm3-3b-4bit-mlx").unwrap();
+
+    assert!(smollm3.capabilities().contains(&"read_only".to_string()));
+    assert!(
+        smollm3
+            .capabilities()
+            .contains(&"inspection_only".to_string())
+    );
+    assert!(!smollm3.capabilities().contains(&"tool_use".to_string()));
+    assert!(
+        !smollm3
+            .capabilities()
+            .contains(&"agent_candidate".to_string())
+    );
 }
 
 #[test]

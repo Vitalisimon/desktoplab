@@ -41,6 +41,7 @@ mod agent_plan_tools;
 mod agent_refactor;
 mod agent_sessions;
 mod agent_subagent_tools;
+mod agent_tool_scope;
 pub(crate) mod agent_transcript;
 mod approval_modes;
 mod approvals;

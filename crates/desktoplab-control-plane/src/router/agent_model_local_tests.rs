@@ -170,6 +170,33 @@ fn mlx_prompt_uses_catalog_context_and_adaptive_timeout() {
     assert_eq!(prompt.model(), "mlx-community/SmolLM3-3B-4bit");
     assert_eq!(prompt.context_window_tokens(), Some(32_768));
     assert_eq!(prompt.request_timeout_seconds(), Some(240));
+
+    let backend = desktoplab_backends::LmStudioExecutionBackend::new(
+        desktoplab_backends::LocalEndpoint::available("http://127.0.0.1:18080"),
+        desktoplab_backends::BackendModelInventory::available(&["mlx-community/SmolLM3-3B-4bit"]),
+    );
+    let contract = backend.constrained_chat_completion_payload(&prompt)["messages"][0]["content"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    assert!(contract.contains(r#""name":"desktoplab.read_file""#));
+    assert!(contract.contains(r#""name":"desktoplab.complete""#));
+    assert!(!contract.contains(r#""name":"desktoplab.write_file""#));
+    assert!(!contract.contains(r#""name":"desktoplab.run_terminal""#));
+    assert!(!contract.contains(r#""name":"desktoplab.spawn_subagent""#));
+
+    let registry = router
+        .agent_tool_registry_for_model(Some("model.smollm3-3b-4bit-mlx"))
+        .unwrap();
+    assert!(registry.get("desktoplab.read_file").is_some());
+    assert!(registry.get("desktoplab.complete").is_some());
+    assert!(registry.get("desktoplab.write_file").is_none());
+    assert!(registry.get("desktoplab.run_terminal").is_none());
+    let tool_ids = router
+        .agent_tool_ids_for_model(Some("model.smollm3-3b-4bit-mlx"))
+        .unwrap();
+    assert!(tool_ids.contains("desktoplab.read_file"));
+    assert!(!tool_ids.contains("desktoplab.write_file"));
 }
 
 #[test]
@@ -206,4 +233,5 @@ fn model_turn_tool_schema_excludes_only_the_suppressed_tool() {
         .expect("constrained MLX prompt should contain its tool contract");
     assert!(!contract.contains(r#""name":"desktoplab.list_files""#));
     assert!(contract.contains(r#""name":"desktoplab.complete""#));
+    assert!(!contract.contains(r#""name":"desktoplab.write_file""#));
 }

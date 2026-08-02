@@ -103,7 +103,10 @@ impl LocalApiRouter {
             })?;
         let workspace_id = self.sessions.workspace_id_for(&session_id)?;
         let prompt = self.agent_iterative_prompts.get(&session_id)?.clone();
-        let registry = self.agent_tool_registry().ok()?;
+        let binding = self.agent_execution_bindings.get(&session_id).cloned();
+        let registry = self
+            .agent_tool_registry_for_model(binding.as_ref().and_then(|binding| binding.model_id()))
+            .ok()?;
         let mut state = self.agent_iterative_states.remove(&session_id)?;
         if !IterativeAgentLoop::default().begin_model_turn(&mut state) {
             self.agent_iterative_states.insert(session_id, state);
@@ -115,7 +118,6 @@ impl LocalApiRouter {
             .sessions
             .get(&session_id)
             .map(|session| session.execution_backend_id().to_string())?;
-        let binding = self.agent_execution_bindings.get(&session_id).cloned();
         let execution = self.prepare_agent_model_execution(
             &backend_id,
             binding.as_ref(),
@@ -198,7 +200,11 @@ impl LocalApiRouter {
         let Some(mut state) = self.agent_iterative_states.remove(&completed.session_id) else {
             return;
         };
-        let registry = match self.agent_tool_registry() {
+        let model_id = self
+            .agent_execution_bindings
+            .get(&completed.session_id)
+            .and_then(|binding| binding.model_id());
+        let registry = match self.agent_tool_registry_for_model(model_id) {
             Ok(registry) => registry,
             Err(error) => {
                 IterativeAgentLoop::default().fail_model_turn(&mut state, error);

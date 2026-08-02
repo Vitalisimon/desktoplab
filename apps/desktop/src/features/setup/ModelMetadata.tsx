@@ -93,7 +93,9 @@ function metadataItems(recommendation: SetupRecommendation, diskLabel = false) {
     recommendation.parameterClass ? friendlyParameterClass(recommendation.parameterClass) : null,
     recommendation.agentQualification === "runtime_validation_required"
       ? "Validated after download"
-      : null,
+      : recommendation.agentQualification === "inspection_only"
+        ? "Inspection only · no workspace changes"
+        : null,
     diskLabel ? null : (recommendation.trustLabel ?? licenseLabel(recommendation.licenseState)),
   ].filter((item): item is string => Boolean(item));
 }

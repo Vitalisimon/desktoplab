@@ -203,7 +203,9 @@ function StatusLine({ label, value }: { label: string; value: string }) {
 }
 
 function modelSummary(model: ModelInventoryItem): string {
-  return [formatParams(model.parametersBillion), model.quantization, `${model.sizeGb} GB`].filter(Boolean).join(" · ");
+  return [model.inspectionOnly ? "inspection only" : null, formatParams(model.parametersBillion), model.quantization, `${model.sizeGb} GB`]
+    .filter(Boolean)
+    .join(" · ");
 }
 
 function modelDetails(model: ModelInventoryItem): string {
@@ -213,6 +215,7 @@ function modelDetails(model: ModelInventoryItem): string {
     model.quantization,
     model.requiredMemoryGb ? `${model.requiredMemoryGb} GB memory class` : null,
     `${model.sizeGb} GB on disk`,
+    model.inspectionOnly ? "Read-only repository inspection; workspace changes are disabled" : null,
   ]
     .filter(Boolean)
     .join(" · ");

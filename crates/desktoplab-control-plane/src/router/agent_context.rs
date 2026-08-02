@@ -30,6 +30,15 @@ impl LocalApiRouter {
             .ok()?;
         let freshness = RepoIndexFreshnessGuard::validate(&index, root);
         let retrieval = HybridRepoRetriever::new(&index).retrieve(prompt, 8, &freshness);
+        let model_id = session_id
+            .and_then(|session_id| self.agent_execution_bindings.get(session_id))
+            .and_then(|binding| binding.model_id().map(str::to_string))
+            .or_else(|| {
+                session_id
+                    .is_none()
+                    .then(|| self.selected_local_model_id().ok())
+                    .flatten()
+            });
         let mut candidates = vec![
             ContextCandidate::new(
                 ContextSectionKind::SystemPolicy,
@@ -39,7 +48,10 @@ impl LocalApiRouter {
             ContextCandidate::new(ContextSectionKind::UserGoal, prompt, "user.goal"),
             ContextCandidate::new(
                 ContextSectionKind::ToolSchemas,
-                format!("available_tools={}", self.agent_tool_ids().ok()?),
+                format!(
+                    "available_tools={}",
+                    self.agent_tool_ids_for_model(model_id.as_deref()).ok()?
+                ),
                 "desktoplab.tool-schemas",
             ),
             ContextCandidate::new(

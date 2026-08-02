@@ -33,16 +33,6 @@ impl LocalApiRouter {
             .collect())
     }
 
-    pub(super) fn agent_tool_ids(&self) -> Result<String, String> {
-        Ok(self
-            .agent_tool_registry()?
-            .tools()
-            .iter()
-            .map(|tool| tool.id())
-            .collect::<Vec<_>>()
-            .join(", "))
-    }
-
     pub(super) fn mcp_tools(&self) -> ApiRouteResponse {
         let tools = self
             .mcp_runtime
