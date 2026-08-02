@@ -4,6 +4,7 @@ pub(crate) fn backend_display_name(backend_id: Option<&str>) -> Value {
     match backend_id {
         Some("backend.ollama") => json!("Local runner"),
         Some("backend.lm-studio") => json!("LM Studio"),
+        Some("backend.mlx-lm") => json!("MLX-LM"),
         Some("backend.high-end-local") => json!("High-capacity local runner"),
         Some("backend.codex") => json!("Codex bridge"),
         Some(other) => json!(other),
@@ -15,6 +16,7 @@ pub(crate) fn backend_kind(backend_id: Option<&str>) -> Value {
     match backend_id {
         Some("backend.ollama") => json!("local"),
         Some("backend.lm-studio") => json!("local"),
+        Some("backend.mlx-lm") => json!("local"),
         Some("backend.high-end-local") => json!("local"),
         Some("backend.codex") => json!("external"),
         Some(_) => json!("custom"),
@@ -26,6 +28,7 @@ pub(crate) fn model_display_name(backend_id: Option<&str>, local_model: Option<&
     match backend_id {
         Some("backend.ollama") => json!(local_model.unwrap_or("No local model selected")),
         Some("backend.lm-studio") => json!(local_model.unwrap_or("Local model")),
+        Some("backend.mlx-lm") => json!(local_model.unwrap_or("Local model")),
         Some("backend.high-end-local") => json!(local_model.unwrap_or("Local model")),
         Some(_) | None => Value::Null,
     }
@@ -35,6 +38,7 @@ pub(crate) fn runtime_display_name(backend_id: Option<&str>, local_runtime: Opti
     match backend_id {
         Some("backend.ollama") => json!(local_runtime.unwrap_or("Ollama")),
         Some("backend.lm-studio") => json!(local_runtime.unwrap_or("LM Studio")),
+        Some("backend.mlx-lm") => json!(local_runtime.unwrap_or("MLX-LM")),
         Some("backend.high-end-local") => json!(local_runtime.unwrap_or("High-capacity runner")),
         Some("backend.codex") => json!("Codex"),
         Some(_) | None => Value::Null,
@@ -62,6 +66,7 @@ pub(crate) fn local_runtime_display_name(runtime_id: Option<&str>) -> Option<Str
     match runtime_id? {
         "runtime.ollama" => Some("Ollama".to_string()),
         "runtime.lm-studio" => Some("LM Studio".to_string()),
+        "runtime.mlx-lm" => Some("MLX-LM".to_string()),
         "runtime.nim" => Some("NVIDIA NIM".to_string()),
         "runtime.tensorrt-llm" => Some("TensorRT-LLM".to_string()),
         "runtime.vllm" => Some("vLLM".to_string()),

@@ -36,6 +36,11 @@ fn ready_mlx_route_certifies_constrained_json_before_selection() {
         "mlx-community/SmolLM3-3B-4bit",
         "constrained_json.v1",
     );
+    let route = route_json(&mut router, "GET", "/v1/routing/preference", "");
+    assert_eq!(route["backendDisplayName"], "MLX-LM");
+    assert_eq!(route["backendKind"], "local");
+    assert_eq!(route["modelDisplayName"], "SmolLM3 3B 4bit");
+    assert_eq!(route["runtimeDisplayName"], "MLX-LM");
 }
 
 #[test]
