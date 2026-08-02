@@ -108,7 +108,7 @@ impl LmStudioExecutionBackend {
 
     #[must_use]
     pub fn constrained_chat_completion_payload(&self, prompt: &BackendPrompt) -> Value {
-        let mut messages = prompt.openai_messages();
+        let mut messages = prompt.constrained_openai_messages();
         messages.insert(
             0,
             json!({
