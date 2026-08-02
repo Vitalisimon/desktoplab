@@ -10,7 +10,8 @@ use crate::agent_execution_obligations::{
     validate_file_change_completion, validate_tool_prerequisites,
 };
 use crate::agent_model_evidence_guidance::{
-    evidence_state_guidance, has_unverified_test_repair, is_passing_test, is_successful_change,
+    evidence_state_guidance, has_unverified_test_repair, is_passing_test, is_read_only_inspection,
+    is_successful_change,
 };
 
 #[cfg(test)]
@@ -391,17 +392,6 @@ fn is_git_change_report(evidence: &[&desktoplab_agent_engine::ToolObservation]) 
             })
 }
 
-fn is_read_only_inspection(tool_name: &str) -> bool {
-    matches!(
-        tool_name,
-        "desktoplab.read_file"
-            | "desktoplab.list_files"
-            | "desktoplab.search_text"
-            | "desktoplab.git_status"
-            | "desktoplab.git_diff"
-    )
-}
-
 fn provider_arguments(value: &Value) -> Option<Value> {
     match value {
         Value::Object(_) => Some(value.clone()),
@@ -568,6 +558,33 @@ mod tests {
         assert!(ledger.contains("A failing test is diagnostic evidence"));
         assert!(ledger.contains("inspect the implicated implementation and test files"));
         assert!(ledger.contains("rerun only after a corrective change"));
+    }
+
+    #[test]
+    fn successful_read_only_evidence_guides_answered_completion() {
+        let mut state = IterativeLoopState::new("session.read-only-completion-guidance");
+        let mut list = BackendDecisionAdapter::new("Inspect the repository", |_| {
+            Ok(r#"{"id":"list-1","tool":"desktoplab.list_files","arguments":{}}"#.to_string())
+        });
+        IterativeAgentLoop::default().advance(
+            &mut state,
+            &mut list,
+            &mut StaticExecutor(json!({"entries":[{"path":"README.md"}],"scope":""})),
+        );
+
+        let messages = backend_messages(
+            "Inspect the repository",
+            &state,
+            &DesktopLabToolRegistry::default(),
+        );
+        let BackendMessage::User(ledger) = messages.last().unwrap() else {
+            panic!("read-only completion guidance should be the final user message");
+        };
+        assert!(ledger.contains("only if every requested outcome is already satisfied"));
+        assert!(ledger.contains("outcome answered"));
+        assert!(ledger.contains(r#"["list-1"]"#));
+        assert!(ledger.contains("select one distinct missing evidence action"));
+        assert!(ledger.contains("Do not repeat desktoplab.list_files"));
     }
 
     #[test]

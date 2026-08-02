@@ -33,8 +33,8 @@
   "sources": [
     { "path": "crates/desktoplab-agent-engine/src/lib.rs", "sha256": "sha256:19402ff330eb2190a3f314f00446a89ee30d3ad285dbb540e41fd09a76e19644" },
     { "path": "crates/desktoplab-agent-engine/src/observation.rs", "sha256": "sha256:c933eea0aadb84c74541ca76687935b41434a1b31478b7de301a3d8aa9d6dcca" },
-    { "path": "crates/desktoplab-control-plane/src/agent_model_adapter.rs", "sha256": "sha256:42ff5141f5d944a9e89b27aa68b2b52b7ae814ee9ab4bcd9b06f1797fbb81d43" },
-    { "path": "crates/desktoplab-control-plane/src/agent_model_evidence_guidance.rs", "sha256": "sha256:0c65cc952c63e179c6d3865a27edc384c8d8ae303b52447446e94063d5f986c7" },
+    { "path": "crates/desktoplab-control-plane/src/agent_model_adapter.rs", "sha256": "sha256:ef9d9021033912157ab995679a41c27e005bd8e24e2d1a04ed33316078ed3cc6" },
+    { "path": "crates/desktoplab-control-plane/src/agent_model_evidence_guidance.rs", "sha256": "sha256:d04962b69ed02773aec5c36cb2fc327d2f8a581d8566a54e7bfa35ac3e6325f6" },
     { "path": "crates/desktoplab-control-plane/src/agent_completion_grounding.rs", "sha256": "sha256:b36e3c4361789ff13f8e0b81ad5c85ee0d378375b4290439513bd1cc23720553" },
     { "path": "crates/desktoplab-control-plane/src/agent_execution_obligations.rs", "sha256": "sha256:2877d6ef134c9c64cf2c3d69d9b26fa5423b503b0954b045aef0809a908bbe2a" },
     { "path": "crates/desktoplab-backends/src/ollama_execution.rs", "sha256": "sha256:0a7a20231a1812005e8752998a0877b23abe3058a6373d37594e77f198a6365c" },
