@@ -117,6 +117,29 @@ impl BackendMessage {
             }),
         }
     }
+
+    fn constrained_openai_value(&self) -> Value {
+        match self {
+            Self::User(content) => json!({"role":"user","content":content}),
+            Self::Assistant(content) => json!({"role":"assistant","content":content}),
+            Self::AssistantToolCall {
+                call_id: _,
+                name,
+                arguments,
+            } => json!({
+                "role":"assistant",
+                "content":json!({"name":name,"arguments":arguments}).to_string()
+            }),
+            Self::ToolResult {
+                call_id,
+                name,
+                output,
+            } => json!({
+                "role":"user",
+                "content":format!("Executor result for {call_id} from {name}: {output}")
+            }),
+        }
+    }
 }
 
 impl BackendPrompt {
@@ -170,6 +193,13 @@ impl BackendPrompt {
         self.messages
             .iter()
             .map(BackendMessage::openai_value)
+            .collect()
+    }
+
+    pub(crate) fn constrained_openai_messages(&self) -> Vec<Value> {
+        self.messages
+            .iter()
+            .map(BackendMessage::constrained_openai_value)
             .collect()
     }
 
