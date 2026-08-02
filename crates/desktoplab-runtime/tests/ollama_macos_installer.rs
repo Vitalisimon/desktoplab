@@ -144,12 +144,12 @@ fn macos_installer_download_uses_plan_source_cache_and_retryable_network_failure
     assert!(
         result
             .evidence()
-            .contains("https://ollama.com/download/Ollama.dmg")
+            .contains("https://ollama.com/download/Ollama-darwin.zip")
     );
     assert!(
         result
             .evidence()
-            .contains("runtime-installers/ollama/Ollama-darwin-arm64.dmg")
+            .contains("runtime-installers/ollama/Ollama-darwin-arm64.zip")
     );
     assert!(result.evidence().contains("checksum=vendor-signed"));
     assert!(
@@ -158,4 +158,128 @@ fn macos_installer_download_uses_plan_source_cache_and_retryable_network_failure
             .contains("signature=ollama-vendor-signature")
     );
     assert!(result.remediation().contains("Network connection"));
+}
+
+#[test]
+fn macos_installer_extracts_and_verifies_the_vendor_app_before_and_after_install() {
+    let _guard = ENV_LOCK.lock().expect("env lock should not be poisoned");
+    unsafe {
+        std::env::remove_var("DESKTOPLAB_RUNTIME_INSTALLER_CACHE_DIR");
+    }
+    let plan = OllamaRuntime::new()
+        .try_platform_install_plan("darwin-arm64")
+        .expect("macOS arm64 should have an Ollama install plan");
+    let runner = ScriptedRunner::new(vec![
+        response(1, "", "ollama not found"),
+        response(0, "", ""),
+        response(0, "", ""),
+        response(0, "", ""),
+        response(0, "", ""),
+        response(0, "", ""),
+        response(0, "", ""),
+        response(0, "", ""),
+        response(0, "", ""),
+        response(0, "", ""),
+        response(0, "", ""),
+        response(0, "{}", ""),
+    ]);
+
+    let result = RuntimeInstallExecutor::new(runner).execute_existing_or_install(&plan);
+
+    assert_eq!(result.state(), RuntimeExecutionState::Completed);
+    assert!(result.evidence().contains("unzip"));
+    assert!(
+        result
+            .evidence()
+            .contains("codesign --verify --deep --strict")
+    );
+    assert!(result.evidence().contains("spctl --assess --type execute"));
+    assert!(
+        result
+            .evidence()
+            .contains("test ! -e /Applications/Ollama.app")
+    );
+    assert!(result.evidence().contains("mv"));
+    assert!(!result.evidence().contains("hdiutil"));
+    assert!(!result.evidence().contains("ditto"));
+}
+
+#[test]
+fn macos_installer_preserves_an_existing_app_instead_of_overwriting_it() {
+    let plan = OllamaRuntime::new()
+        .try_platform_install_plan("darwin-arm64")
+        .expect("macOS arm64 should have an Ollama install plan");
+    let runner = ScriptedRunner::new(vec![
+        response(1, "", "ollama not found"),
+        response(0, "", ""),
+        response(0, "", ""),
+        response(0, "", ""),
+        response(0, "", ""),
+        response(1, "", "existing app"),
+    ]);
+
+    let result = RuntimeInstallExecutor::new(runner).execute_existing_or_install(&plan);
+
+    assert_eq!(result.state(), RuntimeExecutionState::Blocked);
+    assert_eq!(result.verification_state(), "existing_runtime_preserved");
+    assert!(result.remediation().contains("already exists"));
+}
+
+#[test]
+fn macos_installer_quarantines_a_new_copy_that_fails_post_install_verification() {
+    let plan = OllamaRuntime::new()
+        .try_platform_install_plan("darwin-arm64")
+        .expect("macOS arm64 should have an Ollama install plan");
+    let runner = ScriptedRunner::new(vec![
+        response(1, "", "ollama not found"),
+        response(0, "", ""),
+        response(0, "", ""),
+        response(0, "", ""),
+        response(0, "", ""),
+        response(0, "", ""),
+        response(0, "", ""),
+        response(0, "", ""),
+        response(1, "", "invalid installed signature"),
+        response(0, "quarantined", ""),
+    ]);
+
+    let result = RuntimeInstallExecutor::new(runner).execute_existing_or_install(&plan);
+
+    assert_eq!(result.state(), RuntimeExecutionState::Failed);
+    assert_eq!(
+        result.verification_state(),
+        "installed_runtime_verification_failed"
+    );
+    assert!(result.evidence().contains("rejected-Ollama.app"));
+}
+
+#[test]
+fn macos_installer_does_not_claim_a_racing_existing_app_when_no_clobber_move_skips() {
+    let plan = OllamaRuntime::new()
+        .try_platform_install_plan("darwin-arm64")
+        .expect("macOS arm64 should have an Ollama install plan");
+    let runner = ScriptedRunner::new(vec![
+        response(1, "", "ollama not found"),
+        response(0, "", ""),
+        response(0, "", ""),
+        response(0, "", ""),
+        response(0, "", ""),
+        response(0, "", ""),
+        response(0, "move skipped without error", ""),
+        response(1, "", "source still exists"),
+    ]);
+
+    let result = RuntimeInstallExecutor::new(runner).execute_existing_or_install(&plan);
+
+    assert_eq!(result.state(), RuntimeExecutionState::Blocked);
+    assert_eq!(result.verification_state(), "existing_runtime_preserved");
+    assert!(result.remediation().contains("appeared in Applications"));
+}
+
+fn response(exit_code: i32, stdout: &'static str, stderr: &'static str) -> ScriptedResponse {
+    ScriptedResponse {
+        exit_code: Some(exit_code),
+        stdout,
+        stderr,
+    }
 }

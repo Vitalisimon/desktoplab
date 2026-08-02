@@ -192,9 +192,9 @@ fn ollama_platform_install_step(
     match target {
         "darwin-arm64" | "macos-aarch64" => Some((
             "darwin-arm64",
-            "open Ollama .dmg installer",
+            "install verified Ollama app archive",
             InstallerSource::signed_url_with_signature(
-                "https://ollama.com/download/Ollama.dmg",
+                "https://ollama.com/download/Ollama-darwin.zip",
                 "vendor-signed",
                 "ollama-vendor-signature",
             ),

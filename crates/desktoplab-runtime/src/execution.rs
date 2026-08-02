@@ -148,7 +148,7 @@ where
         prior_evidence: &str,
     ) -> RuntimeInstallExecutionResult {
         if plan.target_platform() == Some("darwin-arm64") {
-            return crate::installer_flow::run_macos_ollama_install(
+            return crate::macos_ollama_install::run_macos_ollama_install(
                 &self.runner,
                 plan,
                 prior_evidence,
