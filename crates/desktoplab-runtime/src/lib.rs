@@ -20,6 +20,7 @@ mod lm_studio_managed_lifecycle;
 mod lm_studio_managed_marker;
 mod lm_studio_managed_plan;
 mod lm_studio_managed_status;
+mod macos_ollama_install;
 mod manager;
 mod mlx_lm;
 mod mlx_lm_managed_execution;

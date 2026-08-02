@@ -39,13 +39,13 @@ fn ollama_install_plans_are_platform_specific_without_downloads() {
         .expect("Linux x64 plan should be available")
         .explanation();
 
-    assert!(macos.contains("open Ollama .dmg installer"));
-    assert!(macos.contains("https://ollama.com/download/Ollama.dmg"));
+    assert!(macos.contains("install verified Ollama app archive"));
+    assert!(macos.contains("https://ollama.com/download/Ollama-darwin.zip"));
     assert!(windows.contains("run OllamaSetup.exe"));
     assert!(windows.contains("https://ollama.com/download/OllamaSetup.exe"));
     assert!(linux.contains("run verified install.sh"));
     assert!(linux.contains("https://ollama.com/install.sh"));
-    assert!(!linux.contains("Ollama.dmg"));
+    assert!(!linux.contains("Ollama-darwin.zip"));
 }
 
 #[test]
@@ -143,6 +143,18 @@ fn ollama_operations_source_files_stay_below_initial_line_count_guard() {
         280,
     )
     .expect("ollama operations source should stay below the initial line-count guard");
+    check_logical_line_limit(
+        "crates/desktoplab-runtime/src/installer_flow.rs",
+        include_str!("../src/installer_flow.rs"),
+        220,
+    )
+    .expect("shared installer flow should stay focused");
+    check_logical_line_limit(
+        "crates/desktoplab-runtime/src/macos_ollama_install.rs",
+        include_str!("../src/macos_ollama_install.rs"),
+        240,
+    )
+    .expect("macOS Ollama installer should stay focused");
 }
 
 struct FixtureOllamaHost;

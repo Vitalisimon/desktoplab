@@ -42,57 +42,22 @@ fn verified_macos_download_installs_starts_and_health_checks_ollama() {
     let plan = OllamaRuntime::new()
         .try_platform_install_plan("darwin-arm64")
         .expect("macOS arm64 should have an Ollama install plan");
-    let runner = ScriptedRunner::new(vec![
-        ScriptedResponse {
-            exit_code: Some(1),
-            stdout: "",
-            stderr: "ollama not found",
-        },
-        ScriptedResponse {
-            exit_code: Some(0),
-            stdout: "downloaded",
-            stderr: "",
-        },
-        ScriptedResponse {
-            exit_code: Some(0),
-            stdout: "accepted",
-            stderr: "",
-        },
-        ScriptedResponse {
-            exit_code: Some(0),
-            stdout: "/dev/disk4s1 Apple_HFS /Volumes/Ollama",
-            stderr: "",
-        },
-        ScriptedResponse {
-            exit_code: Some(0),
-            stdout: "copied",
-            stderr: "",
-        },
-        ScriptedResponse {
-            exit_code: Some(0),
-            stdout: "detached",
-            stderr: "",
-        },
-        ScriptedResponse {
-            exit_code: Some(0),
-            stdout: "started",
-            stderr: "",
-        },
-        ScriptedResponse {
-            exit_code: Some(0),
-            stdout: r#"{"models":[]}"#,
-            stderr: "",
-        },
-    ]);
+    let mut responses = install_and_start_responses();
+    responses.push(response(0, r#"{"models":[]}"#, ""));
+    let runner = ScriptedRunner::new(responses);
 
     let result = RuntimeInstallExecutor::new(runner).execute_existing_or_install(&plan);
 
     assert_eq!(result.state(), RuntimeExecutionState::Completed);
     assert_eq!(result.verification_state(), "verified");
-    assert!(result.evidence().contains("spctl --assess"));
-    assert!(result.evidence().contains("hdiutil attach"));
-    assert!(result.evidence().contains("ditto"));
-    assert!(result.evidence().contains("hdiutil detach"));
+    assert!(
+        result
+            .evidence()
+            .contains("codesign --verify --deep --strict")
+    );
+    assert!(result.evidence().contains("spctl --assess --type execute"));
+    assert!(result.evidence().contains("unzip"));
+    assert!(result.evidence().contains("mv"));
     assert!(
         result.evidence().contains("open /Applications/Ollama.app"),
         "fresh installs must launch the exact copied bundle without waiting for LaunchServices name registration"
@@ -109,58 +74,13 @@ fn slow_macos_start_retries_health_before_recording_desktoplab_ownership() {
     let plan = OllamaRuntime::new()
         .try_platform_install_plan("darwin-arm64")
         .expect("macOS arm64 should have an Ollama install plan");
-    let runner = ScriptedRunner::new(vec![
-        ScriptedResponse {
-            exit_code: Some(1),
-            stdout: "",
-            stderr: "ollama not found",
-        },
-        ScriptedResponse {
-            exit_code: Some(0),
-            stdout: "downloaded",
-            stderr: "",
-        },
-        ScriptedResponse {
-            exit_code: Some(0),
-            stdout: "accepted",
-            stderr: "",
-        },
-        ScriptedResponse {
-            exit_code: Some(0),
-            stdout: "/dev/disk4s1 Apple_HFS /Volumes/Ollama",
-            stderr: "",
-        },
-        ScriptedResponse {
-            exit_code: Some(0),
-            stdout: "copied",
-            stderr: "",
-        },
-        ScriptedResponse {
-            exit_code: Some(0),
-            stdout: "detached",
-            stderr: "",
-        },
-        ScriptedResponse {
-            exit_code: Some(0),
-            stdout: "started",
-            stderr: "",
-        },
-        ScriptedResponse {
-            exit_code: Some(7),
-            stdout: "",
-            stderr: "connection refused",
-        },
-        ScriptedResponse {
-            exit_code: Some(0),
-            stdout: "",
-            stderr: "",
-        },
-        ScriptedResponse {
-            exit_code: Some(0),
-            stdout: r#"{"models":[]}"#,
-            stderr: "",
-        },
+    let mut responses = install_and_start_responses();
+    responses.extend([
+        response(7, "", "connection refused"),
+        response(0, "", ""),
+        response(0, r#"{"models":[]}"#, ""),
     ]);
+    let runner = ScriptedRunner::new(responses);
 
     let result = RuntimeInstallExecutor::new(runner).execute_existing_or_install(&plan);
 
@@ -175,43 +95,7 @@ fn persistent_macos_health_failure_stays_bounded_and_does_not_claim_ownership() 
     let plan = OllamaRuntime::new()
         .try_platform_install_plan("darwin-arm64")
         .expect("macOS arm64 should have an Ollama install plan");
-    let mut responses = vec![
-        ScriptedResponse {
-            exit_code: Some(1),
-            stdout: "",
-            stderr: "ollama not found",
-        },
-        ScriptedResponse {
-            exit_code: Some(0),
-            stdout: "downloaded",
-            stderr: "",
-        },
-        ScriptedResponse {
-            exit_code: Some(0),
-            stdout: "accepted",
-            stderr: "",
-        },
-        ScriptedResponse {
-            exit_code: Some(0),
-            stdout: "/dev/disk4s1 Apple_HFS /Volumes/Ollama",
-            stderr: "",
-        },
-        ScriptedResponse {
-            exit_code: Some(0),
-            stdout: "copied",
-            stderr: "",
-        },
-        ScriptedResponse {
-            exit_code: Some(0),
-            stdout: "detached",
-            stderr: "",
-        },
-        ScriptedResponse {
-            exit_code: Some(0),
-            stdout: "started",
-            stderr: "",
-        },
-    ];
+    let mut responses = install_and_start_responses();
     for attempt in 1..=30 {
         responses.push(ScriptedResponse {
             exit_code: Some(7),
@@ -240,47 +124,42 @@ fn failed_macos_start_does_not_mark_runtime_verified() {
     let plan = OllamaRuntime::new()
         .try_platform_install_plan("darwin-arm64")
         .expect("macOS arm64 should have an Ollama install plan");
-    let runner = ScriptedRunner::new(vec![
-        ScriptedResponse {
-            exit_code: Some(1),
-            stdout: "",
-            stderr: "ollama not found",
-        },
-        ScriptedResponse {
-            exit_code: Some(0),
-            stdout: "downloaded",
-            stderr: "",
-        },
-        ScriptedResponse {
-            exit_code: Some(0),
-            stdout: "accepted",
-            stderr: "",
-        },
-        ScriptedResponse {
-            exit_code: Some(0),
-            stdout: "/dev/disk4s1 Apple_HFS /Volumes/Ollama",
-            stderr: "",
-        },
-        ScriptedResponse {
-            exit_code: Some(0),
-            stdout: "copied",
-            stderr: "",
-        },
-        ScriptedResponse {
-            exit_code: Some(0),
-            stdout: "detached",
-            stderr: "",
-        },
-        ScriptedResponse {
-            exit_code: Some(1),
-            stdout: "",
-            stderr: "application launch denied",
-        },
-    ]);
+    let mut responses = verified_install_responses();
+    responses.push(response(1, "", "application launch denied"));
+    let runner = ScriptedRunner::new(responses);
 
     let result = RuntimeInstallExecutor::new(runner).execute_existing_or_install(&plan);
 
     assert_eq!(result.state(), RuntimeExecutionState::Failed);
     assert_eq!(result.verification_state(), "start_failed_retryable");
     assert!(result.remediation().contains("Ollama could not be started"));
+}
+
+fn install_and_start_responses() -> Vec<ScriptedResponse> {
+    let mut responses = verified_install_responses();
+    responses.push(response(0, "started", ""));
+    responses
+}
+
+fn verified_install_responses() -> Vec<ScriptedResponse> {
+    vec![
+        response(1, "", "ollama not found"),
+        response(0, "downloaded", ""),
+        response(0, "extracted", ""),
+        response(0, "valid source signature", ""),
+        response(0, "accepted source", ""),
+        response(0, "target absent", ""),
+        response(0, "installed", ""),
+        response(0, "source moved", ""),
+        response(0, "valid installed signature", ""),
+        response(0, "accepted installed app", ""),
+    ]
+}
+
+fn response(exit_code: i32, stdout: &'static str, stderr: &'static str) -> ScriptedResponse {
+    ScriptedResponse {
+        exit_code: Some(exit_code),
+        stdout,
+        stderr,
+    }
 }
