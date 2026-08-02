@@ -189,6 +189,11 @@ fn model_concurrency_test_stays_focused() {
             120,
         ),
         (
+            "crates/desktoplab-control-plane/src/router/agent_model_dispatch.rs",
+            include_str!("../src/router/agent_model_dispatch.rs"),
+            100,
+        ),
+        (
             "crates/desktoplab-control-plane/src/router/agent_model_local.rs",
             include_str!("../src/router/agent_model_local.rs"),
             180,
