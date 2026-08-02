@@ -164,6 +164,9 @@ fn protocol_recovery_guidance(reason: &str) -> &'static str {
         "repeated_failed_tool_call_without_progress" => {
             "The same tool and arguments already failed and cannot run again without progress. Choose a different canonical tool or arguments to inspect the failure, obtain new evidence, or change the relevant state before retrying."
         }
+        "repeated_successful_tool_call_without_progress" => {
+            "The same tool and arguments already succeeded and its observation is current. Cite that successful call id in desktoplab.complete, or choose a materially different tool or arguments for missing evidence."
+        }
         "missing_argument:message"
         | "missing_argument:outcome"
         | "missing_argument:evidenceCallIds"
@@ -260,6 +263,13 @@ fn decision_from_output(
                 .from_provider_value(&value)
                 .map_err(|error| error.to_string())?;
             validate_tool_prerequisites(state, &call).map_err(ToString::to_string)?;
+            if state
+                .observations()
+                .last()
+                .is_some_and(|observation| observation.is_successful_repeat_of(&call))
+            {
+                return Err("repeated_successful_tool_call_without_progress".to_string());
+            }
             if state
                 .observations()
                 .last()
@@ -616,6 +626,40 @@ mod tests {
             repeated.decide(&state),
             Err("repeated_failed_tool_call_without_progress".to_string())
         );
+    }
+
+    #[test]
+    fn immediate_retry_of_the_same_successful_call_is_rejected() {
+        let mut first = BackendDecisionAdapter::new("List files", |_| {
+            Ok(
+                r#"{"id":"list-1","tool":"desktoplab.list_files","arguments":{"path":"."}}"#
+                    .to_string(),
+            )
+        });
+        let mut state = IterativeLoopState::new("session.successful-call-retry");
+        IterativeAgentLoop::default().advance(
+            &mut state,
+            &mut first,
+            &mut StaticExecutor(json!({"entries":["README.md"]})),
+        );
+
+        let mut repeated = BackendDecisionAdapter::new("List files", |_| {
+            Ok(
+                r#"{"id":"list-2","tool":"desktoplab.list_files","arguments":{"path":"."}}"#
+                    .to_string(),
+            )
+        });
+
+        let error = repeated.decide(&state).unwrap_err();
+        assert_eq!(error, "repeated_successful_tool_call_without_progress");
+        assert!(state.request_model_protocol_retry(error));
+
+        let messages = backend_messages("List files", &state, &DesktopLabToolRegistry::default());
+        let BackendMessage::User(recovery) = messages.last().unwrap() else {
+            panic!("recovery should be the final user message");
+        };
+        assert!(recovery.contains("already succeeded"));
+        assert!(recovery.contains("Cite that successful call id in desktoplab.complete"));
     }
 
     #[test]
