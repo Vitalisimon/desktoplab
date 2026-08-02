@@ -5,7 +5,9 @@ use desktoplab_agent_engine::{
     IterativeAgentLoop, IterativeLoopState, IterativeLoopStatus, IterativeModelDecision,
 };
 
-use crate::agent_model_adapter::{backend_messages, decision_from_backend_output_with_registry};
+use crate::agent_model_adapter::{
+    backend_messages, decision_from_backend_output_with_registry, suppressed_tool_for_model_turn,
+};
 use crate::{CanonicalAgentToolExecutor, CanonicalExecutionApproval};
 
 use super::LocalApiRouter;
@@ -33,9 +35,11 @@ impl LocalApiRouter {
                 break;
             }
             let registry = self.agent_tool_registry()?;
+            let suppressed_tool = suppressed_tool_for_model_turn(state).map(str::to_string);
             let output = self.run_selected_backend_messages(
                 backend_id,
                 backend_messages(compiled_prompt, state, &registry),
+                suppressed_tool.as_deref(),
             );
             let decision = match output {
                 Ok(output) => Some(decision_from_backend_output_with_registry(

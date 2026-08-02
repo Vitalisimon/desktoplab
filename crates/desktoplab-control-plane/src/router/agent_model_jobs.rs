@@ -11,7 +11,9 @@ use super::agent_model_execution::{
     AgentModelExecutionError, PreparedAgentModelExecution, apply_model_execution_error,
 };
 use super::{ApiRouteResponse, LocalApiRouter};
-use crate::agent_model_adapter::{backend_messages, decision_from_backend_output_with_registry};
+use crate::agent_model_adapter::{
+    backend_messages, decision_from_backend_output_with_registry, suppressed_tool_for_model_turn,
+};
 
 pub(crate) struct ClaimedAgentModelTurn {
     session_id: String,
@@ -111,13 +113,19 @@ impl LocalApiRouter {
             self.agent_iterative_states.insert(session_id, state);
             return None;
         }
+        let suppressed_tool = suppressed_tool_for_model_turn(&state).map(str::to_string);
         let messages = backend_messages(&prompt, &state, &registry);
         let backend_id = self
             .sessions
             .get(&session_id)
             .map(|session| session.execution_backend_id().to_string())?;
         let binding = self.agent_execution_bindings.get(&session_id).cloned();
-        let execution = self.prepare_agent_model_execution(&backend_id, binding.as_ref(), messages);
+        let execution = self.prepare_agent_model_execution(
+            &backend_id,
+            binding.as_ref(),
+            messages,
+            suppressed_tool.as_deref(),
+        );
         let cancellation = self
             .agent_cancellation_tokens
             .entry(session_id.clone())
@@ -247,6 +255,7 @@ impl LocalApiRouter {
         backend_id: &str,
         binding: Option<&super::agent_execution_binding::AgentExecutionBinding>,
         messages: Vec<BackendMessage>,
+        suppressed_tool: Option<&str>,
     ) -> PreparedAgentModelExecution {
         #[cfg(debug_assertions)]
         if let AgentBackendExecutionMode::NativeIterativeSequenceForTest(outputs) =
@@ -271,11 +280,21 @@ impl LocalApiRouter {
             );
         }
         match backend_id {
-            "backend.ollama" => self.prepare_ollama_model_execution(binding, messages),
-            "backend.codex" => self.prepare_codex_model_execution(binding, messages),
-            "backend.mlx-lm" => self.prepare_mlx_model_execution(binding, messages),
-            "backend.lm-studio" => self.prepare_lm_studio_model_execution(binding, messages),
-            "backend.high-end-local" => self.prepare_high_end_model_execution(binding, messages),
+            "backend.ollama" => {
+                self.prepare_ollama_model_execution(binding, messages, suppressed_tool)
+            }
+            "backend.codex" => {
+                self.prepare_codex_model_execution(binding, messages, suppressed_tool)
+            }
+            "backend.mlx-lm" => {
+                self.prepare_mlx_model_execution(binding, messages, suppressed_tool)
+            }
+            "backend.lm-studio" => {
+                self.prepare_lm_studio_model_execution(binding, messages, suppressed_tool)
+            }
+            "backend.high-end-local" => {
+                self.prepare_high_end_model_execution(binding, messages, suppressed_tool)
+            }
             _ => PreparedAgentModelExecution::Failed(
                 "backend_native_tool_history_unsupported".to_string(),
             ),

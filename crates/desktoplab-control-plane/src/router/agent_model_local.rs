@@ -10,6 +10,7 @@ impl LocalApiRouter {
         model_id: &str,
         served_model: impl Into<String>,
         messages: Vec<BackendMessage>,
+        suppressed_tool: Option<&str>,
     ) -> Result<BackendPrompt, String> {
         let available_memory_gb = self.host_memory_gb_for_test.unwrap_or(self.host_memory_gb);
         let context_window_tokens =
@@ -20,7 +21,7 @@ impl LocalApiRouter {
                 .ok_or_else(|| "local_model_request_timeout_unavailable".to_string())?;
         Ok(BackendPrompt::new(served_model, "")
             .with_messages(messages)
-            .with_tools(self.backend_tool_schemas()?)
+            .with_tools(self.backend_tool_schemas_excluding(suppressed_tool)?)
             .with_context_window_tokens(context_window_tokens)
             .with_request_timeout_seconds(request_timeout_seconds))
     }
@@ -47,6 +48,7 @@ impl LocalApiRouter {
         &self,
         binding: &AgentExecutionBinding,
         messages: Vec<BackendMessage>,
+        suppressed_tool: Option<&str>,
     ) -> PreparedAgentModelExecution {
         let result = (|| -> Result<_, String> {
             let model_id = binding
@@ -60,7 +62,7 @@ impl LocalApiRouter {
                 .filter(|_| self.readiness.model_id() == Some(model_id))
                 .cloned()
                 .ok_or_else(|| "session_model_configuration_changed".to_string())?;
-            let tools = self.backend_tool_schemas()?;
+            let tools = self.backend_tool_schemas_excluding(suppressed_tool)?;
             let context_window_tokens = crate::model_routes::agent_context_window_tokens(
                 &model_id,
                 self.host_memory_gb_for_test.unwrap_or(self.host_memory_gb),
@@ -89,6 +91,7 @@ impl LocalApiRouter {
         &self,
         binding: &AgentExecutionBinding,
         messages: Vec<BackendMessage>,
+        suppressed_tool: Option<&str>,
     ) -> PreparedAgentModelExecution {
         let Some(runtime) = self.high_end_runtime.as_ref() else {
             return PreparedAgentModelExecution::Failed("high_end_runtime_unavailable".to_string());
@@ -108,7 +111,7 @@ impl LocalApiRouter {
                 "session_model_configuration_changed".to_string(),
             );
         }
-        let tools = match self.backend_tool_schemas() {
+        let tools = match self.backend_tool_schemas_excluding(suppressed_tool) {
             Ok(tools) => tools,
             Err(error) => return PreparedAgentModelExecution::Failed(error),
         };
