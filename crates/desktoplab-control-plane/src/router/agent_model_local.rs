@@ -5,6 +5,26 @@ use super::agent_execution_binding::AgentExecutionBinding;
 use super::agent_model_execution::PreparedAgentModelExecution;
 
 impl LocalApiRouter {
+    pub(super) fn local_openai_compatible_prompt(
+        &self,
+        model_id: &str,
+        served_model: impl Into<String>,
+        messages: Vec<BackendMessage>,
+    ) -> Result<BackendPrompt, String> {
+        let available_memory_gb = self.host_memory_gb_for_test.unwrap_or(self.host_memory_gb);
+        let context_window_tokens =
+            crate::model_routes::agent_context_window_tokens(model_id, available_memory_gb)
+                .ok_or_else(|| "local_model_context_window_unavailable".to_string())?;
+        let request_timeout_seconds =
+            crate::model_routes::agent_request_timeout_seconds(model_id, available_memory_gb)
+                .ok_or_else(|| "local_model_request_timeout_unavailable".to_string())?;
+        Ok(BackendPrompt::new(served_model, "")
+            .with_messages(messages)
+            .with_tools(self.backend_tool_schemas()?)
+            .with_context_window_tokens(context_window_tokens)
+            .with_request_timeout_seconds(request_timeout_seconds))
+    }
+
     pub(super) fn mlx_lm_backend_and_model(
         &self,
     ) -> Result<(desktoplab_backends::LmStudioExecutionBackend, String), String> {

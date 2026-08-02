@@ -1,4 +1,4 @@
-use desktoplab_backends::{BackendMessage, BackendPrompt};
+use desktoplab_backends::BackendMessage;
 
 use super::LocalApiRouter;
 use super::agent_execution_binding::AgentExecutionBinding;
@@ -49,14 +49,12 @@ impl LocalApiRouter {
         let Some(model_id) = binding.model_id().map(str::to_string) else {
             return PreparedAgentModelExecution::Failed("local_model_unavailable".to_string());
         };
-        let model = crate::model_routes::model_pull_ref(&model_id).unwrap_or(model_id);
-        let tools = match self.backend_tool_schemas() {
-            Ok(tools) => tools,
+        let model =
+            crate::model_routes::model_pull_ref(&model_id).unwrap_or_else(|| model_id.clone());
+        let prompt = match self.local_openai_compatible_prompt(&model_id, model.clone(), messages) {
+            Ok(prompt) => prompt,
             Err(error) => return PreparedAgentModelExecution::Failed(error),
         };
-        let prompt = BackendPrompt::new(model.clone(), "")
-            .with_messages(messages)
-            .with_tools(tools);
         let backend = match self.lm_studio_backend_for_inventory(&model, endpoint, models) {
             Ok(backend) => backend,
             Err(error) => return PreparedAgentModelExecution::Failed(error),
