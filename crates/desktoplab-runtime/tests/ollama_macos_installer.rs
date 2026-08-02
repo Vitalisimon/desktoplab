@@ -169,20 +169,7 @@ fn macos_installer_extracts_and_verifies_the_vendor_app_before_and_after_install
     let plan = OllamaRuntime::new()
         .try_platform_install_plan("darwin-arm64")
         .expect("macOS arm64 should have an Ollama install plan");
-    let runner = ScriptedRunner::new(vec![
-        response(1, "", "ollama not found"),
-        response(0, "", ""),
-        response(0, "", ""),
-        response(0, "", ""),
-        response(0, "", ""),
-        response(0, "", ""),
-        response(0, "", ""),
-        response(0, "", ""),
-        response(0, "", ""),
-        response(0, "", ""),
-        response(0, "", ""),
-        response(0, "{}", ""),
-    ]);
+    let runner = ScriptedRunner::new(successful_install_responses());
 
     let result = RuntimeInstallExecutor::new(runner).execute_existing_or_install(&plan);
 
@@ -274,6 +261,40 @@ fn macos_installer_does_not_claim_a_racing_existing_app_when_no_clobber_move_ski
     assert_eq!(result.state(), RuntimeExecutionState::Blocked);
     assert_eq!(result.verification_state(), "existing_runtime_preserved");
     assert!(result.remediation().contains("appeared in Applications"));
+}
+
+#[test]
+fn macos_installer_isolates_each_extraction_attempt() {
+    let plan = OllamaRuntime::new()
+        .try_platform_install_plan("darwin-arm64")
+        .expect("macOS arm64 should have an Ollama install plan");
+
+    let first = RuntimeInstallExecutor::new(ScriptedRunner::new(successful_install_responses()))
+        .execute_existing_or_install(&plan);
+    let second = RuntimeInstallExecutor::new(ScriptedRunner::new(successful_install_responses()))
+        .execute_existing_or_install(&plan);
+
+    assert_eq!(first.state(), RuntimeExecutionState::Completed);
+    assert_eq!(second.state(), RuntimeExecutionState::Completed);
+    assert!(first.evidence().contains("extracted-"));
+    assert_ne!(first.evidence(), second.evidence());
+}
+
+fn successful_install_responses() -> Vec<ScriptedResponse> {
+    vec![
+        response(1, "", "ollama not found"),
+        response(0, "", ""),
+        response(0, "", ""),
+        response(0, "", ""),
+        response(0, "", ""),
+        response(0, "", ""),
+        response(0, "", ""),
+        response(0, "", ""),
+        response(0, "", ""),
+        response(0, "", ""),
+        response(0, "", ""),
+        response(0, "{}", ""),
+    ]
 }
 
 fn response(exit_code: i32, stdout: &'static str, stderr: &'static str) -> ScriptedResponse {

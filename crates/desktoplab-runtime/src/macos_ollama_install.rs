@@ -1,4 +1,8 @@
-use std::{fs, path::Path};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+    sync::atomic::{AtomicU64, Ordering},
+};
 
 use crate::{
     InstallPlan, ProcessCommand, ProcessRunner, RuntimeInstallExecutionResult,
@@ -52,17 +56,19 @@ where
         );
     }
 
-    let extraction = target
+    let extraction_parent = target
         .parent()
-        .expect("installer cache target should have a parent")
-        .join("extracted");
-    if let Err(error) = reset_extraction(&extraction) {
-        return RuntimeInstallExecutionResult::failed(
-            "installer_cache_unavailable",
-            format!("{evidence}; extraction_error={error}"),
-            "DesktopLab could not prepare the Ollama archive extraction directory. Check disk permissions and retry.",
-        );
-    }
+        .expect("installer cache target should have a parent");
+    let extraction = match create_unique_extraction(extraction_parent) {
+        Ok(path) => path,
+        Err(error) => {
+            return RuntimeInstallExecutionResult::failed(
+                "installer_cache_unavailable",
+                format!("{evidence}; extraction_error={error}"),
+                "DesktopLab could not prepare the Ollama archive extraction directory. Check disk permissions and retry.",
+            );
+        }
+    };
     let unpack = runner.run(
         ProcessCommand::new("unzip")
             .arg("-q")
@@ -211,11 +217,16 @@ fn wait_for_health<R: ProcessRunner>(runner: &R, mut evidence: String) -> (bool,
     (false, evidence)
 }
 
-fn reset_extraction(path: &Path) -> std::io::Result<()> {
-    match fs::remove_dir_all(path) {
-        Ok(()) => {}
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
-        Err(error) => return Err(error),
+static EXTRACTION_SEQUENCE: AtomicU64 = AtomicU64::new(0);
+
+fn create_unique_extraction(parent: &Path) -> std::io::Result<PathBuf> {
+    loop {
+        let sequence = EXTRACTION_SEQUENCE.fetch_add(1, Ordering::Relaxed);
+        let path = parent.join(format!("extracted-{}-{sequence}", std::process::id()));
+        match fs::create_dir(&path) {
+            Ok(()) => return Ok(path),
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(error) => return Err(error),
+        }
     }
-    fs::create_dir_all(path)
 }
