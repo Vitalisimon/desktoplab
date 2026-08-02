@@ -162,8 +162,13 @@ mod tests {
         let address = listener.local_addr().expect("listener address");
         let server = thread::spawn(move || {
             let (mut stream, _) = listener.accept().expect("probe connection");
-            let mut request = [0_u8; 512];
-            stream.read(&mut request).expect("probe request");
+            let mut request = Vec::new();
+            while !request.windows(4).any(|window| window == b"\r\n\r\n") {
+                let mut chunk = [0_u8; 128];
+                let read = stream.read(&mut chunk).expect("probe request");
+                assert!(read > 0, "probe request ended before its headers");
+                request.extend_from_slice(&chunk[..read]);
+            }
             stream.write_all(response).expect("probe response");
             stream.shutdown(Shutdown::Write).expect("response EOF");
         });
