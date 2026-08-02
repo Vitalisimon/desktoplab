@@ -58,3 +58,16 @@ test("continuous integration is pinned to the isolated self-hosted Linux runner 
     /"\$HOME\/\.cargo\/bin\/cargo" test --locked --manifest-path apps\/desktop\/src-tauri\/Cargo\.toml --no-fail-fast/,
   );
 });
+
+test("continuous integration isolates temporary files from the shared host tmpfs", () => {
+  assert.equal(
+    [...workflow.matchAll(/name: Prepare isolated temporary directory/g)].length,
+    3,
+  );
+  assert.equal(
+    [...workflow.matchAll(/job_tmp="\$RUNNER_TEMP\/desktoplab-ci-\$GITHUB_RUN_ID-\$GITHUB_JOB"/g)]
+      .length,
+    3,
+  );
+  assert.equal([...workflow.matchAll(/echo "TMPDIR=\$job_tmp" >> "\$GITHUB_ENV"/g)].length, 3);
+});
