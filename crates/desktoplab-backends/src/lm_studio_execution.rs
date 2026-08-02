@@ -8,6 +8,8 @@ use crate::{
     parse_openai_compatible_tool_response, provider_tools,
 };
 
+const CONSTRAINED_AGENT_MAX_TOKENS: u64 = 2_048;
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct LocalEndpoint {
     url: String,
@@ -117,7 +119,9 @@ impl LmStudioExecutionBackend {
         json!({
             "model":prompt.model(),
             "messages":messages,
-            "stream":false
+            "stream":false,
+            "temperature":0,
+            "max_tokens":CONSTRAINED_AGENT_MAX_TOKENS
         })
     }
 

@@ -57,13 +57,22 @@ fn read_sse(
             .map_err(|error| format!("openai_compatible_stream_json:{error}"))?;
         let delta = &chunk["choices"][0]["delta"];
         append_text(delta, "content", &mut content, on_delta);
-        append_text(delta, "reasoning_content", &mut reasoning, &mut |_| {});
+        append_reasoning(delta, &mut reasoning);
         append_tool_fragments(delta, &mut calls)?;
     }
     if cancellation.load(Ordering::SeqCst) {
         return Err("agent_cancelled".to_string());
     }
     Ok(response_envelope(content, reasoning, calls))
+}
+
+fn append_reasoning(delta: &Value, reasoning: &mut String) {
+    let field = if delta["reasoning_content"].is_string() {
+        "reasoning_content"
+    } else {
+        "reasoning"
+    };
+    append_text(delta, field, reasoning, &mut |_| {});
 }
 
 fn append_text(delta: &Value, field: &str, target: &mut String, on_delta: &mut impl FnMut(&str)) {
@@ -124,4 +133,27 @@ fn response_envelope(
         "reasoning_content":reasoning,
         "tool_calls":tool_calls
     }}]})
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::atomic::AtomicBool;
+
+    use super::read_sse;
+
+    #[test]
+    fn mlx_reasoning_alias_is_preserved_in_the_canonical_envelope() {
+        let body = concat!(
+            "data: {\"choices\":[{\"delta\":{\"reasoning\":\"inspect \"}}]}\n\n",
+            "data: {\"choices\":[{\"delta\":{\"reasoning\":\"evidence\",\"content\":\"{}\"}}]}\n\n",
+            "data: [DONE]\n\n"
+        );
+        let value = read_sse(body.as_bytes(), &AtomicBool::new(false), &mut |_| {}).unwrap();
+
+        assert_eq!(
+            value["choices"][0]["message"]["reasoning_content"],
+            "inspect evidence"
+        );
+        assert_eq!(value["choices"][0]["message"]["content"], "{}");
+    }
 }

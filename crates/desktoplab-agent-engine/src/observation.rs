@@ -116,6 +116,11 @@ impl ToolObservation {
     }
 
     #[must_use]
+    pub fn is_successful_repeat_of(&self, call: &IterativeToolCall) -> bool {
+        self.error.is_none() && self.call_signature == call.signature()
+    }
+
+    #[must_use]
     pub fn provenance(&self) -> &ObservationProvenance {
         &self.provenance
     }

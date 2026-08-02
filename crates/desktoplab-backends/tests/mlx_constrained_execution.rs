@@ -24,6 +24,14 @@ fn mlx_payload_embeds_the_canonical_json_contract_without_native_tools() {
 }
 
 #[test]
+fn mlx_agent_payload_is_deterministic_and_reserves_completion_budget() {
+    let payload = backend("http://127.0.0.1:18080").constrained_chat_completion_payload(&prompt());
+
+    assert_eq!(payload["temperature"], 0);
+    assert_eq!(payload["max_tokens"], 2048);
+}
+
+#[test]
 fn mlx_constrained_response_becomes_a_canonical_desktoplab_action() {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let endpoint = format!("http://{}", listener.local_addr().unwrap());
