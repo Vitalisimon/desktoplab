@@ -150,6 +150,12 @@ impl DesktopLabToolRegistry {
     }
 
     #[must_use]
+    pub fn retaining(mut self, mut predicate: impl FnMut(&AgentToolSchema) -> bool) -> Self {
+        self.tools.retain(|tool| predicate(tool));
+        self
+    }
+
+    #[must_use]
     pub fn provider_tool_schemas(&self) -> Vec<Value> {
         self.tools
             .iter()

@@ -34,7 +34,11 @@ impl LocalApiRouter {
             if !agent_loop.begin_model_turn(state) {
                 break;
             }
-            let registry = self.agent_tool_registry()?;
+            let model_id = self
+                .agent_execution_bindings
+                .get(state.session_id())
+                .and_then(|binding| binding.model_id());
+            let registry = self.agent_tool_registry_for_model(model_id)?;
             let suppressed_tool = suppressed_tool_for_model_turn(state).map(str::to_string);
             let output = self.run_selected_backend_messages(
                 backend_id,

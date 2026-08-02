@@ -289,7 +289,15 @@ fn model_recommendation_json(
         );
         object.insert(
             "agentQualification".to_string(),
-            json!("runtime_validation_required"),
+            json!(if variant
+                .capabilities()
+                .iter()
+                .any(|capability| capability == "inspection_only")
+            {
+                "inspection_only"
+            } else {
+                "runtime_validation_required"
+            }),
         );
         if let Some(fit) = model_fit
             .iter()

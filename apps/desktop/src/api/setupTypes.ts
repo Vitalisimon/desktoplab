@@ -26,7 +26,7 @@ export type SetupRecommendation = {
   compatibilityReason?: string;
   licenseState?: "known" | "unknown" | "restricted";
   trustLabel?: string;
-  agentQualification?: "runtime_validation_required";
+  agentQualification?: "runtime_validation_required" | "inspection_only";
   hostInstallState?: "installed" | "missing";
   installedVersion?: string;
   installedPath?: string;

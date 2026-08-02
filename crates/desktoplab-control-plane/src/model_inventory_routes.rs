@@ -48,6 +48,10 @@ fn model_response(
         .any(|model| inventory_entry_has_model(model, runtime.pull_ref()));
     let verified = verified_model_id == Some(variant.model_id());
     let memory_supported = memory_gb >= variant.required_memory_gb();
+    let inspection_only = variant
+        .capabilities()
+        .iter()
+        .any(|capability| capability == "inspection_only");
     let (install_state, compatibility, verification, blocked_reason) = model_state_copy(
         runtime.runtime_id(),
         runtime_cloud,
@@ -75,7 +79,9 @@ fn model_response(
         "backendSelectable":install_state == "installed" && compatibility == "ready",
         "sizeGb":variant.expected_disk_mb().div_ceil(1024),
         "recommended":false,
-        "agentQualification":"runtime_validation_required",
+        "agentQualification":if inspection_only {"inspection_only"} else {"runtime_validation_required"},
+        "inspectionOnly":inspection_only,
+        "mutationCapable":!inspection_only,
         "verification":verification,
         "provenance":{
             "catalogSource":"bundled_seed_catalog",

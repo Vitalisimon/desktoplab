@@ -16,7 +16,9 @@ export type ModelInventoryItem = {
   compatibility: "ready" | "compatible" | "blocked" | "unknown";
   sizeGb: number;
   recommended: boolean;
-  agentQualification?: "runtime_validation_required";
+  agentQualification?: "runtime_validation_required" | "inspection_only";
+  inspectionOnly?: boolean;
+  mutationCapable?: boolean;
   verification?: string;
   provenance?: {
     catalogSource: string;
