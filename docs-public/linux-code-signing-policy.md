@@ -1,9 +1,9 @@
 # Linux Code Signing Policy
 
 Status: active for public Linux beta releases
-Date: 2026-07-25
+Date: 2026-08-03
 
-DesktopLab v0.1.0-beta.10 is publicly available for Linux x64 as AppImage, deb
+DesktopLab v0.1.0-beta.11 is publicly available for Linux x64 as AppImage, deb
 and rpm packages. This policy defines the trust boundary each public Linux
 package must pass.
 
@@ -60,7 +60,7 @@ loss requires immediate environment-secret removal, key revocation, publication
 of the revocation certificate and a new release signed by a replacement key.
 
 Only the public RPM key exists in the repository. No private key, backup
-password or revocation certificate is tracked. The public v0.1.0-beta.10 rpm is
+password or revocation certificate is tracked. The public v0.1.0-beta.11 rpm is
 represented as signed by this policy only because its native signature and
 exact release evidence passed independent verification.
 

@@ -110,4 +110,4 @@ authenticated support-channel audit completes without findings. An authorized
 external non-collaborator report completed the reporter-to-maintainer path on
 this repository: it was received, triaged and closed without public disclosure.
 The public source gate is accepted. Binary publication remains a separate gate;
-v0.1.0-beta.10 passed that gate for macOS Apple Silicon and Linux x64 only.
+v0.1.0-beta.11 passed that gate for macOS Apple Silicon and Linux x64 only.

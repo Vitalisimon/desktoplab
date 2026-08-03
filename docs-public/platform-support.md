@@ -1,7 +1,7 @@
 # Platform Support
 
 Status: scoped macOS and Linux public beta
-Date: 2026-07-25
+Date: 2026-08-03
 
 This page describes what DesktopLab can publicly claim.
 
@@ -11,8 +11,8 @@ It must not be stronger than collected packaging and smoke evidence.
 
 | Platform | Public availability | Evidence state |
 | --- | --- | --- |
-| macOS Apple Silicon | Public beta | v0.1.0-beta.10 passed Developer ID signing, notarization, stapling, Gatekeeper and clean consumer-install smoke. |
-| Linux x64 | Public beta | v0.1.0-beta.10 AppImage, deb and rpm passed exact-artifact Sigstore/OpenPGP verification and physical-host consumer smoke. |
+| macOS Apple Silicon | Public beta | v0.1.0-beta.11 passed Developer ID signing, notarization, stapling, Gatekeeper and public-download consumer verification. |
+| Linux x64 | Public beta | v0.1.0-beta.11 AppImage, deb and rpm passed exact-artifact Sigstore/OpenPGP verification, physical-host smoke and public-download checksum verification. |
 | Windows x64 | Not publicly available | Physical-host development evidence exists, but public publisher trust remains blocked. Windows is outside the scoped beta release and will be reconsidered after trusted signing is available. |
 
 The current binary release scope is macOS Apple Silicon and Linux x64. Stable

@@ -1,10 +1,10 @@
 # Install DesktopLab
 
 Status: public beta installation guide
-Date: 2026-07-25
+Date: 2026-08-03
 
-Download v0.1.0-beta.10 only from the official
-[DesktopLab GitHub Release](https://github.com/Vitalisimon/desktoplab/releases/tag/v0.1.0-beta.10).
+Download v0.1.0-beta.11 only from the official
+[DesktopLab GitHub Release](https://github.com/Vitalisimon/desktoplab/releases/tag/v0.1.0-beta.11).
 DesktopLab does not distribute installers through mirrors or third-party sites.
 Windows binaries are not available.
 

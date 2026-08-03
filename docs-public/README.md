@@ -8,7 +8,7 @@ repository.
 
 Documentation outside `docs-public/` is internal by default unless a later public export gate explicitly promotes it.
 
-DesktopLab v0.1.0-beta.10 is available from the official GitHub Release for
+DesktopLab v0.1.0-beta.11 is available from the official GitHub Release for
 macOS Apple Silicon and Linux x64. Windows is not publicly available.
 
 ## Public Reader Path

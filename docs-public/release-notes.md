@@ -1,17 +1,32 @@
 # DesktopLab Release Notes
 
-Status: v0.1.0-beta.10 public prerelease
-Date: 2026-07-25
+Status: v0.1.0-beta.11 public prerelease
+Date: 2026-08-03
 
-[DesktopLab v0.1.0-beta.10](https://github.com/Vitalisimon/desktoplab/releases/tag/v0.1.0-beta.10)
-is the first public binary beta. It is built from exact public tag
-`v0.1.0-beta.10` at commit `90aa61ba417030934fe9caadc8ea3944d1898ba9`.
+[DesktopLab v0.1.0-beta.11](https://github.com/Vitalisimon/desktoplab/releases/tag/v0.1.0-beta.11)
+is built from exact public tag `v0.1.0-beta.11` at commit
+`e46835ec8fef9ddc2633c54aa4436515c80510a9`.
 
 ## Product Summary
 
-DesktopLab is a local-first desktop environment for development agents.
+DesktopLab is a local-first desktop environment and persistent control plane
+for development agents. It keeps repositories, sessions, runtimes, tools,
+approvals and evidence together while local execution remains primary.
 
-It helps users open a repository, complete setup, connect a compatible local runtime or cloud provider path and work from an agent-focused desktop workbench.
+## What Changed Since Beta.10
+
+- automatic setup now exposes measured host capability, detects existing
+  runtimes and shows a confirmation-gated plan before installation or launch;
+- runtime ownership is explicit, so user-owned services are not silently
+  adopted or stopped by DesktopLab;
+- the supported Ollama path has stronger macOS vendor-signature, concurrent
+  setup, health and recovery checks;
+- connected LM Studio, managed LM Studio headless and managed MLX-LM are
+  included as Preview lifecycle paths with explicit ownership boundaries;
+- constrained local-model responses and recovery after malformed or repeated
+  read-only tool output are grounded more strictly before completion;
+- the public README now includes source-backed setup, workbench, approval and
+  repository-tool captures.
 
 ## What Is Included
 
@@ -23,23 +38,34 @@ It helps users open a repository, complete setup, connect a compatible local run
 - Sigstore bundles for Linux release files and a native OpenPGP signature on
   the rpm package.
 
+## Runtime Boundary
+
+The beta.11 public runtime claim is limited to the exact Ollama automatic-agent
+route on macOS Apple Silicon and Linux x64. LM Studio and MLX-LM are labeled
+Preview rather than inheriting that claim. Their exact ownership and lifecycle
+paths have candidate evidence, but broader runtime/model support requires
+additional evidence. The current managed MLX SmolLM3 model is inspection-only
+and cannot mutate a workspace.
+
+No cloud provider, external-agent bridge or arbitrary custom endpoint is
+publicly certified.
+
 ## Platform Boundary
 
 The macOS DMG passed Developer ID signing, notarization, stapling, Gatekeeper
-and clean consumer-install smoke. Linux packages passed exact-artifact
-Sigstore/OpenPGP verification and consumer smoke on a physical x64 Ubuntu host.
+and anonymous public-download verification. Linux packages passed exact-artifact
+Sigstore/OpenPGP verification, physical x64 host smoke, agent parity and
+anonymous public-download checksum verification.
 
 Windows x64 is not publicly available. Development evidence does not substitute
 for a publicly trusted Windows signing identity.
-
-No cloud provider, frontier-local host/model envelope or automatic application update channel is included in the current public claims.
 
 ## Known Beta Boundaries
 
 - the in-app updater is disabled; install future betas manually;
 - runtime and model availability depends on host compatibility;
-- cloud providers and external-agent bridges remain outside public support
-  until their live certification gates pass;
+- Preview routes may expose narrower capabilities than the supported Ollama
+  route;
 - this is a prerelease intended to collect installation and workflow feedback.
 
 See [installation](install.md), [platform support](platform-support.md),
