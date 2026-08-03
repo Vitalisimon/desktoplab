@@ -32,6 +32,14 @@
 
 ![DesktopLab agent workbench showing a completed task and its source diff](assets/readme/agent-workbench.png)
 
+## From download to a local coding agent
+
+[![Watch the 72-second DesktopLab setup and first-agent demo](assets/readme/desktoplab-first-local-agent-video.png)](https://youtu.be/XbNiTPROEmI)
+
+Watch the real public-beta flow: GitHub download, hardware-aware local setup,
+repository open and the first completed local-agent task. Setup and inference
+are time-compressed only where labeled.
+
 DesktopLab is more than a chat window around a model. It owns the development
 session and coordinates repositories, execution backends, local and optional
 cloud runtimes, tools, approvals and durable evidence. The agent performs the
