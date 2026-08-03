@@ -15,13 +15,13 @@
 
 <p align="center">
   <a href="https://github.com/Vitalisimon/desktoplab/actions/workflows/continuous-integration.yml"><img src="https://github.com/Vitalisimon/desktoplab/actions/workflows/continuous-integration.yml/badge.svg" alt="Continuous integration"></a>
-  <a href="https://github.com/Vitalisimon/desktoplab/releases/tag/v0.1.0-beta.10"><img src="https://img.shields.io/badge/public%20beta-v0.1.0--beta.10-7c3aed" alt="Public beta v0.1.0-beta.10"></a>
+  <a href="https://github.com/Vitalisimon/desktoplab/releases/tag/v0.1.0-beta.11"><img src="https://img.shields.io/badge/public%20beta-v0.1.0--beta.11-7c3aed" alt="Public beta v0.1.0-beta.11"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-2563eb" alt="Apache 2.0 license"></a>
   <a href="docs-public/platform-support.md"><img src="https://img.shields.io/badge/platforms-macOS%20arm64%20%7C%20Linux%20x64-111827" alt="macOS arm64 and Linux x64"></a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/Vitalisimon/desktoplab/releases/tag/v0.1.0-beta.10"><strong>Download the public beta</strong></a>
+  <a href="https://github.com/Vitalisimon/desktoplab/releases/tag/v0.1.0-beta.11"><strong>Download the public beta</strong></a>
   ·
   <a href="docs-public/install.md">Installation</a>
   ·
@@ -89,7 +89,7 @@ local workspace with no personal data. See the
 ## Get started
 
 1. Download
-   [DesktopLab v0.1.0-beta.10](https://github.com/Vitalisimon/desktoplab/releases/tag/v0.1.0-beta.10).
+   [DesktopLab v0.1.0-beta.11](https://github.com/Vitalisimon/desktoplab/releases/tag/v0.1.0-beta.11).
 2. Follow the platform-specific
    [installation and verification guide](docs-public/install.md).
 3. Open a repository and let the setup flow verify your local environment.
@@ -98,7 +98,7 @@ local workspace with no personal data. See the
 DesktopLab does not bundle large runtime installers or model weights. Compatible
 runtimes and models are selected through the setup flow based on host
 capabilities. See [runtime and provider support](docs-public/runtime-and-provider-support.md)
-for the currently verified boundary. In the published beta.10, Ollama is the
+for the currently verified boundary. In the published beta.11, Ollama is the
 only certified automatic local-runtime route. LM Studio remains Preview in
 current source. MLX-LM also remains Preview, and its current bundled SmolLM3
 model is limited to repository inspection after exact installed-app evidence
@@ -113,7 +113,7 @@ failed the mutation gate.
 | Windows x64 | Not yet public | Blocked until trusted signing and exact-artifact verification are available |
 
 Download only from the
-[official GitHub Release](https://github.com/Vitalisimon/desktoplab/releases/tag/v0.1.0-beta.10),
+[official GitHub Release](https://github.com/Vitalisimon/desktoplab/releases/tag/v0.1.0-beta.11),
 verify `SHA256SUMS.txt` and never bypass Gatekeeper or package-signature checks.
 Read the [release notes](docs-public/release-notes.md) and
 [platform support matrix](docs-public/platform-support.md) before installing.

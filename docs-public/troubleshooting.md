@@ -1,7 +1,7 @@
 # Troubleshooting DesktopLab
 
-Status: active for v0.1.0-beta.10
-Date: 2026-07-25
+Status: active for v0.1.0-beta.11
+Date: 2026-08-03
 
 This page is the starting point for public beta troubleshooting.
 

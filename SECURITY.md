@@ -8,7 +8,7 @@ DesktopLab is local-first software that can inspect repositories, start local ru
 
 | Version | Supported |
 | --- | --- |
-| v0.1.0-beta.10 | Yes, on macOS Apple Silicon and Linux x64 |
+| v0.1.0-beta.11 | Yes, on macOS Apple Silicon and Linux x64 |
 | previous public beta | 30 days after the next beta is published |
 | future stable release | Current stable release and its immediate predecessor |
 

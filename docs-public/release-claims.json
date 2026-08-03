@@ -9,12 +9,12 @@
     "macosAppleSilicon": {
       "publicAvailability": "public",
       "evidenceClaim": "signed_notarized_exact_candidate",
-      "currentEvidence": "v0.1.0-beta.10_public_consumer_smoke_pass"
+      "currentEvidence": "v0.1.0-beta.11_public_consumer_smoke_pass"
     },
     "linuxX64": {
       "publicAvailability": "public",
       "evidenceClaim": "sigstore_signed_exact_candidate",
-      "currentEvidence": "v0.1.0-beta.10_public_consumer_smoke_pass"
+      "currentEvidence": "v0.1.0-beta.11_public_consumer_smoke_pass"
     },
     "windowsX64": {
       "publicAvailability": "not_public",
