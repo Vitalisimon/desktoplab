@@ -333,7 +333,7 @@ fn response_for(
 }
 
 fn protected_route(request_line: &str) -> bool {
-    request_line.contains(" /v1/")
+    request_parts(request_line).is_some_and(|(_, path)| path.starts_with("/v1/"))
 }
 
 fn cors_origin(decision: CorsDecision<'_>) -> &str {
