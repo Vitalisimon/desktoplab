@@ -3,7 +3,7 @@ use crate::{
     RuntimeInstallExecutionResult,
     mlx_lm_managed_execution::managed,
     mlx_lm_managed_marker::{clear_marker, read_marker},
-    mlx_lm_managed_status::{MlxLmManagedState, inspect_managed_mlx_lm},
+    mlx_lm_managed_status::{MlxLmManagedState, inspect_managed_mlx_lm, owned_command_matches},
 };
 
 #[must_use]
@@ -27,12 +27,7 @@ pub fn stop_managed_mlx_lm(
     ));
     if !marker.matches_plan(plan)
         || !process.succeeded()
-        || !process
-            .stdout()
-            .contains(&plan.server_path().to_string_lossy().to_string())
-        || !process
-            .stdout()
-            .contains(&format!("--port {}", plan.port()))
+        || !owned_command_matches(process.stdout_for_checks(), plan)
     {
         return RuntimeInstallExecutionResult::blocked(
             process.evidence().evidence(),

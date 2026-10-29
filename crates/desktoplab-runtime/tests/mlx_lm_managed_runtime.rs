@@ -243,6 +243,56 @@ fn recovery_and_stop_require_matching_owned_process() {
 }
 
 #[test]
+fn long_owned_process_arguments_remain_verifiable_without_accepting_wrong_ports() {
+    let temp = TempDir::new().expect("temp root");
+    let plan = plan(&temp);
+    assert_eq!(
+        execute_managed_mlx_lm(
+            &successful_execution_runner(),
+            &RecordingSpawner::new(4242),
+            &FixedProbe(vec!["selected".to_string()]),
+            &plan,
+        )
+        .state(),
+        RuntimeExecutionState::Completed
+    );
+    let process = format!(
+        "{} --model /{} --host 127.0.0.1 --port 18080",
+        plan.server_path().display(),
+        "x".repeat(700)
+    );
+    let runner = DeterministicProcessRunner::succeeds(&process, "");
+    assert_eq!(
+        inspect_managed_mlx_lm(&runner, &FixedProbe(vec!["selected".to_string()]), &plan)
+            .unwrap()
+            .state(),
+        MlxLmManagedState::Ready
+    );
+    let wrong_port = process.replace("--port 18080", "--port 18081");
+    let runner = DeterministicProcessRunner::succeeds(&wrong_port, "");
+    assert_eq!(
+        inspect_managed_mlx_lm(&runner, &FixedProbe(vec!["selected".to_string()]), &plan)
+            .unwrap()
+            .state(),
+        MlxLmManagedState::StaleOwnership
+    );
+    let prefixed_port = process.replace("--port 18080", "--port 180800");
+    let runner = DeterministicProcessRunner::succeeds(&prefixed_port, "");
+    assert_eq!(
+        inspect_managed_mlx_lm(&runner, &FixedProbe(vec!["selected".to_string()]), &plan)
+            .unwrap()
+            .state(),
+        MlxLmManagedState::StaleOwnership
+    );
+    let runner =
+        DeterministicProcessRunner::sequence(vec![(Some(0), &process, ""), (Some(0), "", "")]);
+    assert_eq!(
+        stop_managed_mlx_lm(&runner, &plan).state(),
+        RuntimeExecutionState::Completed
+    );
+}
+
+#[test]
 fn managed_mlx_sources_stay_focused() {
     for (path, source, limit) in [
         (
