@@ -149,20 +149,51 @@ fn lm_studio_connection(pull_ref: &str) -> Option<RuntimeModelConnection> {
 fn mlx_connection(pull_ref: &str) -> Option<RuntimeModelConnection> {
     let status = crate::runtime_routes::mlx_lm_managed::status()
         .filter(desktoplab_runtime::MlxLmManagedStatus::ready)?;
-    status
-        .models()
-        .iter()
-        .any(|model| model == pull_ref)
-        .then(|| RuntimeModelConnection {
-            version: format!("{}@{}", status.model_revision(), status.endpoint()),
-            evidence: format!(
-                "runtime.mlx-lm desktoplab_managed ready; endpoint={}; revision={}",
-                status.endpoint(),
-                status.model_revision()
-            ),
-            endpoint: status.endpoint().to_string(),
-            protocol: ModelToolProtocolKind::ConstrainedJson,
-        })
+    mlx_model_matches(
+        status.ready(),
+        status.model_revision(),
+        status.models(),
+        pull_ref,
+    )
+    .then(|| RuntimeModelConnection {
+        version: format!("{}@{}", status.model_revision(), status.endpoint()),
+        evidence: format!(
+            "runtime.mlx-lm desktoplab_managed ready; endpoint={}; revision={}",
+            status.endpoint(),
+            status.model_revision()
+        ),
+        endpoint: status.endpoint().to_string(),
+        protocol: ModelToolProtocolKind::ConstrainedJson,
+    })
+}
+
+fn mlx_model_matches(ready: bool, revision: &str, models: &[String], pull_ref: &str) -> bool {
+    !models.is_empty()
+        && crate::runtime_routes::mlx_lm_managed::managed_model_inventory(ready, revision)
+            .iter()
+            .any(|model| model == pull_ref)
+}
+
+#[cfg(test)]
+mod mlx_connection_tests {
+    use super::mlx_model_matches;
+
+    #[test]
+    fn managed_mlx_canonical_identity_requires_ready_pinned_runtime() {
+        let canonical = "mlx-community/SmolLM3-3B-4bit";
+        let revision = "d3a7e0594d6642dbcfb7d149bed8b0bdf49f95ce";
+        let local = vec!["/isolated/DesktopLab/runtimes/mlx-lm/models/selected".to_string()];
+        assert!(mlx_model_matches(true, revision, &local, canonical));
+        assert!(!mlx_model_matches(false, revision, &local, canonical));
+        assert!(!mlx_model_matches(
+            true,
+            "wrong-revision",
+            &local,
+            canonical
+        ));
+        assert!(!mlx_model_matches(true, revision, &local, "other/model"));
+        assert!(!mlx_model_matches(true, revision, &[], canonical));
+    }
 }
 
 #[cfg(debug_assertions)]
