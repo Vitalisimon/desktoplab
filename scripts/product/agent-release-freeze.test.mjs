@@ -46,6 +46,8 @@ test("committed release freeze verifies against the current source tree", () => 
     "crates/desktoplab-control-plane/src/router/agent_model_constrained.rs",
     "crates/desktoplab-control-plane/src/router/agent_model_local.rs",
     "crates/desktoplab-control-plane/src/router/agent_model_lm_studio.rs",
+    "crates/desktoplab-runtime/src/lm_studio_local_model.rs",
+    "crates/desktoplab-runtime/src/lm_studio_managed_execution.rs",
     "crates/desktoplab-control-plane/src/router/local_model_protocol.rs",
   ]) {
     assert.ok(frozenPaths.has(path), "required protocol source must be frozen");
