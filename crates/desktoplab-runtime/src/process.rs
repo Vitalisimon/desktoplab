@@ -1,5 +1,9 @@
 use std::{path::PathBuf, process::Command};
 
+#[path = "process_output.rs"]
+mod process_output;
+pub use process_output::ProcessOutput;
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ProcessCommand {
     program: String,
@@ -107,56 +111,6 @@ impl ProcessCommand {
             return candidates;
         }
         vec![self.program.clone()]
-    }
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct ProcessOutput {
-    exit_code: Option<i32>,
-    stdout: String,
-    stderr: String,
-    evidence: ProcessCommand,
-}
-
-impl ProcessOutput {
-    #[must_use]
-    pub fn new(
-        exit_code: Option<i32>,
-        stdout: impl Into<String>,
-        stderr: impl Into<String>,
-        evidence: ProcessCommand,
-    ) -> Self {
-        Self {
-            exit_code,
-            stdout: bound(&redact(&stdout.into())),
-            stderr: bound(&redact(&stderr.into())),
-            evidence,
-        }
-    }
-
-    #[must_use]
-    pub fn exit_code(&self) -> Option<i32> {
-        self.exit_code
-    }
-
-    #[must_use]
-    pub fn stdout(&self) -> &str {
-        &self.stdout
-    }
-
-    #[must_use]
-    pub fn stderr(&self) -> &str {
-        &self.stderr
-    }
-
-    #[must_use]
-    pub fn evidence(&self) -> &ProcessCommand {
-        &self.evidence
-    }
-
-    #[must_use]
-    pub fn succeeded(&self) -> bool {
-        self.exit_code == Some(0)
     }
 }
 

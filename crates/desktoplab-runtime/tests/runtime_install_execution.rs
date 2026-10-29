@@ -17,6 +17,19 @@ fn runtime_process_adapter_executes_command_and_records_redacted_evidence() {
 }
 
 #[test]
+fn extended_process_matching_does_not_expand_public_or_debug_output() {
+    let output = DeterministicProcessRunner::succeeds(
+        format!("{} private-tail token=secret", "x".repeat(700)),
+        "",
+    )
+    .run(ProcessCommand::new("ps"));
+    assert!(output.stdout().len() <= 512);
+    let debug = format!("{output:?}");
+    assert!(!debug.contains("private-tail"));
+    assert!(!debug.contains("token=secret"));
+}
+
+#[test]
 fn ollama_command_candidates_include_gui_safe_macos_locations() {
     let command = ProcessCommand::new("ollama").arg("--version");
 
@@ -218,6 +231,12 @@ fn lm_studio_reports_external_guided_setup() {
 
 #[test]
 fn runtime_execution_sources_stay_small() {
+    check_logical_line_limit(
+        "crates/desktoplab-runtime/src/process_output.rs",
+        include_str!("../src/process_output.rs"),
+        90,
+    )
+    .expect("process output handling should stay focused");
     check_logical_line_limit(
         "crates/desktoplab-runtime/src/process.rs",
         include_str!("../src/process.rs"),

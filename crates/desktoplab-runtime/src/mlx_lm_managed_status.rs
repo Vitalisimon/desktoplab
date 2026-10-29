@@ -71,13 +71,8 @@ pub fn inspect_managed_mlx_lm(
             .arg("command="),
         plan,
     ));
-    let process_matches = process.succeeded()
-        && process
-            .stdout()
-            .contains(&plan.server_path().to_string_lossy().to_string())
-        && process
-            .stdout()
-            .contains(&format!("--port {}", plan.port()));
+    let process_matches =
+        process.succeeded() && owned_command_matches(process.stdout_for_checks(), plan);
     if !marker.matches_plan(plan) || !process_matches {
         return Some(MlxLmManagedStatus {
             state: MlxLmManagedState::StaleOwnership,
@@ -100,4 +95,14 @@ pub fn inspect_managed_mlx_lm(
         pid: marker.pid,
         model_revision: marker.model_revision,
     })
+}
+
+pub(crate) fn owned_command_matches(command: &str, plan: &MlxLmManagedPlan) -> bool {
+    let port = plan.port().to_string();
+    command.contains(&plan.server_path().to_string_lossy().to_string())
+        && command
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .windows(2)
+            .any(|args| args[0] == "--port" && args[1] == port)
 }
