@@ -15,6 +15,7 @@ mod install_job;
 mod installer_flow;
 mod lm_studio;
 mod lm_studio_discovery;
+mod lm_studio_local_model;
 mod lm_studio_managed_execution;
 mod lm_studio_managed_lifecycle;
 mod lm_studio_managed_marker;

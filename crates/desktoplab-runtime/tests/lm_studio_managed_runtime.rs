@@ -86,6 +86,7 @@ fn successful_outputs(sha512: &str, pid: u64) -> Vec<(Option<i32>, String, Strin
             format!(r#"{{"status":"running","pid":{pid},"isDaemon":true}}"#),
             String::new(),
         ),
+        (Some(0), "[]".to_string(), String::new()),
         (Some(0), String::new(), String::new()),
         (Some(0), String::new(), String::new()),
         (Some(0), String::new(), String::new()),
@@ -185,11 +186,11 @@ fn execution_uses_private_home_loopback_and_persists_ownership() {
     assert!(result.desktoplab_started_runtime());
     assert!(plan.marker_path().is_file());
     let commands = runner.commands();
-    assert_eq!(commands.len(), 9);
+    assert_eq!(commands.len(), 10);
     assert!(commands.iter().skip(3).all(|command| {
         command.env_value("HOME") == Some(plan.managed_home().to_string_lossy().as_ref())
     }));
-    let server = &commands[8];
+    let server = &commands[9];
     assert_eq!(
         server.args(),
         ["server", "start", "--port", "12345", "--bind", "127.0.0.1"]

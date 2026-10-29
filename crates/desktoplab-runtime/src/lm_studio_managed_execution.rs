@@ -122,7 +122,17 @@ pub fn execute_managed_lm_studio(
             "The managed llmster daemon did not report a DesktopLab-owned process.",
         );
     };
-    for command in model_and_server_commands(plan) {
+    let local_model = match crate::lm_studio_local_model::verified_local_model(runner, plan) {
+        Ok(model) => model,
+        Err(reason) => {
+            return failed(
+                reason,
+                evidence,
+                "The local model could not be verified safely.",
+            );
+        }
+    };
+    for command in model_and_server_commands(plan, local_model.as_deref()) {
         let output = runner.run(managed(command, plan));
         evidence = format!("{evidence}; {}", output.evidence().evidence());
         if !output.succeeded() {
@@ -166,14 +176,22 @@ fn prepare_directories(plan: &LmStudioManagedPlan) -> std::io::Result<()> {
     fs::create_dir_all(plan.managed_home())
 }
 
-fn model_and_server_commands(plan: &LmStudioManagedPlan) -> Vec<ProcessCommand> {
-    vec![
-        ProcessCommand::new(plan.lms_path().to_string_lossy())
-            .arg("get")
-            .arg(plan.model_id()),
+fn model_and_server_commands(
+    plan: &LmStudioManagedPlan,
+    local_model: Option<&str>,
+) -> Vec<ProcessCommand> {
+    let mut commands = Vec::new();
+    if local_model.is_none() {
+        commands.push(
+            ProcessCommand::new(plan.lms_path().to_string_lossy())
+                .arg("get")
+                .arg(plan.model_id()),
+        );
+    }
+    commands.extend([
         ProcessCommand::new(plan.lms_path().to_string_lossy())
             .arg("load")
-            .arg(plan.model_id())
+            .arg(local_model.unwrap_or_else(|| plan.model_id()))
             .arg("--identifier")
             .arg(plan.api_model_id())
             .arg("--context-length")
@@ -187,7 +205,8 @@ fn model_and_server_commands(plan: &LmStudioManagedPlan) -> Vec<ProcessCommand> 
             .arg(plan.port().to_string())
             .arg("--bind")
             .arg("127.0.0.1"),
-    ]
+    ]);
+    commands
 }
 
 pub(crate) fn managed(command: ProcessCommand, plan: &LmStudioManagedPlan) -> ProcessCommand {
