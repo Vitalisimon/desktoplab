@@ -78,12 +78,16 @@
     { "path": "crates/desktoplab-control-plane/src/model_routes.rs", "sha256": "sha256:d2edb9fb2fb9e17cdaf2c9a6dda3419eef93d5df22f96a02781783c3b9b07d49" },
     { "path": "crates/desktoplab-control-plane/src/router/agent_model_local.rs", "sha256": "sha256:813154250b84f75b16055528e5762595479684880eb0a0cbad6d1268f55ed6b0" },
     { "path": "crates/desktoplab-control-plane/src/router/agent_model_lm_studio.rs", "sha256": "sha256:c873e99d38a0b72ef3396d3ab1aa663037a97b0eb88c925f4b87bae4fad58562" },
-    { "path": "crates/desktoplab-control-plane/src/router/local_model_protocol.rs", "sha256": "sha256:369ede806076f15bf7d66eb45cf607760a0439a2c2b195631e018ed91c8baa64" },
+    { "path": "crates/desktoplab-control-plane/src/router/local_model_protocol.rs", "sha256": "sha256:65f64f305ae5cbc7123846f50d0349c6cd0cee12ace209c062b204f13d3e8255" },
     { "path": "crates/desktoplab-control-plane/src/router/model_setup.rs", "sha256": "sha256:97f1571564323778ed92d58fa0199d37e4e251300f33f1f8e8397fbc62ae18be" },
     { "path": "crates/desktoplab-control-plane/src/router/route_selection.rs", "sha256": "sha256:37d8865940ef2562f17c4405d924849291939e002d708211036135b5b6cce9a4" },
     { "path": "crates/desktoplab-control-plane/src/router/workspace_agent.rs", "sha256": "sha256:f452fbe18276eb317fef04d2c1c293269ad1705ac9becfb63674e26330174e0d" },
     { "path": "crates/desktoplab-control-plane/src/runtime_routes/lm_studio_managed.rs", "sha256": "sha256:02566d5019978b13fc480a291f9d71f57a098eaf526c9bc9361e584e26580991" },
-    { "path": "crates/desktoplab-control-plane/src/runtime_routes/mlx_lm_managed.rs", "sha256": "sha256:5d8e71b10fad97b89ac747ed500339a961275139706059d359e2e915d606d487" },
+    { "path": "crates/desktoplab-control-plane/src/runtime_routes/mlx_lm_managed.rs", "sha256": "sha256:f50864f8bc300d3638758e09e7e32870db166e2a1ab1f79b04153a8cc4f8eeb8" },
+    { "path": "crates/desktoplab-runtime/src/process.rs", "sha256": "sha256:bdb547f8a263a215c0737489adb183dd3ea96e63cb6980b87d97d835d90a8efa" },
+    { "path": "crates/desktoplab-runtime/src/process_output.rs", "sha256": "sha256:a8ada16e23ae032cf312dd54e97016a74476d27f909c6ed366216eeba5e62359" },
+    { "path": "crates/desktoplab-runtime/src/mlx_lm_managed_status.rs", "sha256": "sha256:4178dd8d77fdc03f1a87fb6da813a9299859ecb521416cb7528503e151e525f4" },
+    { "path": "crates/desktoplab-runtime/src/mlx_lm_managed_lifecycle.rs", "sha256": "sha256:6971e91057583e1021db85464d67b263a35868a6efd7883134f871b835bedcff" },
     { "path": "crates/desktoplab-compatibility/src/seed_catalog.rs", "sha256": "sha256:4a4ac9b8d687a59f6434cfd793dbca6e585482ae53622e442ff5ce96b789979a" }
   ]
 }
