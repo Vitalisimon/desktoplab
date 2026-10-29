@@ -60,7 +60,7 @@ pub(crate) fn models() -> Vec<String> {
     managed_model_inventory(status.ready(), status.model_revision())
 }
 
-fn managed_model_inventory(ready: bool, model_revision: &str) -> Vec<String> {
+pub(crate) fn managed_model_inventory(ready: bool, model_revision: &str) -> Vec<String> {
     if ready && model_revision == MODEL_REVISION {
         return vec![MODEL_ID.to_string()];
     }
