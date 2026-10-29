@@ -3,6 +3,10 @@ use serde_json::{Value, json};
 use std::collections::HashMap;
 use std::net::IpAddr;
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
+
+#[path = "openai_canary_retry.rs"]
+mod retry;
 
 use crate::{
     BackendModelCapabilities, BackendToolCallEvidence, ModelCapabilityState,
@@ -102,8 +106,12 @@ impl OpenAiCompatibleToolProtocolCanary {
     ) -> ModelToolProtocolCertification {
         let fingerprint = capabilities.fingerprint();
         let url = format!("{}/v1/chat/completions", endpoint.trim_end_matches('/'));
-        let payload = canary_payload(capabilities.model_id(), protocol);
-        let raw = match self.response(&url, &payload, request_timeout_seconds) {
+        let mut payload = canary_payload(capabilities.model_id(), protocol);
+        let raw = match retry::request_bounded(
+            &mut payload,
+            Duration::from_secs(request_timeout_seconds),
+            |payload, remaining| self.response(&url, payload, remaining),
+        ) {
             Ok(raw) => raw,
             Err(error) => return ModelToolProtocolCertification::failed(fingerprint, error),
         };
@@ -117,18 +125,13 @@ impl OpenAiCompatibleToolProtocolCanary {
         )
     }
 
-    fn response(
-        &self,
-        url: &str,
-        payload: &Value,
-        request_timeout_seconds: u64,
-    ) -> Result<Value, String> {
+    fn response(&self, url: &str, payload: &Value, timeout: Duration) -> Result<Value, String> {
         #[cfg(debug_assertions)]
         if let Some(response) = &self.response_for_test {
             return Ok(response.clone());
         }
         let client = Client::builder()
-            .timeout(std::time::Duration::from_secs(request_timeout_seconds))
+            .timeout(timeout)
             .build()
             .map_err(|error| format!("local_canary_client_build_failed:{error}"))?;
         let response = client
