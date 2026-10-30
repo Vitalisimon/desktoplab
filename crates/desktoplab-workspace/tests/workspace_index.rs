@@ -92,6 +92,11 @@ fn workspace_index_files_stay_small() {
             260,
         ),
         (
+            "crates/desktoplab-workspace/src/index/lookup.rs",
+            include_str!("../src/index/lookup.rs"),
+            70,
+        ),
+        (
             "crates/desktoplab-workspace/tests/workspace_index.rs",
             include_str!("workspace_index.rs"),
             150,

@@ -6,6 +6,8 @@ use std::time::UNIX_EPOCH;
 use crate::inspection::is_protected_path;
 use crate::search::{WorkspaceFileSafety, language_for_path};
 
+mod lookup;
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct WorkspaceIndexLimits {
     max_files: usize,

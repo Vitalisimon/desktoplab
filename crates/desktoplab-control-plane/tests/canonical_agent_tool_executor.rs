@@ -139,6 +139,46 @@ fn file_reads_are_pageable_and_search_results_have_source_coordinates() {
 }
 
 #[test]
+fn search_accepts_file_scopes_without_exposing_protected_or_other_files() {
+    let repo = TestRepo::init();
+    fs::create_dir_all(repo.path().join("docs")).unwrap();
+    fs::write(repo.path().join("docs/guide.md"), "Alpha\nneedle\nNEEDLE\n").unwrap();
+    fs::write(repo.path().join("docs/other.md"), "needle\n").unwrap();
+    fs::write(repo.path().join(".env"), "needle=private\n").unwrap();
+    let mut executor = approved_executor(&repo);
+    let result = execute(
+        &mut executor,
+        "desktoplab.search_text",
+        json!({
+            "path":"docs/guide.md", "query":"^needle$", "regex":true, "caseSensitive":true
+        }),
+    );
+    assert_eq!(result["matches"].as_array().unwrap().len(), 1);
+    assert_eq!(result["matches"][0]["path"], "docs/guide.md");
+    assert_eq!(result["matches"][0]["lineNumber"], 2);
+    let protected = execute(
+        &mut executor,
+        "desktoplab.search_text",
+        json!({"path":".env", "query":"needle"}),
+    );
+    assert!(protected["matches"].as_array().unwrap().is_empty());
+    let empty = execute(
+        &mut executor,
+        "desktoplab.search_text",
+        json!({"path":"docs/guide.md", "query":"absent"}),
+    );
+    assert!(empty["matches"].as_array().unwrap().is_empty());
+    assert!(
+        executor
+            .execute(&normalized(
+                "desktoplab.search_text",
+                json!({"path":"../outside", "query":"needle"})
+            ))
+            .is_err()
+    );
+}
+
+#[test]
 fn canonical_search_exposes_regex_and_case_sensitive_modes() {
     let repo = TestRepo::init();
     fs::write(
