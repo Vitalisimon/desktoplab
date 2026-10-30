@@ -142,8 +142,9 @@ test("ready setup keeps managed Preview runner changes consent gated", async () 
   expect(screen.getByText("Preview · not certified")).toBeInTheDocument();
   const setupPreview = screen.getByRole("button", { name: "Set up MLX-LM Server Preview" });
   expect(setupPreview).toBeDisabled();
+  await waitFor(() => expect(screen.getByRole("checkbox", { name: /accept the Apache-2.0 model license/i })).toBeEnabled());
   fireEvent.click(screen.getByRole("checkbox", { name: /accept the Apache-2.0 model license/i }));
-  expect(setupPreview).toBeEnabled();
+  await waitFor(() => expect(setupPreview).toBeEnabled());
   fireEvent.click(setupPreview);
   await waitFor(() =>
     expect(startRuntimeInstall).toHaveBeenCalledWith({
@@ -375,7 +376,10 @@ function clientFor(options: {
   setupState?: "not_started" | "in_progress" | "ready" | "blocked";
   setupPipeline?: { state: "not_started" | "selected" | "runtime_detecting" | "runtime_installing" | "runtime_verifying" | "model_downloading" | "model_verifying" | "ready" | "blocked"; runtimeId?: string; modelId?: string; blockedReason?: string };
 }): DesktopLabApiClient {
+  const consents = { mlx: false, lmStudio: false };
   return {
+    runtimeConsents: vi.fn(async () => ({ consents: { ...consents } })),
+    setRuntimeConsent: vi.fn(async (id: "mlx" | "lmStudio", accepted: boolean) => { consents[id] = accepted; return { consents: { ...consents } }; }),
     appState: vi.fn().mockResolvedValue({
       readiness: options.setupState === "ready" || !options.setupState ? options.readiness : { state: "blocked" },
       setup: { state: options.setupState ?? "ready" },

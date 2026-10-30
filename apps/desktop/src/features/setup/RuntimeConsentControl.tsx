@@ -6,12 +6,14 @@ export function RuntimeConsentControl({
   setupChoice,
   accepted,
   disabled = false,
+  error = false,
   onChange,
 }: {
   runtimeId?: string;
   setupChoice?: SetupChoice;
   accepted: boolean;
   disabled?: boolean;
+  error?: boolean;
   onChange: (accepted: boolean) => void;
 }) {
   const requirement = runtimeConsentRequirement(runtimeId, setupChoice);
@@ -31,6 +33,7 @@ export function RuntimeConsentControl({
           <span className="mt-1 block text-xs font-normal leading-5 text-muted">{requirement.detail}</span>
         </span>
       </label>
+      {error ? <p role="alert" className="mt-2 text-xs text-warning">Could not save or read consent in this local profile. Try again before continuing.</p> : null}
     </div>
   );
 }

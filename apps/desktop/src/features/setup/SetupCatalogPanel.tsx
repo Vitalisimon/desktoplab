@@ -12,6 +12,7 @@ import {
 } from "./runtimeCapabilityCopy";
 import { RuntimeConsentControl } from "./RuntimeConsentControl";
 import { runtimeConsentRequest, runtimeConsentSatisfied } from "./runtimeConsent";
+import { useRuntimeConsent } from "./useRuntimeConsent";
 
 type SetupCatalogPanelProps = {
   preview: SetupPlanPreview;
@@ -36,9 +37,10 @@ export function SetupCatalogPanel({ preview, models, runtimes, downloading, inst
   const [selectedRuntimeId, setSelectedRuntimeId] = useState(defaultRuntimeId);
   const [startedModelName, setStartedModelName] = useState<string | null>(null);
   const [startedRuntimeName, setStartedRuntimeName] = useState<string | null>(null);
-  const [runtimeConsentAccepted, setRuntimeConsentAccepted] = useState(false);
   const selectedModel = downloadableModels.find((model) => model.modelId === (selectedModelId || defaultModelId));
   const selectedRuntime = configurableRuntimes.find((runtime) => runtime.runtimeId === (selectedRuntimeId || defaultRuntimeId));
+  const runtimeConsent = useRuntimeConsent(selectedRuntime?.runtimeId);
+  const runtimeConsentAccepted = runtimeConsent.accepted && !runtimeConsent.pending && !runtimeConsent.error;
   const visibleLimitations = visibleExpectedLimitations(preview.expectedLimitations);
   const blocked = !selectedModel || selectedModel.installState === "blocked" || selectedModel.compatibility === "blocked";
   const runtimeBlocked = !selectedRuntime
@@ -88,7 +90,6 @@ export function SetupCatalogPanel({ preview, models, runtimes, downloading, inst
                   value={selectedRuntime?.runtimeId ?? ""}
                   onChange={(event) => {
                     setSelectedRuntimeId(event.target.value);
-                    setRuntimeConsentAccepted(false);
                   }}
                 >
                   {configurableRuntimes.map((runtime) => (
@@ -105,8 +106,9 @@ export function SetupCatalogPanel({ preview, models, runtimes, downloading, inst
               runtimeId={selectedRuntime?.runtimeId}
               setupChoice="install"
               accepted={runtimeConsentAccepted}
-              disabled={installingRunner}
-              onChange={setRuntimeConsentAccepted}
+              disabled={installingRunner || runtimeConsent.pending}
+              error={runtimeConsent.error}
+              onChange={runtimeConsent.change}
             />
             {startedRuntimeName ? <p className="text-sm font-medium text-success">Runner setup started for {startedRuntimeName}.</p> : null}
             <button

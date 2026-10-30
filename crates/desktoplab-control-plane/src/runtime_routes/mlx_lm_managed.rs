@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use super::helpers::{bool_body_field, host_target, number_body_field};
 
 const MODEL_ID: &str = "mlx-community/SmolLM3-3B-4bit";
-const MODEL_REVISION: &str = "d3a7e0594d6642dbcfb7d149bed8b0bdf49f95ce";
+pub(crate) const MODEL_REVISION: &str = "d3a7e0594d6642dbcfb7d149bed8b0bdf49f95ce";
 const MODEL_STORAGE_BYTES: u64 = 1_747_260_812;
 
 pub(super) fn execute(body: &str) -> desktoplab_runtime::RuntimeInstallExecutionResult {

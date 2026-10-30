@@ -156,8 +156,9 @@ test("requires explicit consent before starting a managed LM Studio Preview", as
   const start = screen.getByRole("button", { name: /start setup/i });
   expect(start).toBeDisabled();
 
+  await waitFor(() => expect(screen.getByRole("checkbox", { name: /accept the LM Studio vendor terms/i })).toBeEnabled());
   fireEvent.click(screen.getByRole("checkbox", { name: /accept the LM Studio vendor terms/i }));
-  expect(start).toBeEnabled();
+  await waitFor(() => expect(start).toBeEnabled());
   fireEvent.click(start);
 
   await waitFor(() =>
@@ -305,7 +306,10 @@ function previewWithExistingLocalInventory(): SetupPlanPreview {
 }
 
 function client(options: { preview: SetupPlanPreview; acceptance: SetupAcceptanceResponse }): Partial<DesktopLabApiClient> {
+  const consents = { mlx: false, lmStudio: false };
   return {
+    runtimeConsents: vi.fn(async () => ({ consents: { ...consents } })),
+    setRuntimeConsent: vi.fn(async (id: "mlx" | "lmStudio", accepted: boolean) => { consents[id] = accepted; return { consents: { ...consents } }; }),
     setupPreview: vi.fn<() => Promise<SetupPlanPreview>>().mockResolvedValue(options.preview),
     acceptSetupPlan: vi.fn().mockResolvedValue(options.acceptance),
     readiness: vi.fn().mockResolvedValue({ state: "ready" }),
