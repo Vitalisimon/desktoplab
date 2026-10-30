@@ -5,6 +5,8 @@ use std::path::Path;
 use crate::search_pattern::WorkspaceSearchPattern;
 use crate::{WorkspaceIndex, WorkspaceIndexLimits};
 
+mod scoped;
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum WorkspaceFileSafety {
     Readable,
@@ -159,36 +161,7 @@ impl WorkspaceSearch {
         regex: bool,
         case_sensitive: bool,
     ) -> io::Result<WorkspaceSearchReport> {
-        let pattern = WorkspaceSearchPattern::new(query, regex, case_sensitive)?;
-        let mut matches = Vec::new();
-        let mut truncated = false;
-        for entry in self.list_files(root)? {
-            if entry.safety != WorkspaceFileSafety::Readable {
-                continue;
-            }
-            let Some(text) = self.read_limited_text(root, entry.path())? else {
-                continue;
-            };
-            let mut hits = preview_lines(&text, &pattern);
-            if hits.is_empty() && pattern.matches(entry.path()) {
-                hits.push((String::new(), None));
-            }
-            for (preview, line_number) in hits {
-                matches.push(WorkspaceSearchHit {
-                    path: entry.path.clone(),
-                    preview,
-                    line_number,
-                });
-                if matches.len() >= self.limits.max_matches {
-                    truncated = true;
-                    break;
-                }
-            }
-            if truncated {
-                break;
-            }
-        }
-        Ok(WorkspaceSearchReport { matches, truncated })
+        self.search_filtered(root, query, regex, case_sensitive, None)
     }
 
     pub fn ranked_context_paths(

@@ -29,15 +29,30 @@ pub(crate) fn search(
     case_sensitive: bool,
 ) -> Result<Value, String> {
     let root = scoped_root(executor.root(), path)?;
-    let report = search_engine()
-        .search_with_options(&root, query, regex, case_sensitive)
-        .map_err(|error| {
-            if error.kind() == std::io::ErrorKind::InvalidInput {
-                "workspace_search_invalid_pattern".to_string()
-            } else {
-                "workspace_search_failed".to_string()
-            }
-        })?;
+    let search = search_engine();
+    let report = if root.is_file() {
+        let workspace = executor
+            .root()
+            .canonicalize()
+            .map_err(|_| "workspace_path_invalid".to_string())?;
+        let relative = root
+            .strip_prefix(&workspace)
+            .map_err(|_| "path_escape".to_string())?;
+        let relative = relative
+            .to_str()
+            .ok_or_else(|| "workspace_path_invalid".to_string())?
+            .replace('\\', "/");
+        search.search_file_with_options(&workspace, &relative, query, regex, case_sensitive)
+    } else {
+        search.search_with_options(&root, query, regex, case_sensitive)
+    }
+    .map_err(|error| {
+        if error.kind() == std::io::ErrorKind::InvalidInput {
+            "workspace_search_invalid_pattern".to_string()
+        } else {
+            "workspace_search_failed".to_string()
+        }
+    })?;
     let matches = report
         .matches()
         .iter()
