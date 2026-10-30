@@ -42,6 +42,7 @@ fn read_sse(
 ) -> Result<Value, String> {
     let mut content = String::new();
     let mut reasoning = String::new();
+    let mut finish_reason: Option<String> = None;
     let mut calls = BTreeMap::<usize, ToolCallFragments>::new();
     for line in BufReader::new(response).lines() {
         if cancellation.load(Ordering::SeqCst) {
@@ -57,6 +58,9 @@ fn read_sse(
         let chunk: Value = serde_json::from_str(data)
             .map_err(|error| format!("openai_compatible_stream_json:{error}"))?;
         let delta = &chunk["choices"][0]["delta"];
+        if let Some(reason) = chunk["choices"][0]["finish_reason"].as_str() {
+            finish_reason = Some(reason.to_string());
+        }
         append_text(delta, "content", &mut content, on_delta);
         append_reasoning(delta, &mut reasoning);
         append_tool_fragments(delta, &mut calls)?;
@@ -64,7 +68,7 @@ fn read_sse(
     if cancellation.load(Ordering::SeqCst) {
         return Err("agent_cancelled".to_string());
     }
-    Ok(response_envelope(content, reasoning, calls))
+    Ok(response_envelope(content, reasoning, calls, finish_reason))
 }
 
 fn append_reasoning(delta: &Value, reasoning: &mut String) {
@@ -118,6 +122,7 @@ fn response_envelope(
     content: String,
     reasoning: String,
     calls: BTreeMap<usize, ToolCallFragments>,
+    finish_reason: Option<String>,
 ) -> Value {
     let tool_calls = calls
         .into_values()
@@ -129,7 +134,7 @@ fn response_envelope(
             })
         })
         .collect::<Vec<_>>();
-    json!({"choices":[{"message":{
+    json!({"choices":[{"finish_reason":finish_reason,"message":{
         "content":content,
         "reasoning_content":reasoning,
         "tool_calls":tool_calls

@@ -6,6 +6,7 @@ mod claude_bridge;
 mod codex_bridge;
 mod external_harness;
 mod lm_studio_execution;
+mod mlx_constrained_retry;
 mod model_capabilities;
 mod model_protocol_certification;
 mod ollama_capabilities;

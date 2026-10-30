@@ -9,7 +9,7 @@ use crate::{
 };
 
 const CONSTRAINED_AGENT_MAX_TOKENS: u64 = 4_096;
-const CONSTRAINED_AGENT_POLICY: &str = "Execute the user's current request using canonical tools. Do not ask for confirmation when the request already authorizes the action. Use desktoplab.clarify only when required information is missing and cannot be discovered with available tools. Use desktoplab.write_file to create a new file with complete requested content; use desktoplab.patch_file only for a localized edit after reading the current file.";
+const CONSTRAINED_AGENT_POLICY: &str = "Execute the user's current request using only the supplied tools. Never invoke a tool absent from the supplied schemas. Do not ask for confirmation when the request already authorizes an available action.";
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct LocalEndpoint {
@@ -186,17 +186,21 @@ impl LmStudioExecutionBackend {
         if !self.inventory.contains(prompt.model()) {
             return Err("model_unavailable".to_string());
         }
-        let response = crate::openai_compatible_http::request_client(prompt)?
-            .post(self.chat_completions_url())
-            .json(&self.constrained_chat_completion_payload(prompt))
-            .send()
-            .map_err(|error| format!("mlx_request_failed:{error}"))?;
-        if !response.status().is_success() {
-            return Err(format!("mlx_http_status:{}", response.status()));
-        }
-        let value = response
-            .json::<Value>()
-            .map_err(|error| format!("mlx_response_json:{error}"))?;
+        let mut payload = self.constrained_chat_completion_payload(prompt);
+        let value =
+            crate::mlx_constrained_retry::execute(prompt, &mut payload, |payload, request| {
+                let response = crate::openai_compatible_http::request_client(request)?
+                    .post(self.chat_completions_url())
+                    .json(payload)
+                    .send()
+                    .map_err(|error| format!("mlx_request_failed:{error}"))?;
+                if !response.status().is_success() {
+                    return Err(format!("mlx_http_status:{}", response.status()));
+                }
+                response
+                    .json::<Value>()
+                    .map_err(|error| format!("mlx_response_json:{error}"))
+            })?;
         constrained_response_to_agent_text(&value)
     }
 
@@ -215,13 +219,16 @@ impl LmStudioExecutionBackend {
         let url = self.chat_completions_url();
         let mut payload = self.constrained_chat_completion_payload(prompt);
         payload["stream"] = json!(true);
-        let value = crate::openai_compatible_stream::execute(
-            &url,
-            payload,
-            prompt,
-            cancellation,
-            &mut on_delta,
-        )?;
+        let value =
+            crate::mlx_constrained_retry::execute(prompt, &mut payload, |payload, request| {
+                crate::openai_compatible_stream::execute(
+                    &url,
+                    payload.clone(),
+                    request,
+                    cancellation,
+                    &mut on_delta,
+                )
+            })?;
         constrained_response_to_agent_text(&value)
     }
 
@@ -237,11 +244,27 @@ impl LmStudioExecutionBackend {
 }
 
 fn constrained_tool_contract(prompt: &BackendPrompt) -> String {
+    let tools = provider_tools(prompt.tools());
+    let has = |name: &str| tools.iter().any(|tool| tool["function"]["name"] == name);
+    let mut policy = CONSTRAINED_AGENT_POLICY.to_string();
+    if has("desktoplab.clarify") {
+        policy.push_str(" Use desktoplab.clarify when required information is missing or the requested action cannot be performed with the available tools.");
+    }
+    if has("desktoplab.write_file") {
+        policy.push_str(
+            " Use desktoplab.write_file to create a new file with complete requested content.",
+        );
+    }
+    if has("desktoplab.patch_file") {
+        policy.push_str(
+            " Use desktoplab.patch_file only for a localized edit after reading the current file.",
+        );
+    }
     format!(
         "Return exactly one JSON object and no prose or Markdown. The object must use this shape: {contract}. Select one exact tool name from the schemas and provide an arguments object satisfying that schema. {policy} Tool schemas: {tools}",
         contract = r#"{"name":"desktoplab.tool_name","arguments":{}}"#,
-        policy = CONSTRAINED_AGENT_POLICY,
-        tools = Value::Array(provider_tools(prompt.tools()))
+        policy = policy,
+        tools = Value::Array(tools)
     )
 }
 
