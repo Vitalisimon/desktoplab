@@ -22,8 +22,24 @@ fn mlx_payload_embeds_the_canonical_json_contract_without_native_tools() {
     assert!(contract.contains("\"name\":\"desktoplab.search_text\""));
     assert!(contract.contains("\"arguments\""));
     assert!(contract.contains("Do not ask for confirmation"));
+    assert!(!contract.contains("desktoplab.write_file"));
+    assert!(!contract.contains("desktoplab.patch_file"));
+    assert!(!contract.contains("desktoplab.clarify"));
+    assert!(contract.contains("only the supplied tools"));
+}
+
+#[test]
+fn mlx_write_guidance_is_present_only_for_available_tools() {
+    let make = |name| BackendToolSchema::new(name, "Workspace tool.", json!({"type":"object"}));
+    let prompt = BackendPrompt::new("mlx-model", "work on the project").with_tools(vec![
+        make("desktoplab.write_file"),
+        make("desktoplab.clarify"),
+    ]);
+    let payload = backend("http://127.0.0.1:18080").constrained_chat_completion_payload(&prompt);
+    let contract = payload["messages"][0]["content"].as_str().unwrap();
     assert!(contract.contains("desktoplab.write_file to create a new file"));
-    assert!(contract.contains("desktoplab.clarify only when required information is missing"));
+    assert!(contract.contains("desktoplab.clarify"));
+    assert!(!contract.contains("desktoplab.patch_file"));
 }
 
 #[test]
