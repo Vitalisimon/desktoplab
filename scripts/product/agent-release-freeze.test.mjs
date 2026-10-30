@@ -38,6 +38,7 @@ test("committed release freeze verifies against the current source tree", () => 
     "crates/desktoplab-control-plane/src/agent_model_adapter.rs",
     "crates/desktoplab-control-plane/src/agent_completion_grounding.rs",
     "crates/desktoplab-control-plane/src/agent_execution_obligations.rs",
+    "crates/desktoplab-backends/src/lib.rs",
     "crates/desktoplab-backends/src/lm_studio_execution.rs",
     "crates/desktoplab-backends/src/mlx_constrained_retry.rs",
     "crates/desktoplab-backends/src/openai_compatible_http.rs",
