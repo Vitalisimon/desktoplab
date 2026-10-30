@@ -50,6 +50,8 @@ impl LocalApiRouter {
                 ApiRouteResponse::ok(crate::setup_routes::setup_preview_response())
             }
             ("GET", "/v1/app/state") => self.app_state(),
+            ("GET", "/v1/runtime-consents") => self.runtime_consents(),
+            ("POST", "/v1/runtime-consents") => self.update_runtime_consent(body),
             ("GET", "/v1/approval-modes") => self.approval_modes(),
             ("POST", "/v1/approval-modes/default") => self.update_default_approval_mode(body),
             ("POST", "/v1/approval-modes/session") => self.update_session_approval_mode(body),

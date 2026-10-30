@@ -22,6 +22,8 @@ type RecommendationViewProps = {
   onRuntimeSetupChoiceChange: (choice: SetupChoice) => void;
   onModelSetupChoiceChange: (choice: SetupChoice) => void;
   runtimeConsentAccepted: boolean;
+  runtimeConsentPending?: boolean;
+  runtimeConsentError?: boolean;
   onRuntimeConsentChange: (accepted: boolean) => void;
 };
 
@@ -36,6 +38,8 @@ export function RecommendationView({
   onRuntimeSetupChoiceChange,
   onModelSetupChoiceChange,
   runtimeConsentAccepted,
+  runtimeConsentPending,
+  runtimeConsentError,
   onRuntimeConsentChange,
 }: RecommendationViewProps) {
   const runtime = selectedRecommendation(preview.runtimeRecommendations, selectedRuntimeId);
@@ -77,6 +81,8 @@ export function RecommendationView({
         runtimeId={runtime?.manifestId}
         setupChoice={runtime?.setupChoiceRequired ? runtimeSetupChoice : undefined}
         accepted={runtimeConsentAccepted}
+        disabled={runtimeConsentPending}
+        error={runtimeConsentError}
         onChange={onRuntimeConsentChange}
       />
 

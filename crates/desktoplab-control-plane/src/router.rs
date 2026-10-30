@@ -67,6 +67,7 @@ mod persistence_payloads;
 mod persistence_route_selection;
 mod persistence_save;
 mod persistence_settings;
+mod runtime_consents;
 mod plugin_routes;
 mod route_selection;
 mod runtime_setup;

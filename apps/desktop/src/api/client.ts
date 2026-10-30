@@ -81,6 +81,12 @@ export class DesktopLabApiClient {
 
   appState(): Promise<AppStateResponse> { return this.get("/v1/app/state"); }
 
+  runtimeConsents(): Promise<{ consents: { mlx: boolean; lmStudio: boolean } }> { return this.get("/v1/runtime-consents"); }
+
+  setRuntimeConsent(id: "mlx" | "lmStudio", accepted: boolean): Promise<{ consents: { mlx: boolean; lmStudio: boolean } }> {
+    return this.request("POST", "/v1/runtime-consents", { id, accepted });
+  }
+
   setupPreview(): Promise<SetupPlanPreview> { return this.get("/v1/setup/preview"); }
 
   acceptSetupPlan(request?: SetupAcceptanceRequest): Promise<SetupAcceptanceResponse> {

@@ -16,6 +16,7 @@ import { CatalogRefreshPanel, RuntimeOfflineNotice, SetupPanel } from "./SetupSu
 import { useSetupPreview } from "./useSetupPreview";
 import { setupFailureCopy } from "./setupFailureCopy";
 import { runtimeConsentRequest, runtimeConsentSatisfied } from "./runtimeConsent";
+import { useRuntimeConsent } from "./useRuntimeConsent";
 import { LocalConfigurationPanel } from "./LocalConfigurationPanel";
 import {
   jobFromModelDownload,
@@ -52,7 +53,9 @@ export function SetupWizard({ onOpenRepository, hasActiveWorkspace = false }: Se
   const [selectedModelId, setSelectedModelId] = useState<string | undefined>();
   const [runtimeSetupChoice, setRuntimeSetupChoice] = useState<SetupChoice>("use_existing");
   const [modelSetupChoice, setModelSetupChoice] = useState<SetupChoice>("use_existing");
-  const [runtimeConsentAccepted, setRuntimeConsentAccepted] = useState(false);
+  const consentRuntimeId = setup.preview.data ? selectedId(setup.preview.data.runtimeRecommendations, selectedRuntimeId) : undefined;
+  const runtimeConsent = useRuntimeConsent(consentRuntimeId);
+  const runtimeConsentAccepted = runtimeConsent.accepted && !runtimeConsent.pending && !runtimeConsent.error;
   const models = useQuery({ queryKey: ["setup", "catalog-models"], queryFn: () => api.listModels() });
   const runtimes = useQuery({ queryKey: ["setup", "catalog-runtimes"], queryFn: () => api.listRuntimes() });
   const installRuntime = useMutation({
@@ -223,7 +226,6 @@ export function SetupWizard({ onOpenRepository, hasActiveWorkspace = false }: Se
               selectedModelId={selectedModelId}
               onSelectRuntime={(runtimeId) => {
                 setSelectedRuntimeId(runtimeId);
-                setRuntimeConsentAccepted(false);
               }}
               onSelectModel={setSelectedModelId}
               runtimeSetupChoice={runtimeSetupChoice}
@@ -231,7 +233,9 @@ export function SetupWizard({ onOpenRepository, hasActiveWorkspace = false }: Se
               onRuntimeSetupChoiceChange={setRuntimeSetupChoice}
               onModelSetupChoiceChange={setModelSetupChoice}
               runtimeConsentAccepted={runtimeConsentAccepted}
-              onRuntimeConsentChange={setRuntimeConsentAccepted}
+              runtimeConsentPending={runtimeConsent.pending}
+              runtimeConsentError={runtimeConsent.error}
+              onRuntimeConsentChange={runtimeConsent.change}
             />
           </div>
 
