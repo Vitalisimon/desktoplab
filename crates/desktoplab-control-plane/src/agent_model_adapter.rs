@@ -5,6 +5,8 @@ use desktoplab_agent_engine::{
 use desktoplab_backends::BackendMessage;
 use serde_json::{Value, json};
 
+mod recovery_guidance;
+
 use crate::agent_completion_grounding::validate_inspection_message;
 use crate::agent_execution_obligations::{
     validate_file_change_completion, validate_tool_prerequisites,
@@ -22,6 +24,9 @@ mod completion_tests;
 
 #[cfg(test)]
 mod execution_obligations_tests;
+
+#[cfg(test)]
+mod recovery_guidance_tests;
 
 #[cfg(test)]
 pub(crate) struct BackendDecisionAdapter<F> {
@@ -105,7 +110,7 @@ pub(crate) fn backend_messages(
         })
         .collect::<Vec<_>>();
     if !evidence_ledger.is_empty() {
-        let failed_evidence_guidance = failure_recovery_guidance(state);
+        let failed_evidence_guidance = failure_recovery_guidance(state, registry);
         let state_guidance = evidence_state_guidance(state);
         messages.push(BackendMessage::user(format!(
             "Executor evidence ledger: {}. In desktoplab.complete evidenceCallIds, use only exact ids whose status is success. Classify outcome as answered for read-only findings, including reports about existing Git changes; executed for a successful non-mutation action; changed only when the agent applied a mutation with changed=true; or verified only with passing test evidence. Do not repeat a successful tool call with unchanged arguments while its observation is still current; select the next missing evidence or complete the task.{failed_evidence_guidance}{state_guidance}",
@@ -122,8 +127,10 @@ pub(crate) fn backend_messages(
             .collect::<Vec<_>>()
             .join(", ");
         let recovery_guidance = protocol_recovery_guidance(reason);
+        let schema_guidance =
+            recovery_guidance::missing_field_schema_guidance(reason, registry, suppressed_tool);
         messages.push(BackendMessage::user(format!(
-            "The previous response was rejected by the canonical tool protocol ({reason}). Retry exactly once. {recovery_guidance} A completion message must directly answer the current user request with concrete resource names or results from cited executor evidence; merely saying tools ran is not sufficient. Return exactly one JSON tool call using an exact canonical name and arguments that satisfy its schema. Canonical names available for this turn: {available_tools}. Never shorten, alias, or invent a tool name. Use an object named arguments for tool parameters. Do not include prose or Markdown fences."
+            "The previous response was rejected by the canonical tool protocol ({reason}). Retry exactly once. {recovery_guidance}{schema_guidance} A completion message must directly answer the current user request with concrete resource names or results from cited executor evidence; merely saying tools ran is not sufficient. Return exactly one JSON tool call using an exact canonical name and arguments that satisfy its schema. Canonical names available for this turn: {available_tools}. Never shorten, alias, or invent a tool name. Use an object named arguments for tool parameters. Do not include prose or Markdown fences."
         )));
     }
     messages
@@ -140,20 +147,33 @@ pub(crate) fn suppressed_tool_for_model_turn(state: &IterativeLoopState) -> Opti
         .map(|observation| observation.tool_name())
 }
 
-fn failure_recovery_guidance(state: &IterativeLoopState) -> &'static str {
+fn failure_recovery_guidance(
+    state: &IterativeLoopState,
+    registry: &DesktopLabToolRegistry,
+) -> String {
     let observations = state.observations();
-    if observations.iter().any(|observation| {
+    let directory_guidance = if registry.get("desktoplab.list_files").is_some()
+        && observations.last().is_some_and(|observation| {
+            observation.tool_name() == "desktoplab.read_file"
+                && observation.error() == Some("not_regular_file")
+        }) {
+        " The requested path is not a regular file. If it is a directory, use desktoplab.list_files to inspect its entries before choosing a file. Do not repeat the failed read unchanged."
+    } else {
+        ""
+    };
+    let general_guidance = if observations.iter().any(|observation| {
         observation.tool_name() == "desktoplab.run_tests" && observation.error().is_some()
     }) {
-        return " Do not repeat a failed tool call with unchanged arguments when no new evidence or corrective action can change its result. A failing test is diagnostic evidence: inspect the implicated implementation and test files, correct the root cause without weakening the test, and rerun only after a corrective change.";
-    }
-    if observations
+        " Do not repeat a failed tool call with unchanged arguments when no new evidence or corrective action can change its result. A failing test is diagnostic evidence: inspect the implicated implementation and test files, correct the root cause without weakening the test, and rerun only after a corrective change."
+    } else if observations
         .iter()
         .any(|observation| observation.error().is_some())
     {
-        return " Do not repeat a failed tool call with unchanged arguments when no new evidence or corrective action can change its result. Inspect the failure, obtain missing evidence, or change the relevant state before retrying.";
-    }
-    ""
+        " Do not repeat a failed tool call with unchanged arguments when no new evidence or corrective action can change its result. Inspect the failure, obtain missing evidence, or change the relevant state before retrying."
+    } else {
+        ""
+    };
+    format!("{general_guidance}{directory_guidance}")
 }
 
 fn protocol_recovery_guidance(reason: &str) -> &'static str {

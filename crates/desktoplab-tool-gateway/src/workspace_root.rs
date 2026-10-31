@@ -56,6 +56,14 @@ impl WorkspaceRoot {
     }
 
     pub fn read_text(&self, requested: &str) -> Result<String, WorkspaceRootError> {
+        let path = Path::new(requested);
+        if !path.as_os_str().is_empty()
+            && path
+                .components()
+                .all(|component| component == Component::CurDir)
+        {
+            return Err(WorkspaceRootError::NotRegularFile);
+        }
         let mut file = self.open_existing(requested, false)?;
         let mut text = String::new();
         file.read_to_string(&mut text)?;
