@@ -51,6 +51,9 @@ impl FilesystemToolExecutor {
                     {
                         FilesystemToolOutcome::Blocked("read_failed")
                     }
+                    Err(crate::WorkspaceRootError::NotRegularFile) => {
+                        FilesystemToolOutcome::Blocked("not_regular_file")
+                    }
                     Err(_) => FilesystemToolOutcome::Blocked("path_escape"),
                 }
             }
