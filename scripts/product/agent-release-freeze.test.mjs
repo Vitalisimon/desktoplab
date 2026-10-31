@@ -36,6 +36,9 @@ test("committed release freeze verifies against the current source tree", () => 
   const frozenPaths = new Set(report.sources.map((source) => source.path));
   for (const path of [
     "crates/desktoplab-control-plane/src/agent_model_adapter.rs",
+    "crates/desktoplab-control-plane/src/agent_model_adapter/recovery_guidance.rs",
+    "crates/desktoplab-tool-gateway/src/filesystem.rs",
+    "crates/desktoplab-tool-gateway/src/workspace_root.rs",
     "crates/desktoplab-control-plane/src/agent_completion_grounding.rs",
     "crates/desktoplab-control-plane/src/agent_execution_obligations.rs",
     "crates/desktoplab-backends/src/lib.rs",
