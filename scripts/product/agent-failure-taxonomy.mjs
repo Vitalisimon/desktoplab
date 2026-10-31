@@ -50,7 +50,8 @@ export function classifyAgentFailure({ status, scoreResult, trace, verification,
   if (criteria.traceContract?.score === 0 || matches(reason, /state.*(?:lost|regression)|continuity|replay.*failed/)) findings.add("state_regression");
   if (repeatedFailure(events) || matches(reason, /no.progress|repeated.*(?:action|error|failure)/)) findings.add("repeated_error_loop");
   if (criteria.approvalSafety?.score === 0 || criteria.boundedMutation?.score === 0 || matches(reason, /unsafe mutation|approval.*bypass/)) findings.add("unsafe_mutation");
-  if (status === "agent_failure" && matches(reason, /model_(?:failure|protocol_error)|invalid_final_response|duplicate_tool_call/)) findings.add("model_protocol_failure");
+  const transportReason = matches(reason, /(?:ollama|lm_studio|openai_compatible).*(?:request_failed|request_timeout|http_status|stream_read_failed)/);
+  if (status === "agent_failure" && !transportReason && matches(reason, /model_(?:failure|protocol_error)|invalid_final_response|duplicate_tool_call/)) findings.add("model_protocol_failure");
   if (status === "timeout" || matches(reason, /timed?\s*out|timeout/)) findings.add("timeout");
   if (matches(reason, /local_inference_failed/)) findings.add("local_inference_failure");
   if (matches(reason, /(?:ollama|lm_studio|openai_compatible).*(?:request_failed|http_status|stream_read_failed)/)) findings.add("model_transport_failure");

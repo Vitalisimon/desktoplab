@@ -19,7 +19,7 @@ fn ollama_request_uses_the_prompt_timeout_instead_of_the_client_default() {
 
     server.join().unwrap();
     assert!(started.elapsed() < Duration::from_secs(2));
-    assert!(error.starts_with("ollama_request_failed:"), "{error}");
+    assert_eq!(error, "ollama_request_timeout");
 }
 
 #[test]
@@ -35,7 +35,7 @@ fn ollama_stream_uses_the_same_prompt_timeout() {
 
     server.join().unwrap();
     assert!(started.elapsed() < Duration::from_secs(2));
-    assert!(error.starts_with("ollama_request_failed:"), "{error}");
+    assert_eq!(error, "ollama_request_timeout");
 }
 
 fn delayed_server(body: &'static str) -> (String, thread::JoinHandle<()>) {

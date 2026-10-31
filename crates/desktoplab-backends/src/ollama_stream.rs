@@ -18,7 +18,7 @@ pub(crate) fn execute(
         .post(url)
         .json(&payload)
         .send()
-        .map_err(|error| format!("ollama_request_failed:{error}"))?;
+        .map_err(request_error)?;
     if !response.status().is_success() {
         return Err(format!("ollama_http_status:{}", response.status()));
     }
@@ -56,4 +56,12 @@ pub(crate) fn execute(
             "tool_calls":tool_calls
         }
     }))
+}
+
+pub(crate) fn request_error(error: reqwest::Error) -> String {
+    if error.is_timeout() {
+        "ollama_request_timeout".to_string()
+    } else {
+        format!("ollama_request_failed:{error}")
+    }
 }

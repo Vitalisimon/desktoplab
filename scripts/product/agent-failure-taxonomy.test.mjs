@@ -43,6 +43,13 @@ test("operational and agent failures keep original stop reason separate", () => 
   const transport = classifyAgentFailure({ status: "failed", originalStopReason: "ollama_request_failed" });
   assert.equal(transport.primary, "model_transport_failure");
 
+  const ollamaTimeout = classifyAgentFailure({ status: "agent_failure", originalStopReason: "model_failure:ollama_request_timeout" });
+  assert.equal(ollamaTimeout.primary, "timeout");
+  assert.ok(!ollamaTimeout.findings.some((finding) => finding.code === "model_protocol_failure"));
+
+  const ollamaTransport = classifyAgentFailure({ status: "agent_failure", originalStopReason: "model_failure:ollama_request_failed:offline" });
+  assert.equal(ollamaTransport.primary, "model_transport_failure");
+
   const protocol = classifyAgentFailure({ status: "agent_failure", originalStopReason: "model_failure:model_protocol_error:patch_requires_prior_read" });
   assert.equal(protocol.primary, "model_protocol_failure");
 
