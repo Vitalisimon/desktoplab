@@ -10,15 +10,16 @@ import { localModelProvenance } from "./ollama-model-provenance.mjs";
 
 export { localModelProvenance } from "./ollama-model-provenance.mjs";
 
-export function deriveReliabilityConfiguration({ statePath, repoRoot, model = localModelProvenance(statePath), freeze = releaseFreeze(repoRoot) }) {
+export function deriveReliabilityConfiguration({ statePath, repoRoot, model = localModelProvenance(statePath), freeze = releaseFreeze(repoRoot), versionOutput = () => commandOutput("ollama", ["--version"]) }) {
   const readiness = statePayload(statePath, "backend_readiness", "local");
   if (readiness?.state !== "ready" || readiness?.modelCapabilities?.modelId !== model.modelId) throw new Error("seed state is not ready for the selected local model");
-  const runtime = ollamaVersion(commandOutput("ollama", ["--version"]));
+  const runtime = ollamaVersion(versionOutput());
   if (freeze.model.runtimeRef !== model.modelId || freeze.model.digest !== model.digest || freeze.model.quantization !== model.quantization) throw new Error("selected local model differs from release freeze");
   if (freeze.runtime.version !== runtime || readiness.modelCapabilities.fingerprint !== freeze.model.capabilityFingerprint) throw new Error("runtime or capability fingerprint differs from release freeze");
+  const protocol = certifiedReliabilityProtocol(readiness.modelCapabilities, freeze);
   return {
     model: { id: model.modelId, digest: model.digest, quantization: model.quantization },
-    runtime: { id: "runtime.ollama", version: bounded(runtime), backendId: "backend.ollama", backendVersion: "constrained_json.v1" },
+    runtime: { id: "runtime.ollama", version: bounded(runtime), backendId: "backend.ollama", backendVersion: protocol },
     toolSchemaDigest: sourceDigest(repoRoot, toolSchemaFiles),
     approvalMode: approvalMode(statePath),
     contextPlan: { digest: sourceDigest(repoRoot, contextPlanFiles), budgetTokens: freeze.adaptivePolicy.contextWindowTokens, compactionPolicy: "bounded-summary-v1" },
@@ -39,6 +40,18 @@ export function deriveReliabilityConfiguration({ statePath, repoRoot, model = lo
       unifiedMemory: process.platform === "darwin" && arch() === "arm64",
     },
   };
+}
+
+export function certifiedReliabilityProtocol(capabilities, freeze) {
+  const certification = capabilities?.toolProtocolCertification;
+  if (certification?.state !== "certified" || !certification.protocol
+    || !/^sha256:[a-f0-9]{64}$/.test(capabilities?.fingerprint ?? "")
+    || certification.protocol !== freeze?.runtime?.protocol
+    || certification.capabilityFingerprint !== capabilities?.fingerprint
+    || capabilities?.fingerprint !== freeze?.model?.capabilityFingerprint) {
+    throw new Error("certified tool protocol or its capability fingerprint differs from release freeze");
+  }
+  return certification.protocol;
 }
 
 function statePayload(path, kind, subjectId) {
