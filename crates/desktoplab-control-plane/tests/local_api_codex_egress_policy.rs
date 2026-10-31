@@ -1,8 +1,10 @@
+#[path = "support/codex_egress_responder.rs"]
+mod codex_egress_responder;
 mod support;
 
 use desktoplab_control_plane::LocalApiRouter;
 use serde_json::Value;
-use std::io::{Read, Write};
+use std::io::Write;
 use std::net::TcpListener;
 use support::accept_http_request;
 use tempfile::tempdir;
@@ -10,7 +12,9 @@ use xtask::check_logical_line_limit;
 
 #[test]
 fn codex_route_blocks_repository_context_without_explicit_egress_approval() {
-    let (temp, endpoint, responder) = paired_codex_responder(false);
+    let (temp, endpoint, responder, stop) = paired_codex_responder(false);
+    // Simulate a busy runner before pairing; the security check must remain valid.
+    std::thread::sleep(std::time::Duration::from_millis(1200));
     let mut router = LocalApiRouter::default().with_openai_codex_bridge_dir(temp.path());
     mark_setup_ready(&mut router);
     open_desktoplab_workspace(&mut router, temp.path());
@@ -34,6 +38,7 @@ fn codex_route_blocks_repository_context_without_explicit_egress_approval() {
         blocked["approval"]["operationId"],
         "provider.openai:route.external.codex:workspace.desktoplab"
     );
+    stop.send(()).unwrap();
     responder
         .join()
         .expect("responder should not receive a request");
@@ -77,7 +82,7 @@ fn codex_route_sends_repository_context_after_matching_egress_approval() {
 
 #[test]
 fn codex_route_without_context_sends_only_user_prompt_to_responder() {
-    let (temp, endpoint, responder) = paired_codex_responder(true);
+    let (temp, endpoint, responder, _stop) = paired_codex_responder(true);
     let mut router = LocalApiRouter::default().with_openai_codex_bridge_dir(temp.path());
     mark_setup_ready(&mut router);
     open_desktoplab_workspace(&mut router, temp.path());
@@ -104,6 +109,12 @@ fn codex_egress_policy_tests_stay_small() {
         270,
     )
     .expect("codex egress policy tests should stay focused");
+    check_logical_line_limit(
+        "crates/desktoplab-control-plane/tests/support/codex_egress_responder.rs",
+        include_str!("support/codex_egress_responder.rs"),
+        100,
+    )
+    .expect("codex egress responder should stay focused");
 }
 
 fn codex_session_with_context(approval_id: Option<&str>) -> String {
@@ -122,14 +133,20 @@ fn codex_session_with_context(approval_id: Option<&str>) -> String {
 
 fn paired_codex_responder(
     expect_request: bool,
-) -> (tempfile::TempDir, String, std::thread::JoinHandle<()>) {
+) -> (
+    tempfile::TempDir,
+    String,
+    std::thread::JoinHandle<()>,
+    std::sync::mpsc::Sender<()>,
+) {
     let temp = tempdir().expect("bridge dir should be created");
+    let (stop, finished) = std::sync::mpsc::channel();
     let listener = TcpListener::bind("127.0.0.1:0").expect("loopback responder should bind");
     listener.set_nonblocking(!expect_request).unwrap();
     let endpoint = format!("http://{}", listener.local_addr().unwrap());
     let handle = std::thread::spawn(move || {
         if !expect_request {
-            assert_no_nonempty_request(&listener);
+            codex_egress_responder::assert_no_nonempty_request(&listener, &finished);
             return;
         }
         let (mut stream, request) = accept_http_request(&listener);
@@ -144,7 +161,7 @@ fn paired_codex_responder(
         );
         stream.write_all(response.as_bytes()).unwrap();
     });
-    (temp, endpoint, handle)
+    (temp, endpoint, handle, stop)
 }
 
 fn paired_codex_context_responder() -> (tempfile::TempDir, String, std::thread::JoinHandle<()>) {
@@ -174,20 +191,6 @@ fn canonical_completion(message: &str) -> String {
         }).to_string()
     })
     .to_string()
-}
-
-fn assert_no_nonempty_request(listener: &TcpListener) {
-    let deadline = std::time::Instant::now() + std::time::Duration::from_millis(1000);
-    while std::time::Instant::now() < deadline {
-        match listener.accept() {
-            Ok((mut stream, _)) => {
-                let mut request = [0_u8; 256];
-                let read = stream.read(&mut request).unwrap_or_default();
-                assert_eq!(read, 0, "responder must not receive repository context");
-            }
-            Err(_) => std::thread::sleep(std::time::Duration::from_millis(10)),
-        }
-    }
 }
 
 fn open_desktoplab_workspace(router: &mut LocalApiRouter, root: &std::path::Path) {
