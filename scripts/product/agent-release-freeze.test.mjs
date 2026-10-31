@@ -33,6 +33,7 @@ test("committed release freeze verifies against the current source tree", () => 
   const report = verifyAgentReleaseFreeze(freeze, { repoRoot: process.cwd() });
   assert.equal(report.status, "pass", report.failures.join("; "));
   assert.ok(report.sourceCount >= 44);
+  assert.equal(freeze.adaptivePolicy.ollamaRequestMaxAttempts, 2);
   const frozenPaths = new Set(report.sources.map((source) => source.path));
   for (const path of [
     "crates/desktoplab-control-plane/src/agent_model_adapter.rs",
@@ -49,6 +50,7 @@ test("committed release freeze verifies against the current source tree", () => 
     "crates/desktoplab-backends/src/openai_compatible_stream.rs",
     "crates/desktoplab-backends/src/openai_compatible_protocol_canary.rs",
     "crates/desktoplab-control-plane/src/router/agent_model_constrained.rs",
+    "crates/desktoplab-control-plane/src/router/agent_ollama_timeout_retry.rs",
     "crates/desktoplab-control-plane/src/router/agent_model_local.rs",
     "crates/desktoplab-control-plane/src/router/agent_model_lm_studio.rs",
     "crates/desktoplab-runtime/src/lm_studio_local_model.rs",

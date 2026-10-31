@@ -155,7 +155,7 @@ impl OllamaExecutionBackend {
             .post(&url)
             .json(&payload)
             .send()
-            .map_err(|error| format!("ollama_request_failed:{error}"))?;
+            .map_err(crate::ollama_stream::request_error)?;
         if !response.status().is_success() {
             return Err(format!("ollama_http_status:{}", response.status()));
         }

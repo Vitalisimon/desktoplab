@@ -55,6 +55,12 @@ fn local_model_transport_failure_has_actionable_user_copy() {
 }
 
 #[test]
+fn local_model_timeout_is_not_reported_as_a_protocol_error() {
+    let payload = failure_payload("session.timeout", "model_failure:ollama_request_timeout");
+    assert_eq!(payload["primary"], "timeout");
+}
+
+#[test]
 fn local_inference_failure_has_actionable_user_copy() {
     let payload = failure_payload("session.inference", "local_inference_failed");
     assert_eq!(payload["primary"], "local_inference_failure");

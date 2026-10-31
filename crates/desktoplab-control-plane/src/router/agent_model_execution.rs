@@ -3,6 +3,9 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use desktoplab_agent_engine::{IterativeAgentLoop, IterativeLoopState};
 use desktoplab_backends::{BackendPrompt, OpenAiCodexResponderCommandPayload};
 
+#[path = "agent_ollama_timeout_retry.rs"]
+mod agent_ollama_timeout_retry;
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(super) enum AgentModelExecutionError {
     Cancelled,
@@ -185,15 +188,14 @@ fn execute_ollama(
         desktoplab_backends::BackendModelInventory::available(&[model]),
     )
     .with_model_capabilities([resolved.with_tool_protocol_certification(certification)]);
-    if streaming {
-        backend
-            .execute_chat_stream(endpoint, &prompt, cancellation, on_delta)
-            .map_err(AgentModelExecutionError::from_backend)
-    } else {
-        backend
-            .execute_chat(endpoint, &prompt)
-            .map_err(AgentModelExecutionError::from_backend)
-    }
+    agent_ollama_timeout_retry::retry_inference_timeout(cancellation, || {
+        if streaming {
+            backend.execute_chat_stream(endpoint, &prompt, cancellation, &mut *on_delta)
+        } else {
+            backend.execute_chat(endpoint, &prompt)
+        }
+    })
+    .map_err(AgentModelExecutionError::from_backend)
 }
 
 #[cfg(test)]
