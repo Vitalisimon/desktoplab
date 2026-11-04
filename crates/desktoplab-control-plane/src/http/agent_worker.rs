@@ -58,12 +58,19 @@ fn spawn_model_lane(router: Arc<Mutex<LocalApiRouter>>, stop: Arc<AtomicBool>) -
             let session_id = model_turn.session_id().to_string();
             let workspace_id = model_turn.workspace_id().to_string();
             let backend_id = model_turn.backend_id().to_string();
+            let cancellation = model_turn.cancellation_token();
             let progress_router = router.clone();
             let completed = model_turn.execute(|delta| {
                 progress_router
                     .lock()
                     .expect("local api router lock should not be poisoned")
-                    .record_agent_model_delta(&workspace_id, &session_id, &backend_id, delta);
+                    .record_agent_model_delta(
+                        &workspace_id,
+                        &session_id,
+                        &backend_id,
+                        &cancellation,
+                        delta,
+                    );
             });
             let mut router = router
                 .lock()

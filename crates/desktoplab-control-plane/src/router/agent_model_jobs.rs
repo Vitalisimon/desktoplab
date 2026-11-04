@@ -24,6 +24,7 @@ pub(crate) struct CompletedAgentModelTurn {
     session_id: String,
     workspace_id: String,
     backend_id: String,
+    cancellation: Arc<AtomicBool>,
     output: Result<String, AgentModelExecutionError>,
 }
 
@@ -40,15 +41,21 @@ impl ClaimedAgentModelTurn {
         &self.backend_id
     }
 
+    pub(crate) fn cancellation_token(&self) -> Arc<AtomicBool> {
+        Arc::clone(&self.cancellation)
+    }
+
     #[must_use]
     pub(crate) fn execute(self, mut on_delta: impl FnMut(&str)) -> CompletedAgentModelTurn {
+        let output = self
+            .execution
+            .execute(&self.cancellation, self.streaming, &mut on_delta);
         CompletedAgentModelTurn {
             session_id: self.session_id,
             workspace_id: self.workspace_id,
             backend_id: self.backend_id,
-            output: self
-                .execution
-                .execute(&self.cancellation, self.streaming, &mut on_delta),
+            cancellation: self.cancellation,
+            output,
         }
     }
 }
@@ -160,9 +167,15 @@ impl LocalApiRouter {
         workspace_id: &str,
         session_id: &str,
         backend_id: &str,
+        cancellation: &Arc<AtomicBool>,
         delta: &str,
     ) {
         if delta.is_empty()
+            || !self
+                .agent_cancellation_tokens
+                .get(session_id)
+                .is_some_and(|current| Arc::ptr_eq(current, cancellation))
+            || cancellation.load(std::sync::atomic::Ordering::SeqCst)
             || !self.agent_streaming_sessions.contains(session_id)
             || self.sessions.get(session_id).is_some_and(|session| {
                 session.state() == desktoplab_agent_session::SessionState::Cancelled
@@ -182,6 +195,13 @@ impl LocalApiRouter {
 
     pub(crate) fn complete_agent_model_turn(&mut self, completed: CompletedAgentModelTurn) {
         self.agent_model_inflight.remove(&completed.session_id);
+        if !self
+            .agent_cancellation_tokens
+            .get(&completed.session_id)
+            .is_some_and(|current| Arc::ptr_eq(current, &completed.cancellation))
+        {
+            return;
+        }
         let session_state = self
             .sessions
             .get(&completed.session_id)
@@ -265,34 +285,5 @@ fn current_timestamp() -> String {
 }
 
 #[cfg(test)]
-mod tests {
-    use desktoplab_agent_engine::IterativeLoopState;
-
-    use super::LocalApiRouter;
-    use crate::router::WorkspaceRecord;
-
-    #[test]
-    fn model_turn_keeps_the_workspace_owned_by_its_session() {
-        let mut router = LocalApiRouter::default();
-        let session = router
-            .sessions
-            .create_session("workspace.a", "backend.ollama");
-        let session_id = session.session_id().to_string();
-        router.sessions.start(&session_id);
-        router
-            .agent_iterative_states
-            .insert(session_id.clone(), IterativeLoopState::new(&session_id));
-        router
-            .agent_iterative_prompts
-            .insert(session_id, "prompt".to_string());
-        router.workspace = Some(WorkspaceRecord {
-            workspace_id: "workspace.b".to_string(),
-            display_name: "B".to_string(),
-            root_path: "/tmp/workspace-b".to_string(),
-        });
-
-        let claimed = router.claim_next_agent_model_turn().unwrap();
-
-        assert_eq!(claimed.workspace_id(), "workspace.a");
-    }
-}
+#[path = "agent_model_jobs_generation_tests.rs"]
+mod generation_tests;

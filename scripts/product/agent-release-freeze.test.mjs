@@ -51,6 +51,7 @@ test("committed release freeze verifies against the current source tree", () => 
     "crates/desktoplab-backends/src/openai_compatible_protocol_canary.rs",
     "crates/desktoplab-control-plane/src/router/agent_model_constrained.rs",
     "crates/desktoplab-control-plane/src/router/agent_ollama_timeout_retry.rs",
+    "crates/desktoplab-control-plane/src/http/agent_worker.rs",
     "crates/desktoplab-control-plane/src/router/agent_model_local.rs",
     "crates/desktoplab-control-plane/src/router/agent_model_lm_studio.rs",
     "crates/desktoplab-runtime/src/lm_studio_local_model.rs",
