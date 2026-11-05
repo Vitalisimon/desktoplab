@@ -459,6 +459,12 @@ fn control_plane_http_source_stays_below_initial_line_count_guard() {
     )
     .expect("agent HTTP worker should stay below the line-count guard");
     check_logical_line_limit(
+        "crates/desktoplab-control-plane/src/http/agent_executor_worker.rs",
+        include_str!("../src/http/agent_executor_worker.rs"),
+        60,
+    )
+    .expect("agent executor worker should stay below the line-count guard");
+    check_logical_line_limit(
         "crates/desktoplab-control-plane/src/http/auth_response.rs",
         include_str!("../src/http/auth_response.rs"),
         60,
