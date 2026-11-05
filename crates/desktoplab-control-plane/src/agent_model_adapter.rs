@@ -29,6 +29,9 @@ mod execution_obligations_tests;
 mod recovery_guidance_tests;
 
 #[cfg(test)]
+mod patch_recovery_tests;
+
+#[cfg(test)]
 pub(crate) struct BackendDecisionAdapter<F> {
     initial_prompt: String,
     execute: F,
@@ -137,6 +140,9 @@ pub(crate) fn backend_messages(
 }
 
 pub(crate) fn suppressed_tool_for_model_turn(state: &IterativeLoopState) -> Option<&str> {
+    if state.model_protocol_recovery() == Some("patch_requires_prior_read") {
+        return Some("desktoplab.patch_file");
+    }
     if state.model_protocol_recovery() != Some("repeated_successful_tool_call_without_progress") {
         return None;
     }
